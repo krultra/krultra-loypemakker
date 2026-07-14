@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!--
+  Innbyggbar løypevisning — publiseres av KrUltra Løypemakker.
+  Denne fila er en MAL: ved publisering byttes __V__ ut med gjeldende
+  asset-versjon, og fila legges i løypas mappe sammen med course.json.
+  All logikk ligger i delte assets (../assets/v<N>/), så en løype-mappe
+  består kun av denne lille fila + course.json.
+-->
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Løypekart</title>
+  <link rel="icon" type="image/png" href="../assets/v__V__/favicon.png">
+  <link rel="stylesheet" href="../assets/v__V__/leaflet.css">
+  <link rel="stylesheet" href="../assets/v__V__/viewer.css">
+</head>
+<body>
+
+  <header id="topp" class="skjult">
+    <div id="topp-tekst">
+      <h1 id="tittel"></h1>
+      <p id="beskrivelse"></p>
+      <p id="nokkeltall"></p>
+    </div>
+    <!-- Knappene står utenfor kartet så de ikke stjeler kartflate -->
+    <div id="topp-knapper">
+      <button id="lag-knapp" title="Bytt mellom kart og satellittbilde">Satellitt</button>
+      <!-- Vises bare når visningen er bygd inn i en annen side (iframe) -->
+      <button id="fullskjerm-knapp" class="skjult"
+              title="Åpne løypevisningen i egen fane i full størrelse">⛶ Full skjerm</button>
+    </div>
+  </header>
+
+  <div id="map">
+    <!-- Hint på berøringsskjermer i iframe: én finger scroller siden -->
+    <div id="kart-hint" class="skjult">Bruk to fingre for å flytte kartet</div>
+  </div>
+
+  <div id="kontroll">
+    <input type="range" id="slider" min="0" max="0" value="0"
+           aria-label="Flytt markøren langs løypa">
+    <div id="info" class="skjult">
+      <div class="info-celle"><span class="info-navn">Distanse</span><span id="i-dist" class="info-verdi"></span></div>
+      <div class="info-celle"><span class="info-navn" id="i-forrige-navn">Fra forrige punkt</span><span id="i-dist-forrige" class="info-verdi"></span></div>
+      <div class="info-celle"><span class="info-navn">Høyde</span><span id="i-hoyde" class="info-verdi"></span></div>
+      <div class="info-celle"><span class="info-navn">Høydemeter fra start</span><span id="i-hm-start" class="info-verdi"></span></div>
+      <div class="info-celle"><span class="info-navn">Fra forrige punkt</span><span id="i-hm-forrige" class="info-verdi"></span></div>
+    </div>
+  </div>
+
+  <div id="profil-wrap">
+    <canvas id="profil"></canvas>
+  </div>
+
+  <footer id="bunn"></footer>
+
+  <div id="laster">Laster løypa …</div>
+
+  <script src="../assets/v__V__/leaflet.js"></script>
+  <script src="../assets/v__V__/felles.js"></script>
+  <script src="../assets/v__V__/viewer.js"></script>
+</body>
+</html>

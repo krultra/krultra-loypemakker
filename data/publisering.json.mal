@@ -1,0 +1,29 @@
+{
+  "_forklaring": "MAL for publiseringsmål. Kopier denne fila til 'publisering.json' (samme mappe) og fyll inn dine egne verdier. Din publisering.json holdes utenfor git (se .gitignore), så credentials og interne adresser deles aldri. type 'mappe' skriver til en lokal mappe (test/manuell opplasting); type 'sftp' laster opp direkte til en server; type 'gruppe' publiserer til flere mål i én operasjon (f.eks. prod + failover). For sftp: angi enten 'passord' eller 'nøkkelfil' (sti til privat SSH-nøkkel).",
+  "mål": [
+    {
+      "navn": "lokal-test",
+      "type": "mappe",
+      "mappe": "data/publisert",
+      "baseUrl": "http://127.0.0.1:8000/publisert"
+    },
+    {
+      "navn": "min-server",
+      "type": "sftp",
+      "host": "FYLL-INN-vertsnavn-eller-ip",
+      "port": 22,
+      "bruker": "FYLL-INN-brukernavn",
+      "nøkkelfil": "FYLL-INN-sti-til-privat-ssh-nøkkel-eller-slett-denne-linja",
+      "passord": "FYLL-INN-passord-eller-slett-denne-linja",
+      "fjernmappe": "/var/www/loyper",
+      "baseUrl": "https://loyper.eksempel.no"
+    },
+    {
+      "_kommentar": "Valgfritt: publiser til flere servere samtidig (prod + failover). Fjern dette målet hvis du bare har én server.",
+      "navn": "prod + failover",
+      "type": "gruppe",
+      "medlemmer": ["min-server"],
+      "baseUrl": "https://loyper.eksempel.no"
+    }
+  ]
+}

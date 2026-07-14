@@ -1,0 +1,18 @@
+# Python-miljø og cache
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# OS-filer
+.DS_Store
+Thumbs.db
+
+# Verktøy-/agentspesifikk lokal konfig (ikke del av produktet)
+.claude/
+
+# Brukerens egne data, oppsett og hemmeligheter — skal ALDRI i repoet.
+# (Appen oppretter mappene og en fersk publisering.json fra malen ved
+#  første oppstart, så et klonet repo virker med tomt data-lager.)
+/data/*
+!/data/publisering.json.mal

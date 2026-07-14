@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KrUltra Løypemakker (KUL)</title>
+  <link rel="icon" href="favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="stylesheet" href="vendor/leaflet.css">
+  <link rel="stylesheet" href="style.css?v=19">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="favicon.png" alt="" class="brand-logo" width="28" height="28">
+      <h1>KrUltra Løypemakker</h1>
+      <span id="app-version" class="app-version" title="Verktøyets versjon"></span>
+    </div>
+    <div class="topbar-right">
+      <div class="toggles">
+        <button id="btn-toggle-map" class="tab" title="Vis/skjul kartunderlag fra Kartverket (krever internett)">&#128506; Kart</button>
+      </div>
+      <div class="viewmode" title="Velg om skjermflaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
+        <button id="view-kart" class="tab" title="Bruk hele flaten til kartet">&#128506; Bare kart</button>
+        <button id="view-split" class="tab" title="Delt skjerm: kart øverst, høydeprofil nederst">&#9707; Delt</button>
+        <button id="view-profil" class="tab" title="Bruk hele flaten til høydeprofilen">&#9968; Bare profil</button>
+      </div>
+      <nav class="tabs">
+        <button id="tab-editor" class="tab active">Rediger spor</button>
+        <button id="tab-merge" class="tab">Slå sammen segmenter</button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Vises hvis den kjørende serveren har eldre kode enn frontend -->
+  <div id="stale-banner" class="stale-banner hidden">
+    &#9888;&#65039; <strong>Serveren kjører en eldre versjon.</strong>
+    Lukk det svarte vinduet og start <code>KUL.bat</code> på nytt for å ta i
+    bruk de nyeste endringene.
+  </div>
+
+  <div class="layout">
+
+    <!-- Venstre kolonne: fil-innlasting og segmentbibliotek -->
+    <aside class="sidebar">
+      <section class="upload-box">
+        <label id="gpx-load-label" for="gpx-file" class="btn btn-primary btn-block">
+          &#128194; Last inn GPX-fil&hellip;
+        </label>
+        <input type="file" id="gpx-file" accept=".gpx" hidden>
+        <label id="loype-load-label" for="loype-file" class="btn btn-small btn-block"
+               title="Åpne en .loype-fil (f.eks. mottatt for publisering) med kart, punkter og alle metadata">
+          &#128229; Importer .loype-fil&hellip;
+        </label>
+        <input type="file" id="loype-file" accept=".loype,.json" hidden>
+      </section>
+
+      <section class="library">
+        <div class="library-header">
+          <h2>Segmentbibliotek</h2>
+          <button id="btn-new-group" class="btn btn-small" title="Lag en gruppe å organisere segmenter i (f.eks. «MMC»)">+ Gruppe</button>
+        </div>
+        <p class="muted library-hint">Dra segmenter og grupper for å endre rekkefølge — slipp et segment på en gruppe for å legge det i den.</p>
+        <p id="library-empty" class="muted">
+          Ingen lagrede segmenter ennå. Last inn en GPX-fil og lagre et
+          utsnitt, så dukker det opp her.
+        </p>
+        <ul id="segment-list"></ul>
+      </section>
+
+      <section class="wpt-lib-section">
+        <button id="btn-wpt-lib" class="btn btn-small btn-block"
+                title="Delte interessepunkter som gjenbrukes på tvers av løyper">
+          🔗 Punktbibliotek…</button>
+      </section>
+    </aside>
+
+    <!-- Høyre kolonne: kart øverst, kontrollpanel nederst -->
+    <main class="content">
+      <!-- Kartverktøylinje: visningstype og PNG-eksport av kartet -->
+      <div class="map-toolbar">
+        <label class="profile-control" title="Hvilket kartunderlag som vises (krever at Kart er på)">
+          Kartvisning
+          <select id="map-layer-select">
+            <option value="topo">Topografisk (Kartverket)</option>
+            <option value="topograatone">Gråtone (Kartverket)</option>
+            <option value="toporaster">Papirkart-stil (Kartverket)</option>
+            <option value="sjokartraster">Sjøkart (Kartverket)</option>
+            <option value="satellitt">Satellittbilde (Esri)</option>
+          </select>
+        </label>
+        <span class="toolbar-divider"></span>
+        <label class="profile-control" title="Fargen på rutestreken i PNG-eksporten">
+          Rutefarge <input type="color" id="map-track-color" value="#dc2626">
+        </label>
+        <label class="profile-control" title="Tykkelsen på rutestreken i PNG-eksporten">
+          Tykkelse
+          <input type="range" id="map-track-width" min="1" max="12" value="4">
+          <span id="map-track-width-val" class="pos-label-short">4</span>
+        </label>
+        <span class="toolbar-divider"></span>
+        <button id="btn-toggle-wpt" class="btn btn-small active"
+                title="Vis eller skjul interessepunktene på kartet">&#128205; Punkter</button>
+        <label class="profile-control" title="Fargen på streken fra ikon til løypepunkt på kartet (høydeprofilen har sin egen fargevelger)">
+          Punktstrek <input type="color" id="wpt-line-color" value="#334155">
+        </label>
+        <label class="profile-control" title="Tykkelsen på streken fra ikon til løypepunkt">
+          <input type="range" id="wpt-line-width" min="1" max="10" value="2">
+          <span id="wpt-line-width-val" class="pos-label-short">2</span>
+        </label>
+        <label class="profile-control" title="Skaler symbolene opp/ned (50–200 %) i forhold til standardstørrelsen">
+          Ikonstr.
+          <input type="range" id="wpt-size" min="50" max="200" step="10" value="100">
+          <span id="wpt-size-val" class="pos-label-short">100%</span>
+        </label>
+        <span class="toolbar-divider"></span>
+        <button id="btn-select-crop" class="btn btn-small"
+                title="Dra opp et rektangel på kartet — bare det området havner i PNG-fila">
+          &#9633; Velg utsnitt</button>
+        <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
+        <button id="btn-export-map" class="btn btn-small btn-primary"
+                title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
+      </div>
+      <div id="map">
+        <div id="map-empty" class="map-empty">
+          <p>&#11088; Last inn en GPX-fil for å komme i gang,<br>
+          eller åpne et lagret segment fra biblioteket.</p>
+        </div>
+      </div>
+
+      <!-- Høydeprofil (kan slås av/på fra topplinja) -->
+      <section id="profile-section" class="profile-section hidden">
+        <div class="profile-toolbar">
+          <strong>Høydeprofil</strong>
+          <span id="profile-source" class="muted"></span>
+          <label class="profile-control" title="Hvor mye høyden overdrives i forhold til distansen (1× = naturtro)">
+            Høydeskala
+            <input type="range" id="profile-exagg" min="1" max="20" value="5">
+            <span id="profile-exagg-val" class="pos-label-short">5×</span>
+          </label>
+          <label class="profile-control" title="Fargen på selve profillinja">
+            Linje <input type="color" id="profile-line-color" value="#0f172a">
+          </label>
+          <label class="profile-control" title="Fyll området under profilen med valgt farge">
+            <input type="checkbox" id="profile-fill-on"> Fyll
+            <input type="color" id="profile-fill-color" value="#f4b8b8">
+          </label>
+          <label class="profile-control" title="Bakgrunnsfargen bak profilen">
+            Bakgrunn <input type="color" id="profile-bg-color" value="#ffffff">
+          </label>
+          <label class="profile-control" title="Akselinjer av/på, og fargen på dem">
+            <input type="checkbox" id="profile-axes" checked> Akser
+            <input type="color" id="profile-axis-color" value="#94a3b8">
+          </label>
+          <label class="profile-control" title="Rutenett av/på, og fargen på det">
+            <input type="checkbox" id="profile-grid" checked> Rutenett
+            <input type="color" id="profile-grid-color" value="#e2e8f0">
+          </label>
+          <label class="profile-control" title="Fargen på tallene langs aksene">
+            Tall <input type="color" id="profile-tick-color" value="#64748b">
+          </label>
+          <label class="profile-control" title="Tekststørrelse på aksetallene (px)">
+            Tekst
+            <input type="range" id="profile-font" min="8" max="24" value="11">
+            <span id="profile-font-val" class="pos-label-short">11</span>
+          </label>
+          <label class="profile-control"
+                 title="Den loddrette linja som viser hvor markøren på sporet står — kan skjules eller farges (f.eks. for PNG til trykk)">
+            <input type="checkbox" id="profile-marker-on" checked> Markør
+            <input type="color" id="profile-marker-color" value="#2563eb">
+          </label>
+          <label class="profile-control"
+                 title="Jevn ut profilen: hvert punkt vektes sammen med n punkter på hver side (0 = ingen utjevning)">
+            Utjevning
+            <input type="range" id="profile-smooth" min="0" max="50" value="0">
+            <span id="profile-smooth-val" class="pos-label-short">0</span>
+          </label>
+          <label class="profile-control"
+                 title="Formen på vektingen: flat (alle punktene teller nesten likt) eller spiss gauss-kurve (punktet i midten dominerer)">
+            Vektform
+            <input type="range" id="profile-shape" min="1" max="10" value="3">
+            <span id="profile-shape-val" class="pos-label-short">3</span>
+          </label>
+          <label class="profile-control"
+                 title="Vis interessepunktenes navn under x-aksen (med loddrett strek opp til punktet).">
+            <input type="checkbox" id="profile-wpt-names"> Punktnavn
+          </label>
+          <label class="profile-control"
+                 title="Vis interessepunktenes ikoner under x-aksen (under navnene når begge er på). Fargen gjelder punktstreken i profilen, uavhengig av kartets.">
+            <input type="checkbox" id="profile-wpt-icons"> Punktikoner
+            <input type="color" id="profile-wpt-color" value="#334155">
+          </label>
+          <span class="profile-control" title="Ferdige fargeoppsett">
+            <button id="preset-bw" class="btn btn-small">Svart/hvitt</button>
+            <button id="preset-red" class="btn btn-small">Rød fylt</button>
+          </span>
+          <button id="profile-download" class="btn btn-small" title="Last ned profilen som bilde (PNG)">&#11015; PNG</button>
+        </div>
+        <div class="profile-canvas-wrap">
+          <canvas id="profile-canvas"></canvas>
+          <p id="profile-empty" class="muted hidden">Ingen høydedata i dette sporet.</p>
+        </div>
+      </section>
+
+      <!-- Kontrollpanel: Rediger spor -->
+      <section id="editor-panel" class="panel">
+        <div id="editor-controls" class="hidden">
+          <div class="track-info">
+            <strong id="editor-track-name"></strong>
+            <span id="editor-track-meta" class="muted"></span>
+          </div>
+
+          <div class="slider-row">
+            <button id="editor-prev" class="btn btn-icon" title="Forrige punkt (hold Shift for 10 om gangen)">&#9664;</button>
+            <input type="range" id="editor-slider" min="0" max="0" value="0">
+            <button id="editor-next" class="btn btn-icon" title="Neste punkt (hold Shift for 10 om gangen)">&#9654;</button>
+            <span id="editor-pos" class="pos-label"></span>
+          </div>
+
+          <div class="button-row">
+            <button id="btn-mark-start" class="btn btn-green">&#9873; Sett start her</button>
+            <button id="btn-mark-end" class="btn btn-red">&#9873; Sett slutt her</button>
+            <button id="btn-clear-marks" class="btn">Fjern merker</button>
+            <button id="btn-elevation-source" class="btn"
+                    title="Bytt mellom GPX-filas egne høyder og terrenghøyder fra Kartverkets terrengmodell (krever internett)">
+              &#9968; Høyder: GPX-fila</button>
+            <button id="btn-add-wpt" class="btn"
+                    title="Legg til et interessepunkt (mat, drikke, sjekkpunkt …) der markøren står">
+              &#128205; Sett punkt her</button>
+            <button id="btn-pick-shared" class="btn"
+                    title="Finn alle delte punkter fra punktbiblioteket som ligger innenfor 300 m fra løypa, og velg hvilke som skal brukes i denne løypa">
+              🔗 Velg delte punkter…</button>
+            <span id="editor-selection" class="selection-label"></span>
+          </div>
+
+          <div class="button-row actions">
+            <button id="btn-save-segment" class="btn btn-primary">&#128190; Lagre segment</button>
+            <button id="btn-export-gpx" class="btn btn-primary">&#11015; Lagre som GPX</button>
+            <button id="btn-publish" class="btn btn-primary"
+                    title="Publiser en interaktiv løypevisning (kart + høydeprofil) som kan bygges inn på nettsider">
+              &#127760; Publiser løypevisning&hellip;</button>
+            <button id="btn-send-krultra" class="btn"
+                    title="Lag en løypefil du kan sende til KrUltra for publisering på loyper.krultra.no (for deg som ikke publiserer selv)">
+              &#128231; Send til KrUltra&hellip;</button>
+          </div>
+        </div>
+        <p id="editor-hint" class="muted panel-hint">
+          Last inn en GPX-fil eller åpne et segment fra biblioteket for å redigere.
+        </p>
+      </section>
+
+      <!-- Kontrollpanel: Slå sammen -->
+      <section id="merge-panel" class="panel hidden">
+        <div class="merge-grid">
+
+          <div class="merge-card" id="merge-card-a">
+            <h3><span class="dot dot-a"></span> Segment A <span class="muted">(første del)</span></h3>
+            <p class="muted merge-hint" id="merge-hint-a">Velg med «A»-knappen i biblioteket.</p>
+            <div class="merge-controls hidden" id="merge-controls-a">
+              <div class="track-info">
+                <strong id="merge-name-a"></strong>
+                <span id="merge-meta-a" class="muted"></span>
+              </div>
+              <div class="slider-row">
+                <button id="merge-prev-a" class="btn btn-icon">&#9664;</button>
+                <input type="range" id="merge-slider-a" min="0" max="0" value="0">
+                <button id="merge-next-a" class="btn btn-icon">&#9654;</button>
+                <span id="merge-pos-a" class="pos-label"></span>
+              </div>
+              <div class="button-row">
+                <button id="btn-split-a" class="btn btn-green">&#9986; Sett delingspunkt her</button>
+                <button id="btn-nearest-a" class="btn" disabled
+                        title="Flytt delingspunktet hit sporet er nærmest delingspunktet på B">
+                  &#127919; Nærmest B sitt delingspunkt</button>
+              </div>
+              <span id="merge-split-label-a" class="selection-label"></span>
+            </div>
+          </div>
+
+          <div class="merge-card" id="merge-card-b">
+            <h3><span class="dot dot-b"></span> Segment B <span class="muted">(siste del)</span></h3>
+            <p class="muted merge-hint" id="merge-hint-b">Velg med «B»-knappen i biblioteket.</p>
+            <div class="merge-controls hidden" id="merge-controls-b">
+              <div class="track-info">
+                <strong id="merge-name-b"></strong>
+                <span id="merge-meta-b" class="muted"></span>
+              </div>
+              <div class="slider-row">
+                <button id="merge-prev-b" class="btn btn-icon">&#9664;</button>
+                <input type="range" id="merge-slider-b" min="0" max="0" value="0">
+                <button id="merge-next-b" class="btn btn-icon">&#9654;</button>
+                <span id="merge-pos-b" class="pos-label"></span>
+              </div>
+              <div class="button-row">
+                <button id="btn-split-b" class="btn btn-red">&#9986; Sett delingspunkt her</button>
+                <button id="btn-nearest-b" class="btn" disabled
+                        title="Flytt delingspunktet hit sporet er nærmest delingspunktet på A">
+                  &#127919; Nærmest A sitt delingspunkt</button>
+              </div>
+              <span id="merge-split-label-b" class="selection-label"></span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="button-row actions">
+          <button id="btn-merge" class="btn btn-primary" disabled>&#128279; Slå sammen</button>
+          <span id="merge-result-info" class="selection-label"></span>
+          <button id="btn-save-merged" class="btn btn-primary hidden">&#128190; Lagre som segment</button>
+          <button id="btn-export-merged" class="btn btn-primary hidden">&#11015; Lagre som GPX</button>
+          <button id="btn-edit-merged" class="btn hidden">&#9998; Åpne i redigering</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Dialog for navn og beskrivelse ved lagring/eksport/redigering -->
+  <dialog id="meta-dialog">
+    <form method="dialog">
+      <h3 id="meta-dialog-title">Gi et navn</h3>
+      <div id="meta-slug-row" class="hidden">
+        <label class="field-label" for="meta-slug">
+          Adressenavn <span class="muted">(blir del av nettadressen løypa publiseres på — gjenbruk samme navn ved oppdatering)</span>
+        </label>
+        <input type="text" id="meta-slug" placeholder="f.eks. mmc-70k" autocomplete="off">
+      </div>
+      <label class="field-label" for="meta-name">Navn</label>
+      <input type="text" id="meta-name" placeholder="F.eks. «Skogsrunden 5 km»" autocomplete="off">
+      <label class="field-label" for="meta-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="meta-desc" rows="3"
+                placeholder="F.eks. «Fra start ved Nøstmo til drikkestasjonen ved Sulsjøan»"></textarea>
+      <div class="field-pair">
+        <div>
+          <label class="field-label" for="meta-creator">Laget av <span class="muted">(valgfri)</span></label>
+          <input type="text" id="meta-creator" placeholder="F.eks. «Meråker Mountain Challenge»" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label" for="meta-link">Lenke <span class="muted">(valgfri)</span></label>
+          <input type="text" id="meta-link" placeholder="https://…" autocomplete="off">
+        </div>
+      </div>
+      <div class="field-pair">
+        <div>
+          <label class="field-label" for="meta-copyright"
+                 title="Navnet på rettighetshaveren. CC BY-NC 4.0-lisens (fri ikke-kommersiell bruk med navngivelse) legges automatisk til i GPX-fila.">
+            Copyright <span class="muted">(valgfri)</span></label>
+          <input type="text" id="meta-copyright" placeholder="F.eks. ditt navn" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label" for="meta-keywords">Nøkkelord <span class="muted">(valgfri)</span></label>
+          <input type="text" id="meta-keywords" placeholder="F.eks. «terrengløp, Meråker»" autocomplete="off">
+        </div>
+      </div>
+      <div id="meta-start-row" class="hidden">
+        <label class="field-label" for="meta-start">
+          Starttidspunkt for første punkt <span class="muted">(valgfri — resten av tidene flyttes tilsvarende)</span>
+        </label>
+        <input type="datetime-local" id="meta-start" step="1">
+      </div>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">OK</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog for publisering av løypevisning -->
+  <dialog id="publish-dialog">
+    <form method="dialog">
+      <h3>Publiser løypevisning</h3>
+      <label class="field-label" for="publish-target">Publiseringsmål</label>
+      <select id="publish-target"></select>
+      <label class="field-label" for="publish-slug">
+        Adressenavn <span class="muted">(blir del av nettadressen — gjenbruk samme navn for å oppdatere en publisert løype)</span>
+      </label>
+      <input type="text" id="publish-slug" placeholder="f.eks. mmc-70k" autocomplete="off">
+      <label class="field-label" for="publish-name">Tittel</label>
+      <input type="text" id="publish-name" autocomplete="off">
+      <label class="field-label" for="publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="publish-desc" rows="2"></textarea>
+      <div id="publish-result" class="publish-result hidden">
+        <p><strong>Publisert!</strong> <a id="publish-url" href="#" target="_blank" rel="noopener"></a></p>
+        <label class="field-label">Lim inn denne snutten på nettsiden (én gang):</label>
+        <textarea id="publish-embed" rows="3" readonly></textarea>
+        <button type="button" id="publish-copy" class="btn btn-small">Kopier snutten</button>
+      </div>
+      <div class="button-row">
+        <button value="ok" id="publish-go" class="btn btn-primary">Publiser</button>
+        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog for gruppenavn i biblioteket -->
+  <dialog id="group-dialog">
+    <form method="dialog">
+      <h3 id="group-dialog-title">Ny gruppe</h3>
+      <label class="field-label" for="group-name">Gruppenavn</label>
+      <input type="text" id="group-name" placeholder="F.eks. «MMC»" autocomplete="off">
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">OK</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog for interessepunkter (PoI / waypoints) -->
+  <dialog id="wpt-dialog">
+    <form method="dialog">
+      <h3 id="wpt-dialog-title">Interessepunkt</h3>
+      <!-- Delte punkter i nærheten av markøren — ett klikk gjenbruker dem -->
+      <div id="wpt-reuse" class="wpt-reuse hidden">
+        <span class="field-label">Gjenbruk delt punkt i nærheten</span>
+        <div id="wpt-reuse-list" class="wpt-reuse-list"></div>
+        <span class="muted wpt-reuse-hint">… eller lag et nytt punkt under:</span>
+      </div>
+      <!-- Vises når punktet som redigeres er delt -->
+      <p id="wpt-shared-note" class="wpt-shared-note hidden">
+        🔗 Dette er et <strong>delt punkt</strong> fra punktbiblioteket —
+        endringer (også flytting) gjelder alle løyper som bruker det.
+      </p>
+      <label class="field-label" for="wpt-name">Navn</label>
+      <input type="text" id="wpt-name" placeholder="F.eks. «Drikkestasjon Sulsjøan»" autocomplete="off">
+      <label class="field-label" for="wpt-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="wpt-desc" rows="2" placeholder="F.eks. «Vann og saft. Betjent fra kl. 10.»"></textarea>
+      <label class="field-label">Symboler <span class="muted">(velg ett eller flere)</span></label>
+      <div id="wpt-symbols" class="wpt-symbols"></div>
+      <label class="wpt-vis-rad">
+        <input type="checkbox" id="wpt-vis-ikon" checked>
+        Vis ikonene på kartet <span class="muted">(punktet markeres uansett med en liten prikk)</span>
+      </label>
+      <label class="wpt-vis-rad"
+             title="Delte punkter ligger i punktbiblioteket og kan gjenbrukes i andre løyper. Endringer du gjør i én løype gjelder da alle løypene som bruker punktet.">
+        <input type="checkbox" id="wpt-del-bib">
+        Delt punkt <span class="muted">(gjenbrukes på tvers av løyper — endringer gjelder alle)</span>
+      </label>
+      <label class="wpt-vis-rad hidden" id="wpt-snap-rad"
+             title="Punktet ligger et stykke unna løypa. Med «snap» tegnes det på nærmeste løypepunkt i denne løypa; uten vises det på de eksakte koordinatene fra punktbiblioteket.">
+        <input type="checkbox" id="wpt-snap">
+        Fest til løypa (snap) <span class="muted" id="wpt-snap-avstand"></span>
+      </label>
+      <div id="wpt-stats" class="wpt-stats"></div>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">Lagre</button>
+        <button value="move" id="wpt-move-btn" class="btn hidden"
+                title="Flytt punktet til der markøren på sporet står nå">Flytt til markøren</button>
+        <button value="delete" id="wpt-delete-btn" class="btn btn-danger-subtle hidden">Slett</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Velg delte punkter: gjenbruk mange punkter langs løypa i ett jafs -->
+  <dialog id="wpt-bulk-dialog">
+    <form method="dialog">
+      <h3>🔗 Velg delte punkter</h3>
+      <p class="muted">
+        Delte punkter fra punktbiblioteket som ligger innenfor 300 m fra
+        løypa. Kryss av dem du vil bruke i denne løypa. For punkter som
+        ikke ligger direkte på løypa velger du om de skal festes til
+        nærmeste løypepunkt («snap») eller vises på kartet med de eksakte
+        koordinatene fra punktbiblioteket.
+      </p>
+      <label class="wpt-vis-rad" id="wpt-bulk-alle-rad">
+        <input type="checkbox" id="wpt-bulk-alle" checked> Velg alle
+      </label>
+      <div id="wpt-bulk-list" class="wpt-bulk-list"></div>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary" id="wpt-bulk-ok">Legg til valgte</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Punktbiblioteket: oversikt over delte interessepunkter -->
+  <dialog id="wpt-lib-dialog">
+    <form method="dialog">
+      <h3>🔗 Punktbibliotek</h3>
+      <p class="muted">
+        Delte interessepunkter som kan gjenbrukes på tvers av løyper.
+        Punktene redigeres ved å åpne en løype som bruker dem — endringene
+        gjelder da alle. Sletting her lar løypene beholde lokale kopier.
+      </p>
+      <div id="wpt-lib-list" class="wpt-lib-list">
+        <p class="muted">Laster …</p>
+      </div>
+      <div class="button-row">
+        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Små beskjeder nede i hjørnet ("lagret!", feilmeldinger osv.) -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="felles.js?v=19"></script>
+  <script src="app.js?v=19"></script>
+</body>
+</html>

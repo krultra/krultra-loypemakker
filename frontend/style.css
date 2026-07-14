@@ -1,0 +1,637 @@
+/* ============================================================
+   KrUltra Løypemakker (KUL) — utseende
+   Fargevariabler samlet øverst, så hele fargepaletten kan
+   justeres på ett sted.
+   ============================================================ */
+
+:root {
+  --farge-primær: #2563eb;      /* hovedblå — knapper og segment A */
+  --farge-primær-mørk: #1d4ed8;
+  --farge-b: #dc2626;           /* rød — segment B / sluttmerke */
+  --farge-utsnitt: #16a34a;     /* grønn — valgt utsnitt / startmerke */
+  --farge-sammenslått: #7c3aed; /* lilla — sammenslått resultat */
+  --bakgrunn: #f1f5f9;
+  --flate: #ffffff;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+  --skygge: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+}
+
+body { display: flex; flex-direction: column; }
+
+/* ---------- Topplinje ---------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  background: #0f172a;
+  color: #f8fafc;
+  flex-shrink: 0;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon { font-size: 22px; }
+.brand-logo { display: block; border-radius: 50%; }
+.brand h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: 0.2px; }
+
+.topbar-right { display: flex; align-items: center; gap: 18px; }
+
+.toggles { display: flex; gap: 6px; padding-right: 18px; border-right: 1px solid rgba(255,255,255,0.15); }
+
+/* Segmentkontroll for visningsmodus (bare kart / delt / bare profil) */
+.viewmode {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  margin-right: 18px;
+}
+.viewmode .tab { padding: 6px 12px; }
+
+.tabs { display: flex; gap: 6px; }
+
+.tab {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.tab:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
+.tab.active { background: var(--farge-primær); color: #fff; }
+
+/* ---------- Hovedoppsett ---------- */
+
+.layout {
+  display: flex;
+  flex: 1;
+  min-height: 0; /* nødvendig for at kartet skal kunne krympe riktig */
+}
+
+.sidebar {
+  width: 300px;
+  flex-shrink: 0;
+  background: var(--flate);
+  border-right: 1px solid var(--kant);
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* ---------- Varsel om utdatert server ---------- */
+
+.stale-banner {
+  background: #b91c1c;
+  color: #fff;
+  padding: 10px 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+.stale-banner code {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ---------- Kartverktøylinje ---------- */
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 6px 20px;
+  background: var(--flate);
+  border-bottom: 1px solid var(--kant);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.map-toolbar select {
+  font-family: inherit; font-size: 13px;
+  padding: 3px 6px; border: 1px solid var(--kant); border-radius: 6px;
+}
+
+.toolbar-divider { width: 1px; height: 20px; background: var(--kant); }
+
+/* Markør for interessepunkter (PoI): liten sirkel på selve punktet,
+   symbolet står ved siden av (forskjøvet bort fra løypetraseen i JS) */
+.wpt-ikon { background: transparent; border: none; }
+
+/* Ramma som samler alle symbolene for ett interessepunkt. Kan dras rundt
+   på kartet; størrelse/padding settes i JS (skalerer med zoom). */
+.wpt-frame {
+  display: flex;
+  flex-direction: column;   /* én eller flere rader med ikoner */
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #64748b;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+  cursor: grab;
+  box-sizing: border-box;
+}
+.wpt-frame:active { cursor: grabbing; }
+.wpt-rad { display: flex; align-items: center; justify-content: center; }
+.wpt-ico {
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+}
+
+/* Symbolvelger i waypoint-dialogen */
+.wpt-symbols {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.wpt-symbols label {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+.wpt-symbols label:hover { background: #f8fafc; }
+.wpt-symbols label.valgt { border-color: var(--farge-primær); background: #eff6ff; }
+
+.wpt-vis-rad {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; margin-bottom: 12px; cursor: pointer;
+}
+
+.wpt-stats {
+  font-size: 13px;
+  color: var(--tekst);
+  background: #f8fafc;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  line-height: 1.7;
+}
+.wpt-stats .stat-rad { display: flex; justify-content: space-between; gap: 12px; }
+.wpt-stats .stat-navn { color: var(--tekst-dus); }
+.wpt-stats .stat-verdi { font-variant-numeric: tabular-nums; }
+
+/* ---- Punktbiblioteket: gjenbruk av delte interessepunkter ---- */
+
+/* Verktøyets versjonsnummer i topplinja */
+.app-version { font-size: 12px; color: rgba(255, 255, 255, 0.55); }
+
+.wpt-lib-section { padding: 10px 14px; border-top: 1px solid var(--kant); }
+
+/* Forslagsliste i punkt-dialogen: delte punkter nær markøren */
+.wpt-reuse { margin-bottom: 12px; }
+.wpt-reuse-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.wpt-reuse-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px;
+  font-size: 13px; font-family: inherit; text-align: left;
+  background: #f0f7ff;
+  border: 1px solid #bcd7f5;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.wpt-reuse-item:hover { background: #e1efff; }
+.wpt-reuse-navn { font-weight: 600; flex: 1; }
+.wpt-reuse-sym { display: inline-flex; align-items: center; gap: 2px; }
+.wpt-reuse-hint { display: block; font-size: 12px; }
+
+.wpt-shared-note {
+  font-size: 13px;
+  background: #f0f7ff;
+  border: 1px solid #bcd7f5;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 0 0 12px;
+}
+
+/* «Velg delte punkter»-dialogen */
+#wpt-bulk-dialog { width: min(600px, 92vw); }
+.wpt-bulk-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 50vh; overflow-y: auto;
+  margin-bottom: 14px;
+}
+.wpt-bulk-rad {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 7px 10px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.wpt-bulk-hoved { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.wpt-bulk-snapvalg {
+  display: flex; gap: 16px;
+  margin-left: 26px;
+  font-size: 12px;
+  color: var(--tekst-dus);
+}
+.wpt-bulk-snapvalg label {
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+}
+
+/* Punktbibliotek-dialogen */
+#wpt-lib-dialog { width: min(560px, 92vw); }
+.wpt-lib-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 50vh; overflow-y: auto;
+  margin-bottom: 14px;
+}
+.wpt-lib-rad {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.wpt-lib-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.wpt-lib-navn { font-weight: 600; }
+.wpt-lib-bruk { font-size: 12px; }
+
+/* Mens man drar opp eksport-utsnitt på kartet */
+#map.velger-utsnitt { cursor: crosshair !important; }
+
+dialog select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  background: var(--flate);
+}
+
+/* ---------- Kart ---------- */
+
+#map {
+  flex: 1;
+  min-height: 200px;
+  background: #fafcff;
+  position: relative;
+}
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--tekst-dus);
+  font-size: 15px;
+  line-height: 1.7;
+  z-index: 500;
+  pointer-events: none;
+}
+
+/* ---------- Segmentbibliotek ---------- */
+
+.library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.library h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--tekst-dus);
+  margin: 0;
+}
+
+.library-hint { font-size: 11px; margin: 0 0 10px; }
+
+/* Gruppeoverskrift i biblioteket */
+.group-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: #eef2f7;
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  cursor: grab;
+  user-select: none;
+}
+.group-item .group-chevron {
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--tekst-dus);
+  width: 14px;
+  text-align: center;
+}
+.group-item .group-name { font-weight: 600; font-size: 13px; flex: 1; cursor: pointer; }
+.group-item .group-count { font-size: 11px; color: var(--tekst-dus); }
+.group-item .btn { padding: 2px 7px; font-size: 11px; }
+
+/* Segmenter som ligger i en gruppe rykkes inn */
+.segment-item.i-gruppe { margin-left: 16px; }
+
+/* Dra-og-slipp-tilstander */
+.segment-item, .group-item { position: relative; }
+.dragging { opacity: 0.4; }
+.dnd-over-top::before, .dnd-over-bottom::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;
+  background: var(--farge-primær);
+  border-radius: 2px;
+  z-index: 5;
+}
+.dnd-over-top::before { top: -5px; }
+.dnd-over-bottom::after { bottom: -5px; }
+.dnd-into { outline: 2px solid var(--farge-primær); outline-offset: -1px; }
+
+#segment-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.segment-item {
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  background: var(--flate);
+  box-shadow: var(--skygge);
+}
+
+.segment-item .seg-name { font-weight: 600; font-size: 14px; word-break: break-word; }
+.segment-item .seg-meta { font-size: 12px; color: var(--tekst-dus); margin-top: 2px; }
+.segment-item .seg-desc {
+  font-size: 12px; color: var(--tekst-dus); margin-top: 4px;
+  overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.segment-item .seg-buttons { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ---------- Knapper ---------- */
+
+.btn {
+  padding: 8px 14px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  background: var(--flate);
+  color: var(--tekst);
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: #f8fafc; border-color: #cbd5e1; }
+.btn:active:not(:disabled) { transform: scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn-primary { background: var(--farge-primær); border-color: var(--farge-primær); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--farge-primær-mørk); border-color: var(--farge-primær-mørk); }
+
+.btn-green { border-color: var(--farge-utsnitt); color: var(--farge-utsnitt); }
+.btn-green:hover:not(:disabled) { background: #f0fdf4; border-color: var(--farge-utsnitt); }
+
+.btn-red { border-color: var(--farge-b); color: var(--farge-b); }
+.btn-red:hover:not(:disabled) { background: #fef2f2; border-color: var(--farge-b); }
+
+.btn-icon { padding: 8px 12px; font-size: 12px; }
+
+.btn-block { display: block; width: 100%; text-align: center; }
+/* Importer-knappen står rett under «Last inn GPX-fil» — litt luft imellom */
+#loype-load-label { margin-top: 6px; }
+
+.btn-small { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
+
+.btn-danger-subtle { color: var(--farge-b); }
+
+/* ---------- Kontrollpanel ---------- */
+
+.panel {
+  background: var(--flate);
+  border-top: 1px solid var(--kant);
+  padding: 14px 20px;
+  flex-shrink: 0;
+}
+
+.panel-hint { margin: 4px 0; }
+
+.track-info { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.track-info strong { font-size: 15px; }
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.slider-row input[type="range"] { flex: 1; accent-color: var(--farge-primær); min-width: 80px; }
+
+.pos-label {
+  font-size: 13px;
+  color: var(--tekst-dus);
+  font-variant-numeric: tabular-nums;
+  min-width: 200px;
+}
+
+.button-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.button-row.actions { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--kant); }
+
+.selection-label { font-size: 13px; color: var(--farge-utsnitt); font-weight: 600; }
+
+.muted { color: var(--tekst-dus); font-weight: normal; font-size: 13px; }
+
+.hidden { display: none !important; }
+
+/* ---------- Slå sammen-panelet ---------- */
+
+.merge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.merge-card {
+  border: 1px solid var(--kant);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.merge-card h3 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+
+.merge-hint { margin: 4px 0; }
+
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dot-a { background: var(--farge-primær); }
+.dot-b { background: var(--farge-b); }
+
+/* ---------- Høydeprofil ---------- */
+
+.profile-section {
+  background: var(--flate);
+  border-top: 1px solid var(--kant);
+  flex-shrink: 0;
+}
+
+/* Visningsmodus «Bare profil»: skjul kartet og la profilen fylle flaten */
+.content.modus-profil #map,
+.content.modus-profil .map-toolbar { display: none; }
+.content.modus-profil .profile-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.content.modus-profil .profile-canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.profile-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--kant);
+  font-size: 13px;
+}
+
+.profile-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--tekst-dus);
+}
+.profile-control input[type="range"] { width: 90px; accent-color: var(--farge-primær); }
+.profile-control input[type="color"] {
+  width: 30px; height: 24px; padding: 1px;
+  border: 1px solid var(--kant); border-radius: 6px;
+  background: var(--flate); cursor: pointer;
+}
+
+.pos-label-short { font-variant-numeric: tabular-nums; min-width: 30px; }
+
+.profile-canvas-wrap { padding: 6px 20px 10px; position: relative; }
+#profile-canvas { display: block; width: 100%; }
+#profile-empty { text-align: center; padding: 14px 0; margin: 0; }
+
+/* ---------- Navnedialog ---------- */
+
+dialog {
+  border: none;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.25);
+  padding: 20px 24px;
+  width: min(420px, 90vw);
+}
+dialog::backdrop { background: rgba(15, 23, 42, 0.4); }
+
+dialog h3 { margin: 0 0 12px; font-size: 16px; }
+
+dialog input[type="text"],
+dialog textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  resize: vertical;
+}
+dialog input[type="text"]:focus,
+dialog textarea:focus { outline: 2px solid var(--farge-primær); border-color: transparent; }
+
+.field-label { display: block; font-size: 13px; color: var(--tekst-dus); margin-bottom: 4px; }
+
+.field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+dialog input[type="datetime-local"] {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+/* ---------- Publiseringsdialogen ---------- */
+
+.publish-result {
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+}
+.publish-result p { margin: 0 0 8px; font-size: 14px; }
+.publish-result textarea {
+  font-family: Consolas, monospace;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+/* ---------- Toast (små beskjeder) ---------- */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 14px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.25);
+  z-index: 2000;
+  max-width: 380px;
+  animation: toast-inn 0.2s ease-out;
+}
+.toast.success { background: #16a34a; }
+.toast.error { background: #dc2626; }
+
+@keyframes toast-inn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Smale skjermer ---------- */
+
+@media (max-width: 900px) {
+  .layout { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--kant); max-height: 40vh; }
+  .merge-grid { grid-template-columns: 1fr; }
+  .topbar { flex-wrap: wrap; }
+}

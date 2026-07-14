@@ -1,0 +1,182 @@
+/* ============================================================
+   Innbyggbar løypevisning — utseende.
+   Siden lever typisk inne i en iframe på en nettside, så layouten
+   fyller hele viewporten: topptekst, kart (fleksibel), infopanel,
+   høydeprofil og en diskret bunnlinje.
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  /* Aldri horisontal scrollbar — siden lever typisk i en iframe */
+  overflow-x: hidden;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+body { display: flex; flex-direction: column; }
+
+.skjult { display: none !important; }
+
+/* ---------- Topptekst (med knappene, utenfor kartet) ---------- */
+
+#topp {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+#topp h1 { margin: 0; font-size: 18px; }
+#topp p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
+#nokkeltall { font-variant-numeric: tabular-nums; }
+
+#topp-knapper { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ---------- Kart ---------- */
+
+#map {
+  flex: 1;
+  min-height: 220px;
+  position: relative;
+  background: #f8fafc;
+}
+
+#lag-knapp, #fullskjerm-knapp {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+#lag-knapp:hover, #fullskjerm-knapp:hover { background: #f1f5f9; }
+
+/* Hint på berøringsskjermer: én finger scroller siden rundt iframen */
+#kart-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  color: #ffffff;
+  font-size: 15px;
+  text-align: center;
+  padding: 20px;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.4s;
+}
+#kart-hint.usynlig { opacity: 0; }
+
+/* Markør for interessepunkter (samme design som i verktøyet) */
+.wpt-ikon { background: transparent; border: none; }
+.wpt-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #64748b;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.35);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.wpt-rad { display: flex; align-items: center; justify-content: center; }
+.wpt-ico { display: flex; align-items: center; justify-content: center; line-height: 1; }
+
+/* Popup-innhold for interessepunkter */
+.wpt-popup h3 { margin: 0 0 4px; font-size: 14px; }
+.wpt-popup-typer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #334155;
+}
+.wpt-popup-type { display: inline-flex; align-items: center; gap: 4px; }
+.wpt-popup-type svg { flex-shrink: 0; }
+.wpt-popup p { margin: 0 0 6px; font-size: 12px; color: #475569; }
+.wpt-popup table { font-size: 12px; border-collapse: collapse; }
+.wpt-popup td { padding: 1px 0; }
+.wpt-popup td:first-child { color: #64748b; padding-right: 10px; }
+.wpt-popup td:last-child { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* ---------- Slider + infopanel ---------- */
+
+#kontroll {
+  flex-shrink: 0;
+  padding: 8px 16px 4px;
+  border-top: 1px solid #e2e8f0;
+}
+
+#slider { width: 100%; accent-color: #2563eb; margin: 0 0 6px; }
+
+#info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  font-size: 13px;
+  padding-bottom: 4px;
+}
+.info-celle { display: flex; flex-direction: column; min-width: 90px; }
+.info-navn { font-size: 11px; color: #64748b; }
+.info-verdi { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* ---------- Høydeprofil ---------- */
+
+/* På smale skjermer tegnes profilen bredere enn stripa og scroller
+   horisontalt INNE i den (uten å gi hele siden en scrollbar) */
+#profil-wrap {
+  flex-shrink: 0;
+  padding: 2px 16px 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#profil { display: block; width: 100%; cursor: crosshair; touch-action: none; }
+
+/* ---------- Bunnlinje ---------- */
+
+#bunn {
+  flex-shrink: 0;
+  padding: 3px 16px 6px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+#bunn a { color: inherit; }
+
+/* ---------- Lastemelding ---------- */
+
+#laster {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 14px;
+  z-index: 5000;
+}
+
+/* ---------- Smale skjermer (mobil/iframe i smal kolonne) ---------- */
+
+@media (max-width: 560px) {
+  #topp h1 { font-size: 15px; }
+  #topp { flex-wrap: wrap; }
+  #lag-knapp, #fullskjerm-knapp { padding: 5px 9px; font-size: 12px; }
+  #info { gap: 2px 14px; font-size: 12px; }
+  .info-celle { min-width: 72px; }
+  #map { min-height: 180px; }
+}
