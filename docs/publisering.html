@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Publisere interaktive løypevisninger på nettsidene — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="publisere-interaktive-lypevisninger-pa-nettsidene">Publisere interaktive løypevisninger på nettsidene</h1>
+<p>KrUltra Løypemakker kan publisere en <strong>interaktiv løypevisning</strong> (kart +
+høydeprofil + klikkbare punkter + markør med distanse-/høydedata) som
+bygges inn på nettsider med en liten iframe-snutt. Republiserer du en
+løype med samme adressenavn, oppdateres nettsidene automatisk.</p>
+<h2 id="slik-virker-det">Slik virker det</h2>
+<pre><code>Løypemakker (PC)                Raspberry Pi                nettsidene
+«Publiser»-knapp  ──SFTP──►  /var/www/loyper/  ◄──iframe──  mmctrail.no (Drupal)
+                              ├─ assets/v1/                  krultra.no (Node/Strapi)
+                              └─ mmc-70k/
+                                  ├─ index.html   (liten, endres aldri)
+                                  └─ course.json  (løypedataene — overskrives
+                                                    ved republisering)
+</code></pre>
+<p>Kartfliser hentes rett fra Kartverket/Esri i besøkerens nettleser — det
+trengs ingen serverprogramvare på Pi-en, bare statiske filer.</p>
+<h2 id="engangsoppsett">Engangsoppsett</h2>
+<h3 id="1-pa-raspberry-pi-en">1. På Raspberry Pi-en</h3>
+<p>Lag mappa som skal inneholde løypene, og gi SFTP-brukeren din skrivetilgang:</p>
+<pre><code class="language-bash">sudo mkdir -p /var/www/loyper
+sudo chown &lt;din-bruker&gt;:&lt;din-bruker&gt; /var/www/loyper
+</code></pre>
+<p>Pek webserveren på mappa. <strong>Med nginx</strong> (anbefalt — legg i server-blokken
+for f.eks. <code>loyper.krultra.no</code>, med HTTPS via certbot som ellers):</p>
+<pre><code class="language-nginx">server {
+    server_name loyper.krultra.no;
+    root /var/www/loyper;
+
+    # course.json skal alltid revalideres, så republiseringer vises straks
+    location ~ \.json$ { add_header Cache-Control &quot;no-cache&quot;; }
+    # Viewer-assets er versjonerte og kan caches lenge
+    location /assets/ { add_header Cache-Control &quot;public, max-age=604800&quot;; }
+}
+</code></pre>
+<p><strong>Alternativ uten nginx</strong> (hvis Node-frontenden er eneste webserver):
+legg til en statisk rute i Node-appen, f.eks. med Express:
+<code>app.use('/loyper', express.static('/var/www/loyper'))</code> — da blir adressen
+<code>https://krultra.no/loyper/&lt;slug&gt;/</code>.</p>
+<blockquote>
+<p>HTTPS er påkrevd: en HTTPS-side (som mmctrail.no) kan ikke bygge inn en
+iframe som serveres over ren HTTP.</p>
+</blockquote>
+<h3 id="2-pa-pc-en-datapubliseringjson">2. På PC-en: <code>data/publisering.json</code></h3>
+<p>Fila opprettes med en mal første gang du åpner publiseringsdialogen (eller
+starter serveren og kaller publisering). Fyll inn:</p>
+<pre><code class="language-json">{
+  &quot;mål&quot;: [
+    { &quot;navn&quot;: &quot;lokal-test&quot;, &quot;type&quot;: &quot;mappe&quot;,
+      &quot;mappe&quot;: &quot;data/publisert&quot;, &quot;baseUrl&quot;: &quot;&quot; },
+    { &quot;navn&quot;: &quot;min-server&quot;, &quot;type&quot;: &quot;sftp&quot;,
+      &quot;host&quot;: &quot;loyper.eksempel.no&quot;, &quot;port&quot;: 22, &quot;bruker&quot;: &quot;brukernavn&quot;,
+      &quot;nøkkelfil&quot;: &quot;C:/Users/&lt;ditt-brukernavn&gt;/.ssh/id_ed25519&quot;,
+      &quot;fjernmappe&quot;: &quot;/var/www/loyper&quot;,
+      &quot;baseUrl&quot;: &quot;https://loyper.eksempel.no&quot; }
+  ]
+}
+</code></pre>
+<ul>
+<li>Bruk helst <code>nøkkelfil</code> (SSH-nøkkel) i stedet for <code>passord</code>.</li>
+<li><strong>Flere servere i én operasjon (failover):</strong> lag et mål med
+  <code>"type": "gruppe"</code> og lista <code>"medlemmer"</code> med navnene på målene som
+  skal få samme innhold, f.eks. prod- og failover-Pi:</li>
+</ul>
+<p><code>json
+  { "navn": "krultra (prod + failover)", "type": "gruppe",
+    "medlemmer": ["krultra-prod (pi-amk)", "krultra-failover (pi-tok)"],
+    "baseUrl": "https://loyper.krultra.no" }</code></p>
+<p>Velg gruppa i publiseringsdialogen, så publiseres det til alle
+  medlemmene. Feiler ett av målene (f.eks. failover-Pi-en er avslått),
+  fullføres de andre, og dialogen viser en advarsel om hvilket mål som
+  feilet — publiser på nytt når serveren er oppe igjen.
+- <code>lokal-test</code>-målet skriver til en mappe på PC-en, og verktøyet serverer
+  den selv på <code>http://127.0.0.1:8000/publisert/&lt;slug&gt;/</code> — klikk lenken i
+  publiseringsdialogen for å se resultatet (verktøyet må kjøre).
+  <strong>Viktig:</strong> ikke åpne <code>index.html</code> direkte fra mappa — nettlesere nekter
+  å laste løypedataene fra <code>file://</code>-sider, så da vises ingenting.
+  Visningen må alltid nås via en http-adresse.
+- Fila ligger kun lokalt på din PC.</p>
+<blockquote>
+<p><strong>Om SSH-vertsnøkler:</strong> verktøyet stoler automatisk på serverens
+vertsnøkkel første gang det kobler til (praktisk for en Pi på ditt eget
+hjemmenett). Publiserer du over internett til en server du ikke
+kontrollerer fysisk, bør du verifisere vertsnøkkelen på forhånd — koble
+til med <code>ssh &lt;bruker&gt;@&lt;host&gt;</code> én gang fra samme PC og bekreft
+fingeravtrykket, så er nøkkelen kjent når verktøyet kobler til.</p>
+</blockquote>
+<h3 id="3-pa-nettsidene-en-gang-per-lypeside">3. På nettsidene (én gang per løypeside)</h3>
+<p>Publiseringsdialogen gir deg en ferdig snutt, f.eks.:</p>
+<pre><code class="language-html">&lt;iframe src=&quot;https://loyper.krultra.no/mmc-70k/&quot;
+        style=&quot;width:100%;height:640px;height:min(85vh,820px);border:0&quot;
+        loading=&quot;lazy&quot; title=&quot;Løypekart MMC 70K&quot;&gt;&lt;/iframe&gt;
+</code></pre>
+<p>Høyden tilpasser seg skjermen (opptil 820 px på store, 85 % av vinduet
+på små; 640 px-linja er reserve for eldre nettlesere). Innebygde
+visninger har egen fullskjerm-knapp og mobilvennlig navigasjon (én
+finger scroller siden, to fingre flytter kartet).</p>
+<ul>
+<li><strong>Drupal (mmctrail.no):</strong> rediger siden, bytt tekstformat til
+  <em>Full HTML</em>, og lim inn snutten der kartet skal stå. (Formatet
+  «Basic HTML» stripper iframes.)</li>
+<li><strong>krultra.no (Node/Strapi):</strong> lim snutten inn i rikteksfeltet i Strapi
+  (må tillate iframe), eller legg den i en komponent i frontenden.</li>
+</ul>
+<p>Juster gjerne <code>height</code> etter smak (640 px passer de fleste).</p>
+<h2 id="daglig-bruk">Daglig bruk</h2>
+<ol>
+<li>Åpne segmentet i løypeverktøyet, gjør endringer (utsnitt, veipunkter,
+   farger — alt du ser er det som publiseres).</li>
+<li>Klikk <strong>«🌐 Publiser løypevisning…»</strong>, velg mål, behold samme
+   <strong>adressenavn</strong> som sist (f.eks. <code>mmc-70k</code>) og klikk Publiser.</li>
+<li>Ferdig — nettsidene viser den nye versjonen ved neste sidelast.
+   (Bruk et nytt adressenavn hvis det skal bli en ny, separat løypeside.)</li>
+</ol>
+<blockquote>
+<p>Når selve visningskoden er forbedret (ny «asset-versjon»), tas den i
+bruk ved første republisering av hver løype — publiser løypa på nytt
+med samme adressenavn, så oppgraderes den automatisk.</p>
+</blockquote>
+<h2 id="feilsking">Feilsøking</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Løsning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«SFTP: feil brukernavn/passord/nøkkel»</td>
+<td>Sjekk <code>data/publisering.json</code>; test påloggingen med WinSCP/<code>ssh</code></td>
+</tr>
+<tr>
+<td>«SFTP: fikk ikke kontakt»</td>
+<td>Er Pi-en på nett? Riktig host/port? Brannmur?</td>
+</tr>
+<tr>
+<td>Iframen er tom på nettsiden</td>
+<td>Åpne iframe-adressen direkte i nettleseren — virker den der, er det tekstformatet i CMS-et som stripper iframes</td>
+</tr>
+<tr>
+<td>Gammel versjon vises</td>
+<td>Hard-oppdater (Ctrl+F5); sjekk at nginx har <code>no-cache</code> på .json (se over)</td>
+</tr>
+<tr>
+<td>Kartet mangler, profilen vises</td>
+<td>Kartverkets flisetjeneste er nede eller blokkert — prøv igjen senere</td>
+</tr>
+</tbody>
+</table>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/publisering.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

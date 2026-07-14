@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versjon 13 — publisering av interaktive løypevisninger — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="versjon-13-publisering-av-interaktive-lypevisninger">Versjon 13 — publisering av interaktive løypevisninger</h1>
+<p>Bygger på <a href="versjon-12.html">versjon-12.md</a>. Implementert 10. juli 2026.
+Se <a href="publisering.html">publisering.md</a> for oppsett og daglig bruk.</p>
+<h2 id="hva-som-er-nytt">Hva som er nytt</h2>
+<p>Verktøyet kan nå publisere en <strong>innbyggbar, interaktiv løypevisning</strong>
+(for nettsidene til MMC og krultra): kart + høydeprofil, klikkbare
+PoI-er med navn/beskrivelse/statistikk, og en markør som kan føres
+gjennom løypa (slider, dra på profilen, klikk på ruta) med distanse- og
+høydemeterdata — synkronisert mellom kart og profil. Avklart arkitektur:
+alt hostes på Raspberry Pi-en; begge nettstedene bygger inn med iframe.</p>
+<h2 id="delene">Delene</h2>
+<ol>
+<li>
+<p><strong><code>frontend/felles.js</code> (ny)</strong> — de rene funksjonene og symboltabellen
+   er trukket ut av <code>app.js</code> (geometri, utjevning, høydemeter, fintSteg,
+   WPT_SYMBOLER m.m.) og deles mellom verktøyet og vieweren. <code>app.js</code>
+   har tynne skall der API-et var knyttet til verktøyets tilstand
+   (<code>høydemeter</code> → <code>beregnHøydemeter(punkter, utjevning, vektform)</code>).</p>
+</li>
+<li>
+<p><strong><code>viewer/</code> (ny)</strong> — den innbyggbare visningen: <code>index.html</code> (mal der
+   <code>__V__</code> byttes med asset-versjonen ved publisering), <code>viewer.js</code>,
+   <code>viewer.css</code>. Leser <code>./course.json</code> med <code>cache: 'no-cache'</code> så
+   republiseringer slår gjennom umiddelbart. Gjenbruker felles.js for
+   identiske beregninger/symboler som i verktøyet. Akkumulerte
+   høydemeter per punkt precomputeres så markør-statistikken er
+   øyeblikkelig under draing.</p>
+</li>
+<li>
+<p><strong><code>backend/publisering.py</code> (ny)</strong>
+   - <code>forenkle_punkter</code>: Ramer–Douglas–Peucker (iterativ), toleranse 3 m
+     → 16 000 punkter blir typisk 1 500–3 000.
+   - Veipunktenes ankerpunkter tvinges inn i den forenklede lista —
+     RDP fjerner punkter langs rette strekk, og uten dette kunne et
+     veipunkt bli forankret flere hundre meter feil langs løypa
+     (avdekket av testen <code>test_struktur_og_idx_remapping</code>).
+   - <code>bygg_course_json</code>: kompakt JSON (<code>[[lat,lon,ele],…]</code>, avrundet)
+     med metadata, stilvalg (rute + profil) og remappede veipunkter.
+   - Publiseringsmål i <code>data/publisering.json</code>: type <code>mappe</code> (lokal
+     test/manuell opplasting) eller <code>sftp</code> (paramiko; passord eller
+     SSH-nøkkel). Delte viewer-assets lastes opp til <code>assets/v&lt;N&gt;/</code> kun
+     når versjonen mangler; per løype skrives bare <code>index.html</code> +
+     <code>course.json</code>.
+   - <code>ASSET_VERSJON</code> bumpes når viewer-koden endres.</p>
+</li>
+<li>
+<p><strong>API</strong>: <code>GET /api/publish/targets</code> (mål uten påloggingsdetaljer),
+   <code>POST /api/publish</code> → <code>{url, iframe}</code>. <code>BACKEND_VERSJON</code> → 10.</p>
+</li>
+<li>
+<p><strong>Verktøyet</strong>: ny knapp «🌐 Publiser løypevisning…» i redigerings-
+   visningen. Dialog med mål, adressenavn (slug, foreslås fra navnet),
+   tittel og beskrivelse; bruker gjeldende punkter (utsnitt hvis merket),
+   veipunkter og alle stilvalg. Resultatboks med offentlig URL og
+   iframe-snutt med kopieringsknapp. Dialogen står åpen etter publisering
+   (egen submit-håndtering, ikke ventPåDialog).</p>
+</li>
+<li>
+<p><strong><code>requirements.txt</code></strong>: + paramiko.</p>
+</li>
+</ol>
+<h2 id="oppflging-etter-brukertest-lokal-test-ma-ga-over-http">Oppfølging etter brukertest: lokal-test må gå over HTTP</h2>
+<p>Torgeir åpnet den lokalt publiserte visningen som filsti — da viser
+nettleseren bare katalogen, og selv <code>index.html</code> ville feilet fordi
+nettlesere blokkerer <code>fetch()</code> av <code>course.json</code> fra <code>file://</code>-sider.
+Fikset ved at <strong>verktøyet selv serverer den publiserte mappa</strong> på
+<code>/publisert/&lt;slug&gt;/</code> (<code>NoCacheStaticFiles</code>-mount i <code>backend/main.py</code>):</p>
+<ul>
+<li>lokal-test-målets <code>baseUrl</code> er nå <code>http://127.0.0.1:8000/publisert</code>
+  (oppdatert både i malen og i eksisterende <code>data/publisering.json</code>),
+  så lenken og iframe-snutten fra publiseringsdialogen faktisk virker.</li>
+<li><code>data/publisert/embed-test.html</code> peker på http-adressen og forklarer
+  hvorfor filstier ikke kan brukes.</li>
+<li><code>BACKEND_VERSJON</code>/<code>FORVENTET_BACKEND</code> → 11 (mounten krever omstart —
+  banneret varsler).</li>
+</ul>
+<p>Verifisert: MMC 70K publisert lokalt (16 222 → 1 796 punkter), åpnet via
+<code>/publisert/mmc-70k/</code> med korrekte tall (69,81 km · ↑ 4155 · ↓ 4115),
+kart, 17 punktrammer og profil med indikatorer (skjermbilde).</p>
+<h2 id="tester-teststest_publiseringpy">Tester (tests/test_publisering.py)</h2>
+<p>RDP: endepunkter bevart, rett linje kollapser, formavvik ≤ toleranse,
+avstikkere bevart. course.json: struktur, idx-remapping (&lt; 30 m avvik),
+JSON-serialiserbarhet. Publisering til mappe-mål: filstruktur, <code>__V__</code>
+byttet, republisering overskriver course.json, slug-/målvalidering.</p>
+<h2 id="oppflging-etter-brukertest-2-10-juli-2026">Oppfølging etter brukertest 2 (10. juli 2026)</h2>
+<p><strong>Sletting av veipunkter «forsvant ikke»:</strong> selve slettingen ble lagret
+riktig, men <code>sørgForStartOgMål()</code> gjenopprettet slettede Start/Mål-punkter
+hver gang segmentet ble åpnet. Nå legges Start/Mål bare til automatisk på
+spor som ikke har noen veipunkter fra før — slettinger respekteres.</p>
+<p><strong>Publisert visning (asset-versjon 2):</strong></p>
+<ul>
+<li>PoI-popupen viser nå symbolene med tilhørende tekst («🚩 Sjekkpunkt»,
+  «🍲 Varm mat» …) under navnet.</li>
+<li>Ikonene under punktnavnene i høydeprofilen er fjernet (ble rotete) —
+  de finnes på kartet og i popupene.</li>
+<li>Horisontal scrollbar i iframe fikset: profilcanvasen ble tegnet med
+  beholderens <code>clientWidth</code> (som inkluderer padding) og stakk 32 px ut.
+  Bredden beregnes nå uten padding, og <code>overflow-x: hidden</code> er lagt på
+  html/body som sikkerhetsnett.</li>
+<li>Eksisterende publiserte løyper oppgraderes ved første republisering
+  (index.html peker da på <code>assets/v2/</code>).</li>
+</ul>
+<p><strong>Failover-publisering:</strong> nytt måltype <code>gruppe</code> i <code>data/publisering.json</code>
+publiserer til flere mål i én operasjon (prod- og failover-Pi). Feiler
+noen — men ikke alle — fullføres resten, og dialogen viser en advarsel
+(<code>advarsel</code>-felt i PublishResponse). Konfigfila hadde også en JSON-feil
+(manglende komma) som er rettet; gruppa «krultra (prod + failover)» er
+satt opp med de to Pi-ene som medlemmer.</p>
+<p><strong>Verktøyet:</strong> «Punkter»-valget i profilverktøylinja er delt i
+<strong>Punktnavn</strong> og <strong>Punktikoner</strong> som kan slås av/på hver for seg
+(ingen/navn/ikoner/begge). Uten navn rykker ikonene opp til navnenes
+plass. Gamle lagrede valg arves.</p>
+<p><code>BACKEND_VERSJON</code>/<code>FORVENTET_BACKEND</code> → 12, cache-busting → <code>?v=13</code>.
+Nye tester for gruppepublisering (53 totalt).</p>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/versjon-13.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

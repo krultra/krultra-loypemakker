@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Installasjon — KrUltra Løypemakker (KUL)</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="installasjon-krultra-lypemakker-kul">Installasjon — KrUltra Løypemakker (KUL)</h1>
+<p>Denne guiden er skrevet for deg som <strong>ikke</strong> er så vant med programvareutvikling. Du
+trenger ikke kunne noe om programmering. Følg stegene i rekkefølge, så er
+du i gang på noen få minutter. Veilederen forutsetter at du bruker Windows, men det er fullt mulig å installere på Linux eller Mac også hvis du tilpasser kommandoene til det aktuelle operativsystemet.</p>
+<blockquote>
+<p>Du gjør dette <strong>én gang</strong>. Etterpå starter du verktøyet ved å
+dobbeltklikke <code>KUL.bat</code> (se nederst).</p>
+</blockquote>
+<hr />
+<h2 id="steg-1-installer-python-gratis">Steg 1: Installer Python (gratis)</h2>
+<blockquote>
+<p>Har du Python fra før? Da kan du hoppe over dette steget. Slik sjekker du det:
+Åpne en terminal/kommandolinje (f.eks. ved å trykke windows-tast+R, skriv "cmd" og trykk Enter) og skriv:
+python --version
+Hvis du får en versjon som minst er 3.10 eller høyere (f.eks. 3.14.9), har du det du trenger av Python allerede. Hvis ikke, fortsett med dette steget.</p>
+</blockquote>
+<p>Python er «motoren» verktøyet kjører på. Det er gratis og trygt.</p>
+<ol>
+<li>Gå til <strong><a href="https://www.python.org/downloads/">python.org/downloads</a></strong> i
+   nettleseren.</li>
+<li>Last ned den nyeste versjonen av Python for Windows.</li>
+<li>Åpne fila som lastes ned.</li>
+<li><strong>VIKTIG:</strong> helt nederst i installasjonsvinduet, huk av
+   <strong>«Add python.exe to PATH»</strong> <em>før</em> du klikker videre. Dette er det
+   eneste du må huske på.</li>
+</ol>
+<p><img alt="Installasjonsvinduet med «Add python.exe to PATH» avhuket" src="img/installasjon-python-path.png" /></p>
+<ol start="5">
+<li>Klikk <strong>«Install Now»</strong> og vent til det står «Setup was successful».
+   Lukk vinduet.</li>
+</ol>
+<hr />
+<h2 id="steg-2-last-ned-krultra-lypemakker">Steg 2: Last ned KrUltra Løypemakker</h2>
+<ol>
+<li>Gå til prosjektets side på GitHub: https://github.com/krultra/krultra-loypemakker</li>
+<li>Klikk den grønne knappen <strong>«Code»</strong>, og velg <strong>«Download ZIP»</strong>.</li>
+</ol>
+<p><img alt="Den grønne «Code»-knappen med «Download ZIP»" src="img/installasjon-download-zip.png" /></p>
+<ol start="3">
+<li>Finn ZIP-fila i nedlastingsmappa, <strong>høyreklikk</strong> den og velg
+   <strong>«Pakk ut alle»</strong> (Extract All). Velg en mappe du finner igjen, for
+   eksempel <code>Dokumenter</code>.</li>
+</ol>
+<p>Nå har du en mappe som heter <code>krultra-loypemakker</code> (eller lignende) med
+alle filene i.</p>
+<hr />
+<h2 id="steg-3-start-verktyet">Steg 3: Start verktøyet</h2>
+<ol>
+<li>Åpne mappa du pakket ut.</li>
+<li>Dobbeltklikk fila <strong><code>KUL.bat</code></strong>.</li>
+<li>Et <strong>svart vindu</strong> åpner seg. Første gang tar det et par minutter —
+   verktøyet henter automatisk det det trenger. La vinduet være åpent.</li>
+<li>Nettleseren åpner seg av seg selv på verktøyet. Skjer det ikke, skriv
+   inn <strong><code>http://127.0.0.1:8000</code></strong> i nettleseren.</li>
+</ol>
+<blockquote>
+<p><strong>Ser du en advarsel fra Windows</strong> («Windows beskyttet PC-en din»)?
+Det er fordi fila er ny og ukjent for Windows, ikke fordi noe er galt.
+Klikk <strong>«Mer info»</strong> og deretter <strong>«Kjør likevel»</strong>.</p>
+</blockquote>
+<p>Det var alt! Verktøyet kjører nå lokalt på din egen PC. Ingen data sendes ut på nett — alt bor på maskinen din.</p>
+<hr />
+<h2 id="hver-gang-senere">Hver gang senere</h2>
+<ul>
+<li><strong>Start:</strong> dobbeltklikk <code>KUL.bat</code>. (Nå går det fort — nedlastingen i
+  steg 3 skjer bare første gang.)</li>
+<li><strong>Avslutt:</strong> lukk det svarte vinduet.</li>
+</ul>
+<p>Tips: høyreklikk <code>KUL.bat</code> → <strong>«Send til» → «Skrivebord (opprett
+snarvei)»</strong>, så har du en snarvei på skrivebordet du kan starte fra.</p>
+<hr />
+<h2 id="hvis-noe-ikke-virker">Hvis noe ikke virker</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Løsning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>«Fant ikke Python på denne maskinen»</td>
+<td>Python er ikke installert, eller «Add to PATH» ble ikke huket av i steg 1. Installer på nytt og husk avhukingen.</td>
+</tr>
+<tr>
+<td>Det svarte vinduet lukker seg med en gang</td>
+<td>Start på nytt og les hva som står før det lukkes — som regel handler det om Python (se over).</td>
+</tr>
+<tr>
+<td>Nettleseren viser en feil rett etter oppstart</td>
+<td>Vent noen sekunder og trykk <strong>F5</strong> (oppdater). Appen rakk ikke å starte helt.</td>
+</tr>
+<tr>
+<td>«Windows beskyttet PC-en din»</td>
+<td>Klikk «Mer info» → «Kjør likevel» (se over).</td>
+</tr>
+</tbody>
+</table>
+<p>Trenger du mer hjelp? Se <a href="BRUK.html">BRUK.md</a> for hvordan du bruker
+verktøyet, eller ta kontakt med KrUltra på post@krultra.no.</p>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/INSTALLASJON.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

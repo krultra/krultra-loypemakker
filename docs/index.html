@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dokumentasjon — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1>Dokumentasjon</h1>
+<p>KrUltra Løypemakker (KUL) — velg et dokument:</p>
+<p><a href="../README.html">📘 README (start her)</a> · <a href="../CHANGELOG.html">📝 Endringslogg</a></p>
+<h2>Guider</h2>
+<ul>
+<li><a href="BRUK.html">Bruksveiledning — KrUltra Løypemakker (KUL)</a></li>
+<li><a href="INSTALLASJON.html">Installasjon — KrUltra Løypemakker (KUL)</a></li>
+<li><a href="mvp-plan.html">GPS-verktøy for løypeplanlegging — MVP-plan</a></li>
+<li><a href="publisering.html">Publisere interaktive løypevisninger på nettsidene</a></li>
+</ul>
+<h2>Utviklingshistorikk (detaljerte versjonsnotater)</h2>
+<ul>
+<li><a href="versjon-2.html">Versjon 2 — kart, metadata, nærmeste punkt og høydeprofil</a></li>
+<li><a href="versjon-3.html">Versjon 3 — riktige høyder, utjevning, mer metadata og starttidspunkt</a></li>
+<li><a href="versjon-4.html">Versjon 4 — interessepunkter, karteksport, flere kartvisninger og mer metadata</a></li>
+<li><a href="versjon-5.html">Versjon 5 — profilfarger for trykk, høydemeter og gruppert bibliotek</a></li>
+<li><a href="versjon-6.html">Versjon 6 — slider-autorepeat, auto-lagring av PoI, flersymbol og zoom-skalering</a></li>
+<li><a href="versjon-7.html">Versjon 7 — PoI med ledestrek, flyttbar ramme og vis/skjul</a></li>
+<li><a href="versjon-8.html">Versjon 8 — PoI-finpuss, ikonstørrelse og waypoints i høydeprofilen</a></li>
+<li><a href="versjon-9.html">Versjon 9 — PoI-finpuss og profil-etiketter</a></li>
+<li><a href="versjon-10.html">Versjon 10 — utdatert-server-varsel, cache-fiks og profil-avstand</a></li>
+<li><a href="versjon-11.html">Versjon 11 — kompakt profil-etikett og visningsmodus</a></li>
+<li><a href="versjon-12.html">Versjon 12 — ikon-wrapping, flere matvalg og tettere profil-etiketter</a></li>
+<li><a href="versjon-13.html">Versjon 13 — publisering av interaktive løypevisninger</a></li>
+<li><a href="versjon-14.html">Versjon 14 — Punktbibliotek: delte interessepunkter</a></li>
+<li><a href="versjon-15.html">Versjon 15 — «Velg delte punkter» og snap</a></li>
+<li><a href="versjon-16.html">Versjon 16 — Drop bag, bedre GPX-eksport og sikring av punktbiblioteket</a></li>
+<li><a href="versjon-17.html">Versjon 17 — Husk metadata, veipunkter ved sammenslåing, fullskjerm-knapp</a></li>
+<li><a href="versjon-18.html">Versjon 18 — Mobilvennlig publisert visning</a></li>
+<li><a href="versjon-19.html">Versjon 19 — Send/importér løyper, produktnavn, lisens og logo</a></li>
+</ul>
+
+</main>
+<footer class="bunn">
+Generert fra <code>scripts/build_docs_html.py</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

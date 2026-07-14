@@ -71,6 +71,12 @@ Koden er organisert i `backend/` (server + GPX-logikk), `frontend/` (alt du
 ser i nettleseren), `viewer/` (den innebygde løypevisningen), `tests/` og
 `docs/`.
 
+Denne og all annen dokumentasjon finnes også som pene HTML-sider du kan
+dobbeltklikke og åpne direkte i nettleseren (se `README.html` og
+`docs/index.html`). Markdown-filene er kilden — endrer du dem, bygg HTML-
+utgavene på nytt med `python scripts/build_docs_html.py` (krever
+`pip install markdown`, kun et utviklerverktøy).
+
 ## Lisens og kreditering
 
 Utgitt under [MIT-lisensen](LICENSE) — fri å bruke, endre og dele, også

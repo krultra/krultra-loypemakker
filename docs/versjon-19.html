@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versjon 19 — Send/importér løyper, produktnavn, lisens og logo — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="versjon-19-sendimporter-lyper-produktnavn-lisens-og-logo">Versjon 19 — Send/importér løyper, produktnavn, lisens og logo</h1>
+<p><em>11. juli 2026</em></p>
+<p>Første offentlige versjon. Verktøyet har fått navn, lisens, logo og en
+funksjon for at arrangører uten egen server kan få løyper publisert av
+KrUltra.</p>
+<h2 id="send-til-krultra-importer-loype-fil">Send til KrUltra / importér .loype-fil</h2>
+<p>Arrangører som ikke publiserer selv kan bruke <strong>«📧 Send til KrUltra…»</strong>:
+verktøyet samler alle opplysninger (adressenavn, navn, beskrivelse, laget
+av, lenke, copyright, nøkkelord, starttidspunkt), stil og punkter/veipunkter
+i en <strong><code>.loype</code>-fil</strong> (JSON) og åpner en ferdig e-post til <code>post@krultra.no</code>.
+Brukeren vedlegger fila selv (mailto kan ikke vedlegge automatisk).</p>
+<p>KrUltra åpner fila med <strong>«📥 Importer .loype-fil…»</strong> i sidemenyen. Løypa
+lastes med opphavspersonens <strong>eksakte høyder</strong> (henter ikke DEM på nytt) og
+<strong>stil</strong> (<code>importertStil</code> overstyrer lokal UI ved publisering), og
+publiseringsdialogen forhåndsutfyller det ønskede <strong>adressenavnet</strong> — slik
+at løypa havner på <code>loyper.krultra.no/&lt;adressenavn&gt;</code> og republisering treffer
+samme adresse.</p>
+<p>En ren GPX ville tapt stil, snap og etikettplasseringer; <code>.loype</code>-fila er
+derfor et lite JSON-format som bærer alt tapsfritt. Formatet er <code>kul-loype</code>
+versjon 1.</p>
+<h2 id="metadata">Metadata</h2>
+<ul>
+<li><strong>Adressenavn</strong> er nå et metadatafelt som bæres med (arves/importeres og
+  gjenbrukes ved republisering). Vises i meta-dialogen i «Send»-modus, og
+  forhåndsutfylles i publiseringsdialogen.</li>
+<li><strong>«Creator» → «Laget av»</strong> i dialogen (feltet brukes ved GPX-eksport og
+  segment-lagring, som før).</li>
+<li>Alle publiseringsrelevante metadata følger med i <code>.loype</code>-eksporten og
+  brukes ved import/publisering, slik at KrUltra publiserer med de verdiene
+  opphavspersonen ønsker.</li>
+</ul>
+<h2 id="produktnavn-lisens-og-logo">Produktnavn, lisens og logo</h2>
+<ul>
+<li><strong>Navn:</strong> «KrUltra Løypemakker», forkortet <strong>KUL</strong>. Oppstartsfil
+  <code>run.bat</code> → <strong><code>KUL.bat</code></strong>. Vist i topplinja med logo + versjonsnummer.</li>
+<li><strong>Lisens:</strong> <a href="../LICENSE">MIT</a> — fri bruk, også kommersielt, med bevart
+  opphavsrettsnotis (kreditering). GPX-eksportens rutedata-lisens er fortsatt
+  CC BY-NC 4.0 (en separat ting — arrangørens løypedata, ikke programvaren).</li>
+<li><strong>Logo:</strong> <code>brand/KUL_logo.png</code>. Sol/måne-emblemet er beskåret til favicon
+  (<code>frontend/favicon.png</code> + <code>.ico</code>, og i den publiserte visningen via
+  asset-pakken) og vist i appens topplinje.</li>
+</ul>
+<h2 id="klar-for-github">Klar for GitHub</h2>
+<ul>
+<li><code>.gitignore</code> holder <code>/data/</code> og credentials ute; <code>data/publisering.json.mal</code>
+  som mal.</li>
+<li>XSS-herding av publisert visning (validerer/escaper <code>løype.link</code>).</li>
+<li>Ny README (front page) + <code>docs/BRUK.md</code> (full bruksveiledning) + MIT LICENSE.</li>
+<li>GitHub-tilgang bekreftet: <code>gh</code> innlogget som <code>krultra</code> (repo-scope).</li>
+</ul>
+<h2 id="versjoner">Versjoner</h2>
+<p><code>APP_VERSJON</code> → 19, cache-busting → <code>?v=19</code>. Backend-API-et er uendret
+(<code>BACKEND_VERSJON</code> = 17) — send/import er ren frontend, og publisering bruker
+det eksisterende endepunktet. Asset-versjon 7 (favicon + tidligere
+mobil-/XSS-endringer) tas i bruk ved neste republisering.</p>
+<h2 id="gjenstar-fr-lansering">Gjenstår før lansering</h2>
+<p><code>docs/INSTALLASJON.md</code> (billedlagt), <code>CHANGELOG.md</code> (fra <code>versjon-*.md</code>),
+siste herding (opplastingsgrense på GPX-parsing, SFTP-vertsnøkkel-note), og
+selve git-push (venter på klarsignal).</p>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/versjon-19.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

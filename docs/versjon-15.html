@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versjon 15 — «Velg delte punkter» og snap — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="versjon-15-velg-delte-punkter-og-snap">Versjon 15 — «Velg delte punkter» og snap</h1>
+<p><em>11. juli 2026</em></p>
+<h2 id="behovet">Behovet</h2>
+<p>Med punktbiblioteket (versjon 14) kunne delte punkter gjenbrukes ett og
+ett via «Sett punkt her». For en ny løype som overlapper eksisterende
+traseer er det mer effektivt å hente alle aktuelle punkter i én operasjon.</p>
+<h2 id="velg-delte-punkter">«Velg delte punkter…»</h2>
+<p>Ny knapp ved siden av «Sett punkt her». Den traverserer hele løypa og
+finner alle delte punkter i punktbiblioteket som ligger <strong>innenfor 300 m
+fra traseen</strong> (punkter løypa allerede bruker utelates). Dialogen viser
+dem i løypas rekkefølge med symboler, navn, posisjon langs løypa og —
+for punkter som ikke ligger direkte på traseen — avstanden fra løypa.
+Alle er forhåndsvalgt, med «Velg alle» for å snu hele lista. Ett klikk
+på «Legg til valgte» legger punktene inn og lagrer automatisk.</p>
+<h2 id="snap-eller-eksakt-posisjon">Snap eller eksakt posisjon</h2>
+<p>For delte punkter som ligger et stykke unna traseen (&gt; 15 m) velger
+brukeren per punkt:</p>
+<ul>
+<li><strong>Fest til løypa (snap)</strong> — punktet tegnes på nærmeste løypepunkt,
+  både i verktøyet og i publiserte visninger. Standardvalget.</li>
+<li><strong>Eksakt posisjon</strong> — punktet vises på koordinatene fra
+  punktbiblioteket (f.eks. ei hytte 90 m fra stien).</li>
+</ul>
+<p>Valget kan endres senere i punkt-dialogen («Fest til løypa (snap)»,
+vises bare når punktet faktisk ligger unna løypa, med avstanden oppgitt).</p>
+<p><strong>Viktig designvalg:</strong> <code>snap</code> lagres <em>per løype</em> (som <code>vis_ikon</code> og
+etikettplasseringen) og er IKKE et delt felt. De lagrede koordinatene
+røres aldri — ellers ville en snapping i én løype synkronisert de
+snappede koordinatene tilbake til punktbiblioteket og flyttet punktet
+for alle løypene. Visningsposisjonen beregnes i stedet ved tegning
+(<code>wptPosisjon()</code> i frontend, og ved bygging av course.json i
+<code>backend/publisering.py</code>). Statistikk og profilforankring bruker som
+før nærmeste løypepunkt og påvirkes ikke av valget.</p>
+<h2 id="annet">Annet</h2>
+<ul>
+<li><code>Waypoint</code>-modellen har fått feltet <code>snap</code> (bool, standard false).</li>
+<li>«Flytt til markøren» nullstiller snap (punktet står da på løypa).</li>
+<li><code>BACKEND_VERSJON</code>/<code>FORVENTET_BACKEND</code> → 14 (serveren må kjenne
+  <code>snap</code>-feltet for at det skal lagres), cache-busting → <code>?v=15</code>,
+  <code>APP_VERSJON</code> → 15. Publiserte visninger trenger ingen ny
+  asset-versjon (course.json bærer ferdig beregnede koordinater).</li>
+</ul>
+<h2 id="tester">Tester</h2>
+<ul>
+<li>Publisering: snappet punkt publiseres på selve løypepunktet, eksakt
+  punkt beholder bibliotekkoordinatene.</li>
+<li>Punktbiblioteket: <code>snap</code> består ved åpning, og lagring flytter ikke
+  bibliotekpunktet. 65 tester totalt.</li>
+</ul>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/versjon-15.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versjon 9 — PoI-finpuss og profil-etiketter — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="versjon-9-poi-finpuss-og-profil-etiketter">Versjon 9 — PoI-finpuss og profil-etiketter</h1>
+<p>Bygger på <a href="versjon-8.html">versjon-8.md</a>. Implementert og verifisert 9. juli 2026.</p>
+<h2 id="1-ledestreken-skinner-ikke-lenger-gjennom-rammen">1. Ledestreken skinner ikke lenger gjennom rammen</h2>
+<p>Ikonrammen hadde halvgjennomsiktig bakgrunn, så ledestreken (som ender i
+rammens sentrum) syntes gjennom. Bakgrunnen er gjort <strong>helt hvit</strong> — både
+på kartet (<code>.wpt-frame</code> i CSS) og i PNG-eksporten (rammefyllet på canvas).</p>
+<h2 id="2-auto-lagring-av-waypoints-ingen-kodefeil-men-stale-server">2. Auto-lagring av waypoints — ingen kodefeil, men stale-server</h2>
+<p>Feilen «Method Not Allowed» og at et flersymbol-punkt ble redusert til ett
+ikon skyldtes at den kjørende serveren hadde <strong>gammel kode i minnet</strong>:
+Uvicorn laster ikke inn kodeendringer uten omstart, så en server startet
+før v6/v8 manglet både PUT-endepunktet og <code>types</code>-feltet (Pydantic
+forkastet det ukjente feltet stille). På fersk kode ble det verifisert at
+PUT gir <code>200</code> og at alle tre symbolene overlever lagring og gjenåpning.</p>
+<p>For å unngå at dette gjentar seg er <code>run.bat</code> endret til å starte Uvicorn
+med <code>--reload --reload-dir backend</code>: backend-endringer tas i bruk
+automatisk, mens lagring av segmenter i <code>data\</code> ikke trigger omstart.
+Frontend-endringer krever fortsatt bare F5.</p>
+<h2 id="3-veipunkt-streker-i-profilen-stopper-ved-profilen">3. Veipunkt-streker i profilen stopper ved profilen</h2>
+<p>Indikatorstreken går nå fra x-aksen kun opp til profilens høyde der
+punktet ligger (til f.eks. 200-metersnivået), ikke til toppen av vinduet.
+Den lille sirkelen sitter der streken møter profillinja. Y-aksen får litt
+luft under laveste punkt (8 % av høydespennet), slik at også lavtliggende
+punkter (som start/mål) får en synlig strek. Verifisert ved pikselavlesing:
+tre streker, den høyeste stopper godt under toppen, de lave start/mål-
+strekene er korte men synlige.</p>
+<h2 id="4-profil-etiketter-navn-lenger-ned-ikoner-under-navnet">4. Profil-etiketter: navn lenger ned, ikoner under navnet</h2>
+<p>Navnene starter nå et stykke under x-aksens km-tall (under margen for
+km-tallene), så de ikke kolliderer. Ikonene tegnes på en parallell 45°-
+diagonal <strong>under</strong> navnet i stedet for etter det. Canvas-høyden utvides
+automatisk til å romme både navn og ikoner.</p>
+<h2 id="verifisert">Verifisert</h2>
+<ul>
+<li>38 automatiske tester passerer</li>
+<li>Fersk server: PoI-auto-lagring gir PUT 200; flersymbol (mat+drikke+
+  toalett) overlever lagring og gjenåpning</li>
+<li>Profil (pikselavlesing): tre veipunkt-streker, alle stopper ved profilen
+  (ingen når toppen), lave punkter synlige takket være y-akse-luften</li>
+<li>Ingen konsollfeil (skjermbilde-verktøyet i forhåndsvisningen hang, men
+  eval-basert verifisering bekreftet geometrien)</li>
+</ul>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/versjon-9.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

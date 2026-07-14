@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bruksveiledning — KrUltra Løypemakker (KUL)</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="bruksveiledning-krultra-lypemakker-kul">Bruksveiledning — KrUltra Løypemakker (KUL)</h1>
+<p>Denne veiledningen går gjennom alt verktøyet kan. For installasjon, se
+<a href="INSTALLASJON.html">INSTALLASJON.md</a>. For nettpublisering, se
+<a href="publisering.html">publisering.md</a>.</p>
+<h2 id="starte-og-avslutte">Starte og avslutte</h2>
+<ul>
+<li><strong>Start:</strong> dobbeltklikk <code>KUL.bat</code> i prosjektmappa. Et svart vindu åpnes,
+  og nettleseren åpner verktøyet automatisk på <code>http://127.0.0.1:8000/</code>.
+  Viser nettleseren en feil rett etter oppstart, vent et par sekunder og
+  trykk oppdater (F5) — appen rakk ikke å starte helt før nettleseren åpnet.</li>
+<li><strong>Avslutt:</strong> lukk det svarte vinduet.</li>
+</ul>
+<h2 id="klippe-ut-et-segment-fra-et-gps-spor">Klippe ut et segment fra et GPS-spor</h2>
+<ol>
+<li>Klikk <strong>«Last inn GPX-fil…»</strong> og velg fila.</li>
+<li>Sporet vises på skjermen. Bruk <strong>glidebryteren</strong> eller <strong>pilknappene</strong>
+   til å flytte den blå markøren langs sporet. (Piltastene på tastaturet
+   virker også — hold Shift for å hoppe 10 punkter om gangen.)</li>
+<li>Klikk <strong>«Sett start her»</strong> når markøren står der segmentet skal begynne.</li>
+<li>Flytt markøren videre og klikk <strong>«Sett slutt her»</strong>. Utsnittet markeres
+   med grønt, og lengden vises.</li>
+<li>Klikk <strong>«Lagre segment»</strong> og gi det et navn. Segmentet havner i
+   biblioteket til venstre og er der neste gang du åpner appen.</li>
+</ol>
+<p>Tips: hold inne <strong>◀/▶</strong>-knappene for å flytte markøren raskt langs sporet —
+farten øker jo lenger du holder.</p>
+<h2 id="sette-sammen-to-segmenter-til-en-lype">Sette sammen to segmenter til en løype</h2>
+<ol>
+<li>Bytt til fanen <strong>«Slå sammen segmenter»</strong>.</li>
+<li>Velg første del med <strong>«A»</strong>-knappen og siste del med <strong>«B»</strong>-knappen i
+   biblioteket. De vises i blått og rødt.</li>
+<li>Sett ett <strong>delingspunkt</strong> på hvert segment (glidebryter + knapp). Tips:
+   sett delingspunktet på det ene segmentet der løypene møtes, og klikk
+   <strong>«Nærmest … delingspunkt»</strong> på det andre — da finner verktøyet
+   automatisk punktet der sporene er nærmest hverandre, og varsler hvis
+   avstanden er over 100 meter.</li>
+<li>Klikk <strong>«Slå sammen»</strong>. Den nye løypa (lilla) går fra starten av A, til
+   delingspunktet på A, videre fra delingspunktet på B, til slutten av B.</li>
+<li>Lagre resultatet som segment, eller eksporter det rett til GPX.
+   Interessepunktene fra begge segmentene følger med (de som ligger langs
+   den nye traseen); nye start- og målpunkt lages for de nye endene.</li>
+</ol>
+<h2 id="kartunderlag-kartvisninger-og-kart-som-png">Kartunderlag, kartvisninger og kart som PNG</h2>
+<ul>
+<li><strong>«Kart»</strong>-knappen i topplinja legger Kartverkets kart under sporene
+  (krever internett — resten av appen virker uten).</li>
+<li><strong>Kartvisning:</strong> topografisk, gråtone, papirkart-stil, sjøkart — pluss
+  satellittbilde (fra Esri; Kartverket tilbyr ikke satellitt).</li>
+<li><strong>Kart som PNG:</strong> lagrer kartet med rute (valgfri <strong>rutefarge</strong> og
+  <strong>tykkelse</strong>) og interessepunkter som bilde. Bruk <strong>«Velg utsnitt»</strong> og
+  dra opp et rektangel på kartet for å eksportere bare det området.</li>
+</ul>
+<h2 id="hydeprofil">Høydeprofil</h2>
+<p><strong>«Høydeprofil»</strong> (eller visningsmodus <strong>«Delt» / «Bare profil»</strong>) viser
+høydeprofilen for sporet du jobber med. Utseendet kan tilpasses fritt —
+nyttig for program, plakater og startnummertrykk:</p>
+<ul>
+<li><strong>Høydeskala</strong> (1× = naturtro målestokk, høyere = mer dramatisk)</li>
+<li><strong>Linje</strong>, <strong>Fyll</strong> (av/på + farge) og <strong>Bakgrunn</strong> — fritt fargevalg</li>
+<li><strong>Akser</strong> og <strong>Rutenett</strong> — av/på og fritt fargevalg for hver, pluss egen
+  farge på <strong>Tall</strong>ene (sett dem svarte for full kontrast på trykk)</li>
+<li><strong>Markør</strong> — den loddrette linja som viser markørposisjonen, kan skjules
+  eller gis egen farge</li>
+<li><strong>Tekst</strong> — størrelsen på aksetallene</li>
+<li><strong>Utjevning</strong> og <strong>Vektform</strong> — jevner ut GPS-støy (kun visningen; dataene
+  endres aldri). «Utjevning» velger hvor mange nabopunkter som regnes med,
+  «Vektform» hvor spiss gauss-vektingen er (1 = flat/mye, 10 = spiss/lite)</li>
+<li><strong>«PNG»</strong> lagrer profilen som bilde</li>
+</ul>
+<p>Metadatalinja viser også <strong>høydemeter opp og ned</strong>, beregnet fra den aktive
+høydekilden og med utjevningen tatt hensyn til. Alle valg huskes.</p>
+<h2 id="riktige-hyder-fra-kartverket">Riktige høyder fra Kartverket</h2>
+<p>GPS-klokker måler høyde upresist — avvik på ±150 m er vanlig, så
+høydeprofilen fra en GPX-fil kan se helt feil ut selv om fila er i orden.
+Verktøyet henter derfor <strong>automatisk</strong> de riktige terrenghøydene fra
+Kartverkets nasjonale terrengmodell når du åpner et spor (samme prinsipp som
+Garmin Connect bruker). Knappen <strong>«Høyder: Kartverket / GPX-fila»</strong> viser
+hvilken kilde som er aktiv og lar deg bytte tilbake. Henting tar noen
+sekunder for lange spor og krever internett — uten nett beholdes filas egne
+høyder. De valgte høydene brukes også ved lagring og eksport.</p>
+<h2 id="interessepunkter-mat-drikke-sjekkpunkter">Interessepunkter (mat, drikke, sjekkpunkter …)</h2>
+<p><strong>«Sett punkt her»</strong> oppretter et interessepunkt der markøren står, med
+navn, beskrivelse og <strong>ett eller flere symboler</strong> (sjekkpunkt, drikke,
+snacks, mat, varm mat, toalett, dusj, drop bag, husly, tidtaking,
+informasjon m.fl.). Et sted kan f.eks. ha både mat, drikke og toalett, og
+alle symbolene samles i én ramme (som wrapper til flere rader ved mange
+ikoner) med en <strong>strek ned til løypepunktet</strong>. <strong>Start- og målpunkt lages
+automatisk.</strong> Dialogen viser også avstand og høydemeter fra start og fra
+forrige punkt.</p>
+<p>Du kan <strong>dra ramma</strong> dit du vil på kartet — streken følger med, og
+plasseringen huskes. Klikk på en ramme for å redigere, flytte til markøren
+eller slette punktet. Du kan også skjule ikonene for enkeltpunkter (da vises
+bare en liten prikk du kan klikke på igjen).</p>
+<p>I kartverktøylinja styrer du utseendet: <strong>«📍 Punkter»</strong> skjuler/viser alle,
+<strong>«Punktstrek»</strong> setter farge og tykkelse på strekene, og <strong>«Ikonstr.»</strong>
+skalerer symbolene 50–200 %. Symbolene blir uansett mindre når du zoomer ut
+og større når du zoomer inn.</p>
+<p>I <strong>høydeprofilen</strong> kan punktene vises som en loddrett strek opp til punktet,
+med <strong>navn</strong> og/eller <strong>ikoner</strong> (velges hver for seg).</p>
+<p>Interessepunktene <strong>lagres automatisk</strong>: har du åpnet et segment, oppdateres
+det med det samme; har du åpnet en GPX-fil, skrives punktet rett inn i fila.
+(Et sammenslått resultat må først lagres før du kan sette punkter på det.)</p>
+<h2 id="punktbibliotek-gjenbruk-punkter-pa-tvers-av-lyper">Punktbibliotek: gjenbruk punkter på tvers av løyper</h2>
+<p>Når mange løyper deler de samme stasjonene, kan du gjøre et interessepunkt
+<strong>delt</strong>: kryss av <strong>«Delt punkt»</strong> i dialogen, så havner det i
+punktbiblioteket. I andre løyper:</p>
+<ul>
+<li>Stå i nærheten og klikk <strong>«Sett punkt her»</strong> — dialogen foreslår delte
+  punkter i nærheten; ett klikk gjenbruker punktet.</li>
+<li>Eller bruk <strong>«Velg delte punkter…»</strong> som går gjennom hele løypa og lister
+  alle delte punkter innenfor 300 m fra traseen, så du kan huke av mange på
+  én gang. Punkter som ligger et stykke fra løypa kan du enten <strong>feste til
+  løypa</strong> («snap») eller vise på de eksakte koordinatene.</li>
+</ul>
+<p>Endrer du et delt punkt i én løype, gjelder endringen alle løypene som
+bruker det. Knappen <strong>«🔗 Punktbibliotek…»</strong> viser alle delte punkter og
+hvilke løyper som bruker dem.</p>
+<h2 id="metadata-navn-beskrivelse-creator-lenke-copyright-nkkelord">Metadata (navn, beskrivelse, creator, lenke, copyright, nøkkelord)</h2>
+<p>Alle spor og segmenter har navn, og valgfritt beskrivelse, creator, lenke,
+copyright, nøkkelord og starttidspunkt. Disse <strong>arves naturlig</strong>: laster du
+inn en GPX-fil, følger metadataene med til segmentet du lagrer — men du får
+alltid redigere dem i dialogen. Verdiene du bruker <strong>huskes</strong> og foreslås
+neste gang. Bruk <strong>«Endre»</strong>-knappen i biblioteket for å endre metadata på
+et lagret segment uten å røre selve sporet.</p>
+<p>Om copyright: skriv inn rettighetshaverens navn, så får eksporterte
+GPX-filer automatisk årstall og <strong>CC BY-NC 4.0</strong>-lisensen (fri
+ikke-kommersiell bruk med navngivelse). Dette gjelder løypedataene dine, og
+er uavhengig av programvarens MIT-lisens.</p>
+<h2 id="lagre-som-gpx-fil">Lagre som GPX-fil</h2>
+<p>Klikk <strong>«Lagre som GPX»</strong> (finnes i begge faner). Verktøyet rydder
+automatisk opp i tidsstemplene: manglende, dupliserte eller bakovergående
+tider fikses, slik at fila alltid er gyldig standard GPX 1.1. Hvert
+interessepunkt blir ett <code>&lt;wpt&gt;</code> (med alle symbolene i <code>&lt;type&gt;</code> og en lesbar
+tjenesteliste i kommentarfeltet, som bl.a. Garmin viser som merknad).</p>
+<ul>
+<li><strong>Starttidspunkt:</strong> i dialogen kan du sette starttid for første punkt
+  (f.eks. løpets faktiske starttid). Hele tidsserien flyttes dit, med alle
+  innbyrdes tidsavstander bevart. La feltet stå for å beholde sporets
+  opprinnelige tider.</li>
+<li><strong>Lagre hvor du vil:</strong> i Chrome/Edge åpnes en «Lagre som»-dialog der du
+  velger mappe og filnavn; andre nettlesere laster ned til nedlastingsmappa.</li>
+</ul>
+<h2 id="organisere-biblioteket-i-grupper">Organisere biblioteket i grupper</h2>
+<p>Med <strong>«+ Gruppe»</strong> lager du grupper i segmentbiblioteket (f.eks. «MMC») og
+legger segmenter i dem ved å <strong>dra og slippe</strong>: slipp et segment på en
+gruppeoverskrift for å legge det i gruppa, eller over/under andre segmenter
+for å endre rekkefølgen — også grupper kan flyttes. Klikk på gruppenavnet
+for å vise/skjule innholdet. Sletter du en gruppe, flyttes segmentene trygt
+ut på rotnivået.</p>
+<h2 id="publisere-lyper-pa-nettsidene">Publisere løyper på nettsidene</h2>
+<p><strong>«🌐 Publiser løypevisning…»</strong> lager en interaktiv løypeside og laster den
+opp til serveren din; nettsidene bygger den inn med en iframe-snutt.
+Fullstendig oppsett og bruk: se <a href="publisering.html">publisering.md</a>.</p>
+<h2 id="hvor-ligger-tingene-mine">Hvor ligger tingene mine?</h2>
+<ul>
+<li><strong>Lagrede segmenter:</strong> mappa <code>data/segments</code> (én fil per segment — ikke
+  rediger dem for hånd).</li>
+<li><strong>Delte punkter:</strong> <code>data/waypoints.json</code>.</li>
+<li><strong>Eksporterte GPX-filer og PNG-bilder:</strong> der du velger i «Lagre
+  som»-dialogen, ellers nettleserens nedlastingsmappe.</li>
+</ul>
+<h2 id="hvis-noe-ikke-virker">Hvis noe ikke virker</h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Løsning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dobbeltklikk på <code>KUL.bat</code> gjør ingenting</td>
+<td>Åpne mappa i Filutforsker, høyreklikk <code>KUL.bat</code> → «Kjør som administrator» og se hva feilmeldingen sier</td>
+</tr>
+<tr>
+<td>«Fant ikke Python»</td>
+<td>Installer Python fra python.org (se <a href="INSTALLASJON.html">INSTALLASJON.md</a>)</td>
+</tr>
+<tr>
+<td>Nettleseren viser feil rett etter oppstart</td>
+<td>Vent et par sekunder og trykk F5</td>
+</tr>
+<tr>
+<td>Kartet er tomt etter innlasting</td>
+<td>GPX-fila inneholdt ingen sporpunkter — sjekk fila i et annet verktøy</td>
+</tr>
+<tr>
+<td>Kartunderlaget vises ikke</td>
+<td>Kartflisene hentes fra Kartverket via internett — sjekk nettforbindelsen</td>
+</tr>
+<tr>
+<td>Høydeprofilen sier «Ingen høydedata»</td>
+<td>Sporet mangler høyde på alle punktene — vanlig for manuelt tegnede ruter</td>
+</tr>
+<tr>
+<td>En eksportert fil virker rar</td>
+<td>Kjør <code>python scripts\check_gpx.py "sti-til-fila.gpx"</code> fra det svarte vinduet for en hurtigsjekk</td>
+</tr>
+</tbody>
+</table>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/BRUK.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

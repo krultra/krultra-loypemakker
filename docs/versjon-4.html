@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Versjon 4 — interessepunkter, karteksport, flere kartvisninger og mer metadata — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="../frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="../frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="versjon-4-interessepunkter-karteksport-flere-kartvisninger-og-mer-metadata">Versjon 4 — interessepunkter, karteksport, flere kartvisninger og mer metadata</h1>
+<p>Bygger på <a href="versjon-3.html">versjon-3.md</a>. Implementert og verifisert 8. juli 2026.</p>
+<h2 id="kartverkets-hyder-er-na-standard">Kartverkets høyder er nå standard</h2>
+<p>Ved innlasting av GPX-fil eller åpning av segment i redigeringsvisningen
+hentes terrenghøydene fra Kartverket automatisk. Feiler hentingen (f.eks.
+uten nett) beholdes GPX-filas høyder, og knappen kan brukes til å prøve
+igjen. Knappen viser alltid hvilken kilde som er aktiv.</p>
+<h2 id="1-utvidet-metadata-copyright-time-keywords">1. Utvidet metadata: copyright, time, keywords</h2>
+<ul>
+<li><strong>Copyright</strong>: tekstfelt for rettighetshaver i dialogen (forhåndsutfylt
+  med creator hvis ikke arvet). I eksportert GPX blir dette
+  <code>&lt;copyright author&gt;</code> med årstall og <strong>CC BY-NC 4.0</strong> som standardlisens —
+  fri ikke-kommersiell bruk så lenge opphavsperson navngis
+  (https://creativecommons.org/licenses/by-nc/4.0/).</li>
+<li><strong>Keywords</strong>: fritt nøkkelord-felt → <code>&lt;keywords&gt;</code>.</li>
+<li><strong>Time</strong>: <code>&lt;metadata&gt;&lt;time&gt;</code> settes automatisk til eksporttidspunktet
+  (sporet har sine egne tidsstempler).</li>
+<li>Alt arves gjennom kjeden som før (GPX → segment → sammenslåing → eksport).</li>
+</ul>
+<h2 id="2-valgfritt-lagringssted-og-filnavn">2. Valgfritt lagringssted og filnavn</h2>
+<p>Alle fillagringer (GPX, høydeprofil-PNG, kart-PNG) bruker nå nettleserens
+«Lagre som»-dialog (<code>showSaveFilePicker</code>, Chrome/Edge) der brukeren velger
+mappe og filnavn. I nettlesere uten støtte faller det tilbake til vanlig
+nedlasting. Felles funksjon <code>lagreFil()</code> i <code>frontend/app.js</code>.</p>
+<h2 id="3-interessepunkter-poi-wpt-frste-iterasjon">3. Interessepunkter (PoI / <code>&lt;wpt&gt;</code>) — første iterasjon</h2>
+<ul>
+<li>Ny <code>Waypoint</code>-modell (lat/lon/ele/name/desc/sym/type) hele veien:
+  parse → segmentlagring (JSON) → eksport (<code>&lt;wpt&gt;</code>-elementer).</li>
+<li><strong>«Sett punkt her»</strong>-knapp: oppretter PoI der markøren står, med dialog
+  for navn, beskrivelse, symbol og type.</li>
+<li><strong>Symboler</strong> (bygges ut senere): mat, drikke, toalett, husly, tidtaking,
+  sjekkpunkt, informasjon, start, mål, annet. <code>&lt;sym&gt;</code> bruker Garmin-kjente
+  navn (Restaurant, Drinking Water, Restroom, Lodging, Flag …), <code>type</code>
+  er vår norske kategorisering.</li>
+<li><strong>Automatisk start/mål</strong>: opprettes ved innlasting hvis de mangler, med
+  passende navn/beskrivelse/symbol.</li>
+<li><strong>Redigere/flytte/slette</strong>: klikk på et punkt på kartet åpner dialogen
+  med Lagre / Flytt til markøren / Slett.</li>
+<li><strong>Ved utsnitt</strong>: manuelle punkter innenfor 100 m av utsnittet beholdes,
+  start/mål regenereres for de nye endene. Sammenslåtte løyper får
+  automatisk start/mål (A/B-enes punkter følger ikke med i første versjon).</li>
+<li>Dialoghåndteringen ble samtidig gjort om til å lytte på skjemaets
+  submit-hendelse i stedet for dialogens close-hendelse (mer robust).</li>
+</ul>
+<h2 id="4-png-eksport-av-kartet-med-utsnitt">4. PNG-eksport av kartet med utsnitt</h2>
+<p>Ny kartverktøylinje over kartet:
+- <strong>Rutefarge</strong> og <strong>Tykkelse</strong>: styrer rutestreken i eksporten.
+- <strong>Velg utsnitt</strong>: dra opp et rektangel på kartet; kun det området
+  eksporteres. «Fjern utsnitt» går tilbake til hele kartvisningen.
+- <strong>Kart som PNG</strong>: bygger bildet selv — henter kartflisene direkte
+  (tjenestene har åpen CORS), tegner rute, interessepunkter og påkrevd
+  kildeangivelse («© Kartverket» / «© Esri …») på et canvas.
+  Zoomnivået tas fra kartet, men reduseres automatisk om bildet ville
+  blitt over ~4000 px. Web Mercator-matematikken ligger i
+  <code>merkatorX/merkatorY</code> i <code>frontend/app.js</code>.</p>
+<h2 id="5-flere-kartvisninger">5. Flere kartvisninger</h2>
+<p>Nedtrekksvalg i kartverktøylinja (valget huskes):
+| Visning | Kilde |
+|---|---|
+| Topografisk | Kartverket (<code>topo</code>) |
+| Gråtone | Kartverket (<code>topograatone</code>) |
+| Papirkart-stil | Kartverket (<code>toporaster</code>) |
+| Sjøkart | Kartverket (<code>sjokartraster</code>) |
+| Satellittbilde | Esri World Imagery |</p>
+<p>Kartverket tilbyr <strong>ikke</strong> satellittbilder — derfor Esri (gratis med
+kildeangivelse). Norge i bilder (norgeibilder.no) har norske ortofoto,
+men krever egen avtale/nøkkel for API-bruk; kan vurderes senere.</p>
+<h2 id="feilrettinger-8-juli-2026-etter-tilbakemelding">Feilrettinger (8. juli 2026, etter tilbakemelding)</h2>
+<ul>
+<li><strong>Rutefarge/-tykkelse vises nå live på kartet</strong>: sporet i redigerings-
+  visningen og det sammenslåtte resultatet tegnes med valgene fra
+  kartverktøylinja og oppdateres umiddelbart (<code>oppdaterRuteStil</code>), slik
+  at skjermen viser nøyaktig det som havner i PNG-en. Segment A/B i
+  sammenslåingsvisningen beholder blå/rød for å kunne skilles fra
+  hverandre.</li>
+<li><strong>Dobbel lagringsdialog ved karteksport fikset</strong>, to årsaker: (1) hvis
+  «Lagre som»-dialogen åpnet, men skrivingen feilet, falt koden videre
+  til vanlig nedlasting → dialog nummer to; nå gis en feilmelding i
+  stedet. (2) Eksportknappen kunne fyres på nytt mens flisene ble hentet;
+  nå er den sperret til lagringen er helt ferdig.</li>
+<li><strong>Mindre PoI-markører</strong>: punktet markeres med en liten sirkel (10 px),
+  og symbolet (15 px, ca. halvert) står ved siden av — forskjøvet
+  vinkelrett på løyperetningen slik at det ikke dekker traseen. Samme
+  design i PNG-eksporten.</li>
+</ul>
+<h2 id="verifisert">Verifisert</h2>
+<ul>
+<li>31 automatiske tester, inkl. rundtur med copyright/lisens/keywords/wpt</li>
+<li>Eksport-API: <code>&lt;copyright author&gt;</code> med år + CC BY-NC-lisens, <code>&lt;keywords&gt;</code>,
+  <code>&lt;metadata&gt;&lt;time&gt;</code>, tre <code>&lt;wpt&gt;</code> med riktige symboler, strengt økende tid</li>
+<li>I nettleser: automatisk DEM-bytte ved åpning, auto start/mål-punkter,
+  ny PoI via dialog (💧 på kartet), kart-PNG (264 KB med rute og punkter),
+  utsnittsvalg → mindre PNG, alle fem kartvisninger, lagvalg husket</li>
+</ul>
+</main>
+<footer class="bunn">
+Generert fra <code>docs/versjon-4.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>

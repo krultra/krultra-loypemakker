@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Endringslogg — KrUltra Løypemakker</title>
+<link rel="icon" type="image/png" href="frontend/favicon.png">
+<style>
+:root {
+  --farge-primaer: #2563eb;
+  --farge-primaer-mork: #1d4ed8;
+  --bakgrunn: #f1f5f9;
+  --kant: #e2e8f0;
+  --tekst: #0f172a;
+  --tekst-dus: #64748b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: var(--tekst);
+  background: var(--bakgrunn);
+  line-height: 1.6;
+}
+header.topp {
+  background: var(--farge-primaer);
+  color: #fff;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+header.topp img { width: 28px; height: 28px; border-radius: 50%; display: block; }
+header.topp strong { font-size: 16px; }
+header.topp nav { margin-left: auto; display: flex; gap: 14px; font-size: 13px; }
+header.topp nav a { color: #dbeafe; text-decoration: none; }
+header.topp nav a:hover { color: #fff; text-decoration: underline; }
+main {
+  max-width: 860px;
+  margin: 24px auto 60px;
+  background: #fff;
+  border: 1px solid var(--kant);
+  border-radius: 12px;
+  padding: 32px 40px;
+}
+@media (max-width: 640px) {
+  main { margin: 0; border-radius: 0; border-width: 0 0 1px; padding: 20px; }
+}
+h1, h2, h3, h4 { line-height: 1.3; }
+h1 { font-size: 26px; border-bottom: 2px solid var(--kant); padding-bottom: 10px; }
+h2 { font-size: 20px; margin-top: 2em; border-bottom: 1px solid var(--kant); padding-bottom: 6px; }
+h3 { font-size: 16px; margin-top: 1.6em; color: var(--farge-primaer-mork); }
+a { color: var(--farge-primaer-mork); }
+img { max-width: 100%; border-radius: 8px; border: 1px solid var(--kant); }
+code {
+  background: #f1f5f9; padding: 2px 5px; border-radius: 4px;
+  font-family: Consolas, "Courier New", monospace; font-size: 0.92em;
+}
+pre {
+  background: #0f172a; color: #e2e8f0; padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto;
+}
+pre code { background: none; padding: 0; color: inherit; }
+blockquote {
+  margin: 1em 0; padding: 10px 16px;
+  background: #eff6ff; border-left: 4px solid var(--farge-primaer);
+  border-radius: 0 8px 8px 0;
+}
+blockquote p { margin: 0.4em 0; }
+table { border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px; }
+th, td { border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }
+th { background: var(--bakgrunn); }
+hr { border: none; border-top: 1px solid var(--kant); margin: 2em 0; }
+footer.bunn {
+  max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
+  color: var(--tekst-dus); font-size: 12px;
+}
+footer.bunn a { color: inherit; }
+</style>
+</head>
+<body>
+<header class="topp">
+<img src="frontend/favicon.png" alt="">
+<strong>KrUltra Løypemakker (KUL)</strong>
+<nav>
+<a href="docs/index.html">Dokumentasjon</a>
+<a href="https://github.com/krultra/krultra-loypemakker" target="_blank" rel="noopener">GitHub</a>
+</nav>
+</header>
+<main>
+<h1 id="endringslogg">Endringslogg</h1>
+<p>Alle vesentlige endringer i KrUltra Løypemakker (KUL). Detaljerte notater
+for hver versjon ligger i <a href="docs/"><code>docs/</code></a>.</p>
+<h2 id="versjonering">Versjonering</h2>
+<p>Fra og med <strong>2.0.0</strong> følger prosjektet
+<a href="https://semver.org/lang/nb-NO/">semantisk versjonering</a> (MAJOR.MINOR.PATCH):</p>
+<ul>
+<li><strong>MAJOR</strong> (f.eks. 2.0.0 → 3.0.0) — store nye hovedfunksjoner eller endringer
+  som kan kreve at du gjør noe (f.eks. starter appen på nytt, endrer oppsett).</li>
+<li><strong>MINOR</strong> (f.eks. 2.0.0 → 2.1.0) — nye funksjoner som bygger videre uten å
+  bryte noe eksisterende.</li>
+<li><strong>PATCH</strong> (f.eks. 2.0.0 → 2.0.1) — feilrettinger og småjusteringer.</li>
+</ul>
+<p>Versjonene før 2.0.0 (under <strong>Utviklingshistorikk</strong> nedenfor) ble kalt
+«v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.</p>
+<h2 id="200-14-juli-2026-frste-offentlige-utgivelse">2.0.0 — 14. juli 2026 (første offentlige utgivelse)</h2>
+<p>Verktøyet er nå åpen kildekode under MIT-lisens, med nytt navn og logo.</p>
+<ul>
+<li><strong>«Send til KrUltra»</strong>: arrangører uten egen server kan lage en <code>.loype</code>-fil
+  (bærer punkter, veipunkter, stil og alle metadata) og sende den til KrUltra
+  for publisering. Tilhørende <strong>importfunksjon</strong>.</li>
+<li>Produktnavn <strong>KrUltra Løypemakker (KUL)</strong>, oppstartsfil <code>KUL.bat</code>, logo og favicon.</li>
+<li><strong>MIT-lisens</strong> — åpen kildekode, fri også kommersielt, med kreditering.</li>
+<li>«Creator» → «Laget av»; adressenavn som båret metadatafelt.</li>
+<li>XSS-herding av publisert visning; opplastingsgrense på GPX-parsing.</li>
+<li>Billedlagt installasjonsguide, bruksveiledning og HTML-versjoner av all dokumentasjon.</li>
+<li><a href="docs/versjon-19.html">Detaljer</a></li>
+</ul>
+<h2 id="utviklingshistorikk-fr-200">Utviklingshistorikk (før 2.0.0)</h2>
+<p>Interne utviklingsversjoner fra prosjektets MVP fram til første offentlige
+utgivelse. Numrene («v2»–«v19») var løpende tellere under utvikling, ikke
+semantiske versjoner.</p>
+<h3 id="v18-mobilvennlig-publisert-visning">v18 — Mobilvennlig publisert visning</h3>
+<ul>
+<li>Én finger scroller siden, to fingre flytter kartet (i innebygde visninger).</li>
+<li>Knapper flyttet ut av kartet; høydeprofilen scroller horisontalt på smale skjermer.</li>
+<li>Smartere iframe-høyde. <a href="docs/versjon-18.html">Detaljer</a></li>
+</ul>
+<h3 id="v17-husk-metadata-veipunkter-ved-sammenslaing-fullskjerm">v17 — Husk metadata, veipunkter ved sammenslåing, fullskjerm</h3>
+<ul>
+<li>Metadata (laget av, lenke, copyright, nøkkelord, starttid) huskes og foreslås.</li>
+<li>Interessepunkter følger med når segmenter slås sammen.</li>
+<li>«Vis i full skjerm»-knapp i publiserte visninger. <a href="docs/versjon-17.html">Detaljer</a></li>
+</ul>
+<h3 id="v16-drop-bag-bedre-gpx-eksport-sikring-av-punktbibliotek">v16 — Drop bag, bedre GPX-eksport, sikring av punktbibliotek</h3>
+<ul>
+<li>Nytt symbol: Drop bag. Ett <code>&lt;wpt&gt;</code> per interessepunkt (ryddigere i Garmin).</li>
+<li>Automatisk sikkerhetskopi av punktbiblioteket. <a href="docs/versjon-16.html">Detaljer</a></li>
+</ul>
+<h3 id="v15-velg-delte-punkter-og-snap">v15 — «Velg delte punkter» og snap</h3>
+<ul>
+<li>Finn alle delte punkter langs løypa og velg mange på én gang.</li>
+<li>Fest punkter til løypa («snap») eller vis dem på eksakt posisjon. <a href="docs/versjon-15.html">Detaljer</a></li>
+</ul>
+<h3 id="v14-punktbibliotek">v14 — Punktbibliotek</h3>
+<ul>
+<li>Delte, gjenbrukbare interessepunkter på tvers av løyper.</li>
+<li>Versjonsnummer i verktøyet; KrUltra-kreditering i publiserte visninger. <a href="docs/versjon-14.html">Detaljer</a></li>
+</ul>
+<h3 id="v13-publisering-av-interaktive-lypevisninger">v13 — Publisering av interaktive løypevisninger</h3>
+<ul>
+<li>Kart + høydeprofil + klikkbare punkter + markør, innebygd på nettsider via iframe.</li>
+<li>Opplasting via SFTP, med failover-gruppe. <a href="docs/versjon-13.html">Detaljer</a> · <a href="docs/publisering.html">publisering.md</a></li>
+</ul>
+<h3 id="v12-ikon-wrapping-flere-matvalg-tettere-profil-etiketter">v12 — Ikon-wrapping, flere matvalg, tettere profil-etiketter</h3>
+<ul>
+<li>Nye symboler (snacks, mat, varm mat, dusj); ikoner wrapper til flere rader. <a href="docs/versjon-12.html">Detaljer</a></li>
+</ul>
+<h3 id="v11-visningsmodus">v11 — Visningsmodus</h3>
+<ul>
+<li>Bare kart / delt / bare profil. <a href="docs/versjon-11.html">Detaljer</a></li>
+</ul>
+<h3 id="v10-utdatert-server-varsel-og-cache-fiks">v10 — Utdatert-server-varsel og cache-fiks</h3>
+<ul>
+<li>Rødt banner når serveren kjører eldre kode; cache-busting. <a href="docs/versjon-10.html">Detaljer</a></li>
+</ul>
+<h3 id="v9-poi-finpuss-og-profil-etiketter">v9 — PoI-finpuss og profil-etiketter</h3>
+<ul>
+<li><a href="docs/versjon-9.html">Detaljer</a></li>
+</ul>
+<h3 id="v8-ikonstrrelse-og-waypoints-i-hydeprofilen">v8 — Ikonstørrelse og waypoints i høydeprofilen</h3>
+<ul>
+<li>Individuell vis/skjul per punkt. <a href="docs/versjon-8.html">Detaljer</a></li>
+</ul>
+<h3 id="v7-interessepunkter-med-ledestrek-og-flyttbar-ramme">v7 — Interessepunkter med ledestrek og flyttbar ramme</h3>
+<ul>
+<li><a href="docs/versjon-7.html">Detaljer</a></li>
+</ul>
+<h3 id="v6-autorepeat-auto-lagring-av-punkter-flersymbol-zoom-skalering">v6 — Autorepeat, auto-lagring av punkter, flersymbol, zoom-skalering</h3>
+<ul>
+<li><a href="docs/versjon-6.html">Detaljer</a></li>
+</ul>
+<h3 id="v5-profilfarger-for-trykk-hydemeter-og-gruppert-bibliotek">v5 — Profilfarger for trykk, høydemeter og gruppert bibliotek</h3>
+<ul>
+<li><a href="docs/versjon-5.html">Detaljer</a></li>
+</ul>
+<h3 id="v4-interessepunkter-karteksport-og-flere-kartvisninger">v4 — Interessepunkter, karteksport og flere kartvisninger</h3>
+<ul>
+<li>Kartverkets høyder som standard. <a href="docs/versjon-4.html">Detaljer</a></li>
+</ul>
+<h3 id="v3-riktige-hyder-utjevning-og-starttidspunkt">v3 — Riktige høyder, utjevning og starttidspunkt</h3>
+<ul>
+<li>Terrenghøyder fra Kartverket; gaussisk utjevning av profilen. <a href="docs/versjon-3.html">Detaljer</a></li>
+</ul>
+<h3 id="v2-kart-metadata-nrmeste-punkt-og-hydeprofil">v2 — Kart, metadata, nærmeste punkt og høydeprofil</h3>
+<ul>
+<li>Kartunderlag fra Kartverket; høydeprofil. <a href="docs/versjon-2.html">Detaljer</a></li>
+</ul>
+<h3 id="mvp-klippe-skjte-og-eksportere-gpx">MVP — Klippe, skjøte og eksportere GPX</h3>
+<ul>
+<li>Kjernen: last inn GPX, klipp ut segmenter, slå sammen, eksporter ryddig
+  GPX 1.1 med stigende tidsstempler. <a href="docs/mvp-plan.html">Plan</a></li>
+</ul>
+</main>
+<footer class="bunn">
+Generert fra <code>CHANGELOG.md</code> — rediger den fila og kjør
+<code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
+</footer>
+</body>
+</html>
