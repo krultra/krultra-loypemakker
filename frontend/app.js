@@ -16,9 +16,11 @@
    ============================================================ */
 'use strict';
 
-// Verktøyets versjon — vises i topplinja og følger versjon-N-dokumentene
-// i docs/. Oppdateres når en ny funksjonsrunde er ferdig.
-const APP_VERSJON = 19;
+// Verktøyets versjon — vises i topplinja, følger semantisk versjonering
+// (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
+// hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
+// under, som bare er en intern teller for å oppdage utdatert server.
+const APP_VERSJON = '2.0.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
