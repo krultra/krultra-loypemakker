@@ -1,0 +1,62 @@
+name: 🐛 Feilrapport
+description: Meld fra om noe som ikke virker som det skal
+title: "[Feil] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Takk for at du melder fra! Jo mer konkret du kan være, desto
+        raskere kan feilen fikses.
+
+  - type: textarea
+    id: hva
+    attributes:
+      label: Hva skjedde?
+      description: Beskriv problemet så konkret du kan.
+      placeholder: F.eks. «Når jeg klikker Publiser løypevisning, skjer ingenting.»
+    validations:
+      required: true
+
+  - type: textarea
+    id: steg
+    attributes:
+      label: Hvordan kan vi gjenskape det?
+      description: Steg for steg, fra du starter verktøyet til feilen dukker opp.
+      placeholder: |
+        1. Last inn GPX-fil …
+        2. Klikk «…»
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: forventet
+    attributes:
+      label: Hva forventet du skulle skje?
+    validations:
+      required: false
+
+  - type: textarea
+    id: skjermbilde
+    attributes:
+      label: Skjermbilde eller feilmelding
+      description: Dra inn et bilde her, eller lim inn teksten fra det svarte vinduet / nettleserens konsoll (F12).
+    validations:
+      required: false
+
+  - type: input
+    id: versjon
+    attributes:
+      label: Hvilken versjon av KUL bruker du?
+      description: Vises øverst i verktøyet, ved siden av tittelen (f.eks. «versjon 2.0.0»).
+    validations:
+      required: false
+
+  - type: input
+    id: nettleser
+    attributes:
+      label: Nettleser og operativsystem
+      placeholder: F.eks. Chrome på Windows 11
+    validations:
+      required: false

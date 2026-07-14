@@ -1,0 +1,34 @@
+name: 💡 Forslag til ny funksjon
+description: Foreslå en forbedring eller ny funksjon
+title: "[Forslag] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gode forslag fra løpsarrangører er akkurat det som gjør verktøyet
+        bedre — takk for at du tar deg tid!
+
+  - type: textarea
+    id: behov
+    attributes:
+      label: Hvilket behov eller problem løser dette?
+      description: Beskriv gjerne situasjonen du sto i som fikk deg til å ønske dette.
+      placeholder: F.eks. «Jeg arrangerer flere løp som deler samme sjekkpunkt, og …»
+    validations:
+      required: true
+
+  - type: textarea
+    id: forslag
+    attributes:
+      label: Hva ønsker du deg?
+      description: Beskriv løsningen slik du ser den for deg. Skisser/eksempler er kjempefint.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternativer
+    attributes:
+      label: Har du vurdert andre måter å løse det på?
+    validations:
+      required: false

@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Spørsmål og diskusjon
+    url: https://github.com/krultra/krultra-loypemakker/discussions
+    about: Har du et spørsmål, eller vil du diskutere en idé før du foreslår den som en funksjon? Bruk Discussions.
+  - name: 🔒 Sikkerhetsproblem
+    url: mailto:post@krultra.no
+    about: Sikkerhetsrelaterte funn meldes helst direkte på e-post, ikke som et offentlig issue.
