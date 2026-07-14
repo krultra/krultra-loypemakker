@@ -96,6 +96,13 @@ starter serveren og kaller publisering). Fyll inn:
   Visningen må alltid nås via en http-adresse.
 - Fila ligger kun lokalt på din PC.
 
+> **Om SSH-vertsnøkler:** verktøyet stoler automatisk på serverens
+> vertsnøkkel første gang det kobler til (praktisk for en Pi på ditt eget
+> hjemmenett). Publiserer du over internett til en server du ikke
+> kontrollerer fysisk, bør du verifisere vertsnøkkelen på forhånd — koble
+> til med `ssh <bruker>@<host>` én gang fra samme PC og bekreft
+> fingeravtrykket, så er nøkkelen kjent når verktøyet kobler til.
+
 ### 3. På nettsidene (én gang per løypeside)
 
 Publiseringsdialogen gir deg en ferdig snutt, f.eks.:

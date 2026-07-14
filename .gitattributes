@@ -1,0 +1,14 @@
+# Linjeskift: normaliseres til LF i repoet, og sjekkes ut med plattformens
+# native slutt (CRLF på Windows, LF på Linux/Mac). Da får både Linux-utviklere
+# og rene Windows-brukere det de forventer.
+* text=auto
+
+# Windows-batchfiler MÅ ha CRLF for å kjøre pålitelig i cmd.exe
+*.bat text eol=crlf
+
+# Skallskript skal alltid ha LF (kjøres på Linux/Mac)
+*.sh text eol=lf
+
+# Binærfiler — git skal aldri røre linjeskift her
+*.png binary
+*.ico binary

@@ -50,10 +50,22 @@ def helse():
     return {"ok": True, "versjon": BACKEND_VERSJON}
 
 
+# Øvre grense for opplastede GPX-filer. Romslig (svært lange spor på
+# titusenvis av punkter er sjelden over noen få MB), men hindrer at en
+# ekstremt stor fil spiser opp minnet.
+MAKS_GPX_BYTES = 50 * 1024 * 1024  # 50 MB
+
+
 @router.post("/gpx/parse", response_model=ParseGpxResponse)
 async def parse_gpx_fil(file: UploadFile = File(...)):
     """Ta imot en opplastet GPX-fil og returner punktene til frontend."""
-    innhold = await file.read()
+    # Les inntil grensen + 1 byte, så vi kan avvise for store filer uten
+    # å lese hele den store fila inn i minnet.
+    innhold = await file.read(MAKS_GPX_BYTES + 1)
+    if len(innhold) > MAKS_GPX_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="GPX-fila er for stor (maks {} MB)".format(MAKS_GPX_BYTES // (1024 * 1024)))
     try:
         resultat = gpx_io.parse_gpx(innhold)
     except ValueError as exc:

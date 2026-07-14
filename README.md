@@ -50,6 +50,7 @@ Hver gang senere: bare dobbeltklikk `KUL.bat`. Lukk det svarte vinduet for
 📖 Detaljert, billedlagt installasjon: [docs/INSTALLASJON.md](docs/INSTALLASJON.md)
 · Full bruksveiledning: [docs/BRUK.md](docs/BRUK.md)
 · Publisering til nett: [docs/publisering.md](docs/publisering.md)
+· Endringslogg: [CHANGELOG.md](CHANGELOG.md)
 
 ## Vil du ha løypa publisert, men mangler egen server?
 
