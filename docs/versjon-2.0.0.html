@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Versjon 18 — Mobilvennlig publisert visning — KrUltra Løypemakker</title>
+<title>Versjon 2.0.0 — Første offentlige utgivelse — KrUltra Løypemakker</title>
 <link rel="icon" type="image/png" href="../frontend/favicon.png">
 <style>
 :root {
@@ -90,50 +90,36 @@ footer.bunn a { color: inherit; }
 </nav>
 </header>
 <main>
-<h1 id="versjon-18-mobilvennlig-publisert-visning">Versjon 18 — Mobilvennlig publisert visning</h1>
-<p><em>11. juli 2026</em></p>
-<h2 id="problemet">Problemet</h2>
-<p>I en iframe på mobil ble høydeprofilen svært komprimert, og kartet
-«fanget» brukeren: når kartet fylte skjermen, panorerte én-finger-sveip
-kartet i stedet for å scrolle siden rundt. Knappene lå dessuten oppå
-kartet og stjal av den begrensede kartflaten.</p>
-<h2 id="lsningene-alle-i-den-publiserte-visningen-asset-versjon-6">Løsningene (alle i den publiserte visningen, asset-versjon 6)</h2>
-<p><strong>Skånsom kartnavigasjon — kun når visningen er innebygd (iframe):</strong></p>
+<h1 id="versjon-200-frste-offentlige-utgivelse">Versjon 2.0.0 — Første offentlige utgivelse</h1>
+<p><em>14. juli 2026</em></p>
+<p>KrUltra Løypemakker (KUL) ble med denne utgivelsen <strong>åpen kildekode</strong>,
+publisert på <a href="https://github.com/krultra/krultra-loypemakker">GitHub</a> under
+MIT-lisens — fri å bruke, endre og dele, også kommersielt, med kreditering.</p>
+<h2 id="hovedinnhold">Hovedinnhold</h2>
 <ul>
-<li>Berøring: <strong>én finger scroller siden, to fingre flytter kartet</strong>
-  (Google Maps-mønsteret). Kartbeholderen får <code>touch-action: pan-y</code>,
-  Leaflet-draging slås av og på etter antall fingre, og et kort,
-  gjennomsiktig hint («Bruk to fingre for å flytte kartet») vises når
-  noen prøver med én finger. Knip-zoom virker som før.</li>
-<li>Mus: <strong>rullehjulet zoomer først etter at kartet er klikket</strong>, og slås
-  av igjen når pekeren forlater kartet — så siden kan scrolles forbi.</li>
-<li>Åpnet direkte (via «Vis i full skjerm») beholdes vanlig navigasjon.</li>
+<li><strong>Produktnavn og identitet:</strong> «KrUltra Løypemakker», forkortet KUL, med
+  logo, favicon og oppstartsfil <code>KUL.bat</code> (tidligere <code>run.bat</code>).</li>
+<li><strong>«Send til KrUltra»</strong>: arrangører uten egen server kan lage en
+  <code>.loype</code>-fil (bærer punkter, veipunkter, stil og alle metadata) og sende
+  den til KrUltra for publisering på loyper.krultra.no — med tilhørende
+  importfunksjon.</li>
+<li><strong>Klar for offentligheten:</strong> billedlagt installasjonsguide
+  (<a href="INSTALLASJON.html">INSTALLASJON.md</a>), bruksveiledning
+  (<a href="BRUK.html">BRUK.md</a>), endringslogg, HTML-versjoner av all dokumentasjon,
+  GitHub-maler for feilrapporter og funksjonsforslag, og sikkerhetsherding
+  (XSS-validering i publisert visning, opplastingsgrense på GPX-parsing).</li>
+<li><strong>Semantisk versjonering</strong> (MAJOR.MINOR.PATCH) ble innført fra og med
+  denne utgivelsen — se skjemaet i <a href="../CHANGELOG.html">CHANGELOG</a>.</li>
 </ul>
-<p><strong>Knappene ut av kartet:</strong> Satellitt- og fullskjerm-knappen ligger nå i
-topplinja ved siden av tittelen (alle skjermstørrelser) — hele
-kartflaten er kart.</p>
-<p><strong>Høydeprofilen på smale skjermer (&lt; 560 px):</strong></p>
-<ul>
-<li>Tegnes i lesbar bredde (minst 640 px) og <strong>scroller horisontalt inne
-  i sin egen stripe</strong> (<code>overflow-x: auto</code> på #profil-wrap — siden selv
-  får aldri scrollbar). Canvasen får <code>touch-action: pan-x</code>: sveip
-  scroller profilen, trykk flytter markøren (slideren virker som før).</li>
-<li><strong>Punktnavnene droppes</strong> — de spiste høyde og var uansett uleselige.
-  Indikatorstrekene og sirklene beholdes, og navnene finnes i
-  PoI-popupene på kartet.</li>
-</ul>
-<p><strong>Smartere iframe-høyde:</strong> snutten som genereres ved publisering bruker
-nå <code>height:640px;height:min(85vh,820px)</code> — opptil 820 px på store
-skjermer, 85 % av vinduet på små (640 px-linja er reserve for eldre
-nettlesere). Eksisterende innbygginger virker som før; bytt gjerne til
-den nye snutten ved anledning.</p>
-<h2 id="versjoner">Versjoner</h2>
-<p><code>APP_VERSJON</code> → 18, <code>BACKEND_VERSJON</code>/<code>FORVENTET_BACKEND</code> → 17
-(ny iframe-snutt + asset-versjon 6 krever omstart), cache-busting →
-<code>?v=18</code>. Endringene når nettsidene ved neste republisering av hver løype.</p>
+<h2 id="bakgrunn">Bakgrunn</h2>
+<p>2.0.0 tilsvarer den interne utviklingsversjonen «v19». Hele
+utviklingsløpet fra MVP til første offentlige utgivelse er dokumentert i
+versjonsnotatene <a href="versjon-2.html">versjon-2</a> til og med
+<a href="versjon-19.html">versjon-19</a> — se særlig <a href="versjon-19.html">versjon-19</a> for
+detaljene i selve lanseringsrunden.</p>
 </main>
 <footer class="bunn">
-Generert fra <code>docs/versjon-18.md</code> — rediger den fila og kjør
+Generert fra <code>docs/versjon-2.0.0.md</code> — rediger den fila og kjør
 <code>python scripts/build_docs_html.py</code> på nytt for å oppdatere denne siden.
 </footer>
 </body>

@@ -110,6 +110,7 @@ table {{ border-collapse: collapse; width: 100%; margin: 1em 0; font-size: 14px;
 th, td {{ border: 1px solid var(--kant); padding: 8px 10px; text-align: left; }}
 th {{ background: var(--bakgrunn); }}
 hr {{ border: none; border-top: 1px solid var(--kant); margin: 2em 0; }}
+p.muted {{ color: var(--tekst-dus); font-size: 14px; margin: 0.2em 0 0.6em; }}
 footer.bunn {{
   max-width: 860px; margin: 0 auto 40px; padding: 0 40px;
   color: var(--tekst-dus); font-size: 12px;
@@ -171,20 +172,34 @@ def bygg(kildefil: Path) -> Path:
 
 
 def bygg_indeks(genererte: "list[tuple[Path, str]]") -> None:
-    """docs/index.html: enkel oversikt med lenker til alle dokumentene."""
-    hoved, historikk = [], []
+    """docs/index.html: oversikt med lenker til alle dokumentene, delt i
+    Guider, Utgivelser (semver 2.x.y) og Utviklingshistorikk (v2–v19)."""
+    guider, utgivelser, historikk = [], [], []
     for fil, tittel in genererte:
         if fil.parent == ROT:
             continue  # README/CHANGELOG lenkes egne steder over
         rel = fil.relative_to(ROT / "docs").as_posix()
         rad = '<li><a href="{}">{}</a></li>'.format(rel, tittel)
-        (historikk if fil.stem.startswith("versjon-") else hoved).append(rad)
+        if re.match(r"^versjon-\d+\.\d+\.\d+$", fil.stem):
+            utgivelser.append((fil, rad))          # semver-utgivelse (2.0.0, 2.1.0 …)
+        elif re.match(r"^versjon-\d+$", fil.stem):
+            historikk.append(rad)                  # utviklingsversjon (v2–v19)
+        else:
+            guider.append(rad)                     # BRUK, INSTALLASJON, publisering …
+    # Utgivelser nyeste først (semver synkende)
+    utgivelser.sort(key=lambda t: _naturlig_nøkkel(t[0]), reverse=True)
+    utgivelser_rader = [rad for _, rad in utgivelser]
     innhold = (
         "<h1>Dokumentasjon</h1>\n<p>KrUltra Løypemakker (KUL) — velg et dokument:</p>\n"
         '<p><a href="../README.html">📘 README (start her)</a> · '
         '<a href="../CHANGELOG.html">📝 Endringslogg</a></p>\n'
-        "<h2>Guider</h2>\n<ul>\n" + "\n".join(hoved) + "\n</ul>\n"
-        "<h2>Utviklingshistorikk (detaljerte versjonsnotater)</h2>\n"
+        "<h2>Guider</h2>\n<ul>\n" + "\n".join(guider) + "\n</ul>\n"
+        "<h2>Utgivelser</h2>\n"
+        '<p class="muted">Offentlige versjoner (semantisk versjonering, nyeste først).</p>\n'
+        "<ul>\n" + "\n".join(utgivelser_rader) + "\n</ul>\n"
+        "<h2>Utviklingshistorikk (før 2.0.0)</h2>\n"
+        '<p class="muted">Interne utviklingsversjoner fra MVP fram til første '
+        "offentlige utgivelse.</p>\n"
         "<ul>\n" + "\n".join(historikk) + "\n</ul>\n"
     )
     html = MAL.format(
