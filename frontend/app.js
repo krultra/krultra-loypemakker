@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.0.0';
+const APP_VERSJON = '2.1.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -431,6 +431,14 @@ function zoomTil(punktlister) {
 //   - Nedlasting som PNG-bilde
 // Alle innstillingene huskes i nettleseren til neste gang.
 
+/** Lagret tallverdi fra localStorage, eller standardverdien hvis nøkkelen
+ *  ikke finnes. (I motsetning til «Number(...) || standard» overlever en
+ *  bevisst lagret 0 — 0 er falsy og ville ellers blitt til standarden.) */
+function lagretTall(nøkkel, standard) {
+  const verdi = localStorage.getItem(nøkkel);
+  return verdi === null ? standard : Number(verdi);
+}
+
 const profilState = {
   synlig: localStorage.getItem('gps-tool.profil') === '1',
   overdrivelse: Number(localStorage.getItem('gps-tool.profil.skala')) || 5,
@@ -441,8 +449,12 @@ const profilState = {
   fyll: localStorage.getItem('gps-tool.profil.fyll') || '#f4b8b8',
   bakgrunn: localStorage.getItem('gps-tool.profil.bakgrunn') || '#ffffff',
   tekst: Number(localStorage.getItem('gps-tool.profil.tekst')) || 11,
-  utjevning: Number(localStorage.getItem('gps-tool.profil.utjevning')) || 0,
-  vektform: Number(localStorage.getItem('gps-tool.profil.vektform')) || 3,
+  // Utjevning/vektform: 5/5 er standard og ANBEFALT — gir høydemeter
+  // omtrent som løpernes GPS-klokker rapporterer, og felles innstillinger
+  // på tvers av arrangører gjør tallene sammenlignbare. (lagretTall, ikke
+  // «|| 5»: en bevisst lagret 0 skal ikke overstyres av standarden.)
+  utjevning: lagretTall('gps-tool.profil.utjevning', 5),
+  vektform: lagretTall('gps-tool.profil.vektform', 5),
   // Farger på akser, rutenett, tall og posisjonsmarkør — fritt valgbare,
   // så profilen kan gjøres kontrastrik nok til f.eks. startnummertrykk
   akseFarge: localStorage.getItem('gps-tool.profil.akseFarge') || '#94a3b8',
@@ -915,6 +927,11 @@ document.getElementById('profile-shape').addEventListener('input', (e) => {
   lagreProfilValg();
   tegnProfil();
   oppdaterEditorMeta();
+});
+
+// (i)-knappen: forklaring av utjevningsinnstillingene og 5/5-anbefalingen
+document.getElementById('smooth-info-btn').addEventListener('click', () => {
+  ventPåDialog(document.getElementById('smooth-info-dialog'));
 });
 
 document.getElementById('profile-axis-color').addEventListener('input', (e) => {
@@ -2678,6 +2695,19 @@ function byggLoypeBunt(meta) {
   };
 }
 
+/** Last ned en blob rett til nettleserens nedlastingsmappe (uten
+ *  «Lagre som»-dialog) — brukt der filnavnet og målet er gitt på forhånd. */
+function lastNedFil(blob, filnavn) {
+  const url = URL.createObjectURL(blob);
+  const lenke = document.createElement('a');
+  lenke.href = url;
+  lenke.download = filnavn;
+  document.body.appendChild(lenke);
+  lenke.click();
+  lenke.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+}
+
 async function sendTilKrUltra() {
   if (!editorState.punkter) return;
   const meta = await spørOmMeta(
@@ -2688,28 +2718,35 @@ async function sendTilKrUltra() {
   const bunt = byggLoypeBunt(meta);
   const filnavn = (meta.adressenavn || 'loype') + '.loype';
   const blob = new Blob([JSON.stringify(bunt, null, 2)], { type: 'application/json' });
-  const lagret = await lagreFil(
-    blob, filnavn, 'KrUltra løypefil', { 'application/json': ['.loype'] });
-  if (!lagret) return;
+  // Rett i nedlastingsmappa — ingen dialog, så flyten blir: se over
+  // e-posten, dra inn fila fra Nedlastinger, send.
+  lastNedFil(blob, filnavn);
 
   huskSisteMeta(meta);
   editorState.adressenavn = meta.adressenavn; // huskes på sporet
 
-  // Åpne en ferdig e-post. Vedlegg kan ikke legges til automatisk via
-  // mailto, så brukeren vedlegger fila de nettopp lagret.
-  const emne = 'Løype for publisering: ' + meta.navn;
+  // Åpne en ferdig e-post i brukerens standard e-postprogram. Vedlegg kan
+  // ikke legges ved automatisk (mailto støtter ikke vedlegg — en bevisst
+  // sikkerhetsbegrensning i alle nettlesere/e-postprogrammer), så utkastet
+  // sier tydelig hvor fila ligger og at den må legges ved.
+  const emne = 'Løype: ' + meta.navn + ' - for publisering på loyper.krultra.no';
   const kropp =
     'Hei KrUltra!\n\n' +
-    'Jeg ønsker å få publisert denne løypa på loyper.krultra.no.\n\n' +
+    'Jeg ønsker å få publisert denne løypa på loyper.krultra.no:\n\n' +
     'Navn: ' + meta.navn + '\n' +
     'Ønsket adresse: loyper.krultra.no/' + meta.adressenavn + '\n' +
     (meta.creator ? 'Laget av: ' + meta.creator + '\n' : '') +
     (meta.copyright ? 'Copyright/lisens: ' + meta.copyright + '\n' : '') +
-    '\nVIKTIG: Husk å legge ved fila «' + filnavn + '» som jeg nettopp lagret.\n\n' +
+    (meta.link ? 'Lenke til løpet: ' + meta.link + '\n' : '') +
+    '\n*** HUSK VEDLEGGET: Løypefila «' + filnavn + '» ligger i ' +
+    'nedlastingsmappa di (Nedlastinger/Downloads). Dra den inn i denne ' +
+    'e-posten eller bruk vedleggsknappen før du sender. ***\n\n' +
+    'Eventuelle tilleggsopplysninger:\n\n\n' +
     'Hilsen\n';
   window.location.href = 'mailto:post@krultra.no?subject=' +
     encodeURIComponent(emne) + '&body=' + encodeURIComponent(kropp);
-  toast('Løypefila «' + filnavn + '» er lagret. Legg den ved e-posten som åpnet seg.');
+  toast('Løypefila «' + filnavn + '» er lastet ned til Nedlastinger. ' +
+    'Legg den ved e-posten som åpnet seg, og send.');
 }
 
 document.getElementById('btn-send-krultra').addEventListener('click', sendTilKrUltra);

@@ -143,6 +143,42 @@ body { display: flex; flex-direction: column; }
 
 .toolbar-divider { width: 1px; height: 20px; background: var(--kant); }
 
+/* Gruppering av innstillinger som hører sammen (f.eks. Utjevning+Vektform) */
+.profile-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 8px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+/* Liten rund (i)-knapp for forklaringer */
+.info-btn {
+  width: 18px; height: 18px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--farge-primær);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--farge-primær);
+  font: italic bold 11px Georgia, serif;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.info-btn:hover { background: var(--farge-primær); color: #fff; }
+
+/* Innhold i informasjonsdialoger */
+#smooth-info-dialog { max-width: 520px; }
+.info-liste { padding-left: 20px; }
+.info-liste li { margin-bottom: 6px; }
+.info-advarsel {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  border-radius: 0 8px 8px 0;
+  padding: 8px 12px;
+}
+
 /* Markør for interessepunkter (PoI): liten sirkel på selve punktet,
    symbolet står ved siden av (forskjøvet bort fra løypetraseen i JS) */
 .wpt-ikon { background: transparent; border: none; }

@@ -17,6 +17,22 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.1.0 — 14. juli 2026
+
+- **Utjevning og Vektform: 5/5 er ny standard og anbefaling.** De to
+  innstillingene er gruppert sammen i verktøylinja med en **(i)-knapp** som
+  forklarer hva de gjør, advarer om at de påvirker beregnede høydemeter, og
+  begrunner anbefalingen: 5/5 gir omtrent samme høydemeter som løpernes
+  GPS-klokker, og felles innstillinger på tvers av arrangører gjør
+  høydetallene sammenlignbare. Dialogen anbefaler også sterkt Kartverkets
+  høydedata framfor GPX-filas egne høyder. (Har du selv lagret andre
+  verdier fra før, beholdes de.)
+- **Enklere «Send til KrUltra»-flyt:** løypefila lastes nå ned automatisk
+  til Nedlastinger (ingen lagringsdialog), og e-postutkastet som åpnes har
+  riktig mottaker, emne («Løype: ‹navn› - for publisering på
+  loyper.krultra.no») og ferdig brødtekst med tydelig påminnelse om å legge
+  ved fila. Se over, legg ved, send.
+
 ## 2.0.0 — 14. juli 2026 (første offentlige utgivelse)
 
 Verktøyet er nå åpen kildekode under MIT-lisens, med nytt navn og logo.

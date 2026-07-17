@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 </head>
 <body>
 
@@ -170,18 +170,20 @@
             <input type="checkbox" id="profile-marker-on" checked> Markør
             <input type="color" id="profile-marker-color" value="#2563eb">
           </label>
-          <label class="profile-control"
-                 title="Jevn ut profilen: hvert punkt vektes sammen med n punkter på hver side (0 = ingen utjevning)">
-            Utjevning
-            <input type="range" id="profile-smooth" min="0" max="50" value="0">
-            <span id="profile-smooth-val" class="pos-label-short">0</span>
-          </label>
-          <label class="profile-control"
-                 title="Formen på vektingen: flat (alle punktene teller nesten likt) eller spiss gauss-kurve (punktet i midten dominerer)">
-            Vektform
-            <input type="range" id="profile-shape" min="1" max="10" value="3">
-            <span id="profile-shape-val" class="pos-label-short">3</span>
-          </label>
+          <span class="profile-group" title="Utjevning av høydeprofilen — påvirker også beregnede høydemeter. Anbefalt: 5/5. Klikk (i) for forklaring.">
+            <label class="profile-control">
+              Utjevning
+              <input type="range" id="profile-smooth" min="0" max="50" value="5">
+              <span id="profile-smooth-val" class="pos-label-short">±5</span>
+            </label>
+            <label class="profile-control">
+              Vektform
+              <input type="range" id="profile-shape" min="1" max="10" value="5">
+              <span id="profile-shape-val" class="pos-label-short">5</span>
+            </label>
+            <button type="button" id="smooth-info-btn" class="info-btn"
+                    title="Hva gjør Utjevning og Vektform — og hvorfor 5/5 er anbefalt">i</button>
+          </span>
           <label class="profile-control"
                  title="Vis interessepunktenes navn under x-aksen (med loddrett strek opp til punktet).">
             <input type="checkbox" id="profile-wpt-names"> Punktnavn
@@ -492,11 +494,52 @@
     </form>
   </dialog>
 
+  <!-- Forklaring av utjevningsinnstillingene for høydeprofilen -->
+  <dialog id="smooth-info-dialog">
+    <form method="dialog">
+      <h3>Utjevning og Vektform</h3>
+      <p>
+        GPS-spor inneholder alltid litt «støy» i høydemålingene. Disse to
+        innstillingene jevner ut profilen:
+      </p>
+      <ul class="info-liste">
+        <li><strong>Utjevning</strong> — hvor mange nabopunkter (på hver
+          side) som regnes med når hvert punkt jevnes ut. 0 = ingen
+          utjevning, høyere tall = glattere profil.</li>
+        <li><strong>Vektform</strong> — formen på vektingen: lav verdi gir
+          flat vekting (mye utjevning), høy verdi gir spiss gauss-kurve
+          (punktet i midten dominerer, mindre utjevning).</li>
+      </ul>
+      <p class="info-advarsel">
+        ⚠️ <strong>Innstillingene påvirker de beregnede høydemeterne</strong>
+        (↑ opp / ↓ ned) — i metadatalinja, i eksporterte filer og i
+        publiserte løypevisninger. Mer utjevning gir lavere tall.
+      </p>
+      <p>
+        <strong>5/5 er anbefalt</strong> og gir tilnærmet samme høydemeter
+        som løperne får på GPS-klokkene sine (selv om dette også varierer
+        med klokkenes egne innstillinger). Hvis norske løpsarrangører
+        opererer med svært forskjellige innstillinger, blir det vanskelig
+        for løperne å forholde seg til de oppgitte høydetallene — hold deg
+        derfor til 5/5 med mindre du har en god grunn.
+      </p>
+      <p>
+        💡 Det er også <strong>sterkt anbefalt å bruke høydedata fra
+        Kartverket</strong> (knappen «Høyder: Kartverket», som er standard)
+        i stedet for høydene som følger med GPX-fila — GPS-målte høyder kan
+        avvike med ±150 m fra terrenget.
+      </p>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">OK</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Små beskjeder nede i hjørnet ("lagret!", feilmeldinger osv.) -->
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=19"></script>
-  <script src="app.js?v=19"></script>
+  <script src="felles.js?v=20"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>
