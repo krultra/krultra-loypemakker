@@ -31,6 +31,10 @@ Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
   - Når et sted markeres, vises **kontaktene knyttet til stedet** (tittel +
     «…»); klikk på en kontakt åpner et **kontaktkort** med all informasjon
     (telefon og e-post er klikkbare).
+- **Arenakart innebygd (iframe):** stedslista åpnes nå automatisk bare på full
+  skjermbredde — i smale innebygginger er den skjult som standard (kan alltid
+  åpnes med «☰ Liste»). Innebygde arenakart har også fått en **«⛶ Full
+  skjerm»**-knapp som åpner kartet i egen fane, slik løypekartene har.
 
 ## 2.2.0 — 25. juli 2026
 

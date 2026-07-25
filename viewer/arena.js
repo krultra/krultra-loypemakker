@@ -62,7 +62,9 @@ function startVisning() {
   byggKontaktliste();
   byggPanelFaner();
   byggListeToggle();
+  byggFullskjerm();
   byggKontaktKort();
+  settListeAuto();
 }
 
 // ============================================================
@@ -426,17 +428,44 @@ function byggKontaktKort() {
 }
 
 // ============================================================
-// Liste-panel av/på (mobil, og valgfritt på store skjermer)
+// Liste-panel av/på + fullskjerm
 // ============================================================
+
+// Under denne bredden (px) skjules stedslista automatisk ved oppstart —
+// typisk når visningen er bygd inn i en smal iframe. På full skjermbredde
+// åpnes den. Brukeren kan alltid overstyre med «☰ Liste».
+const LISTE_BRED_NOK = 860;
+let listeManuell = false; // har brukeren selv styrt lista?
 
 function byggListeToggle() {
   const knapp = document.getElementById('arena-liste-toggle');
   const app = document.getElementById('arena-app');
   knapp.addEventListener('click', () => {
+    listeManuell = true; // brukeren bestemmer nå — slutt å auto-styre
     const skjult = app.classList.toggle('liste-skjult');
     knapp.setAttribute('aria-expanded', String(!skjult));
     setTimeout(() => map.invalidateSize(), 250);
   });
+}
+
+/** Skjul lista automatisk på smal skjerm, vis den på full bredde. */
+function settListeAuto() {
+  if (listeManuell) return; // ikke overstyr brukerens eget valg
+  const app = document.getElementById('arena-app');
+  const skjul = window.innerWidth < LISTE_BRED_NOK;
+  app.classList.toggle('liste-skjult', skjul);
+  document.getElementById('arena-liste-toggle')
+    .setAttribute('aria-expanded', String(!skjul));
+}
+
+/** Fullskjerm-knapp: bare når visningen er bygd inn (iframe) — åpner den
+ *  direkte adressen i egen fane, som i løypevisningen. */
+function byggFullskjerm() {
+  if (window.self === window.top) return;
+  const fs = document.getElementById('arena-fullskjerm');
+  fs.classList.remove('skjult');
+  fs.addEventListener('click', () =>
+    window.open(window.location.href, '_blank', 'noopener'));
 }
 
 // ============================================================
@@ -448,4 +477,7 @@ function escHtml(s) {
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
-window.addEventListener('resize', () => { if (map) map.invalidateSize(); });
+window.addEventListener('resize', () => {
+  settListeAuto(); // følg bredden (til brukeren selv styrer lista)
+  if (map) map.invalidateSize();
+});

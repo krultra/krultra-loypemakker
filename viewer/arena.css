@@ -37,6 +37,8 @@ body { display: flex; flex-direction: column; }
 #arena-topp h1 { margin: 0; font-size: 18px; }
 #arena-topp p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
 
+#arena-topp-knapper { display: flex; gap: 6px; flex-shrink: 0; }
+
 .arena-liste-toggle {
   padding: 6px 12px;
   border: 1px solid #cbd5e1;
