@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.1.0';
+const APP_VERSJON = '2.2.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1647,6 +1647,7 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
   document.getElementById('wpt-snap').checked = !!(wpt && wpt.snap);
   document.getElementById('wpt-snap-avstand').textContent = snapAktuelt
     ? '(punktet ligger ' + Math.round(avstandFraSpor * 1000) + ' m fra løypa)' : '';
+  document.getElementById('wpt-arena').value = (wpt && wpt.arena) || '';
 
   // Nytt punkt: foreslå delte punkter i nærheten av markøren (ett klikk
   // gjenbruker punktet i denne løypa — samme sted, navn og symboler)
@@ -1720,6 +1721,10 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
       delBib: document.getElementById('wpt-del-bib').checked,
       // undefined = snap-valget var ikke aktuelt — behold eksisterende verdi
       snap: snapAktuelt ? document.getElementById('wpt-snap').checked : undefined,
+      // Arena-lenke (valgfri): «arena» eller «løype/arena». Fjern mellomrom
+      // (også rundt skråstreken) og små bokstaver — matcher slug-formatet.
+      arena: document.getElementById('wpt-arena').value.trim().toLowerCase()
+        .replace(/\s+/g, '') || null,
     },
   };
 }
@@ -1737,6 +1742,7 @@ async function leggTilWpt() {
     s.veipunkter.push({
       bib_id: d.id, lat: d.lat, lon: d.lon, ele: d.ele,
       name: d.name, desc: d.desc, sym: d.sym, type: d.type, types: d.types,
+      arena: d.arena || null, // arenakart-lenken følger med det delte punktet
       vis_ikon: true,
     });
     tegnVeipunkter();
@@ -1796,6 +1802,7 @@ async function redigerWpt(indeks) {
     wpt.sym = svar.verdier.sym;
     wpt.type = svar.verdier.type;
     wpt.vis_ikon = svar.verdier.vis_ikon;
+    wpt.arena = svar.verdier.arena;
     if (svar.verdier.snap !== undefined) wpt.snap = svar.verdier.snap;
     if (svar.handling === 'move') {
       const p = s.punkter[s.valgtIdx];
@@ -1948,6 +1955,7 @@ async function velgDeltePunkter() {
     s.veipunkter.push({
       bib_id: d.id, lat: d.lat, lon: d.lon, ele: d.ele,
       name: d.name, desc: d.desc, sym: d.sym, type: d.type, types: d.types,
+      arena: d.arena || null, // arenakart-lenken følger med det delte punktet
       vis_ikon: true,
       snap: !!(snapValg && snapValg.value === 'snap'),
     });
@@ -3429,10 +3437,24 @@ let aktivFane = 'editor';
 
 function byttFane(fane) {
   aktivFane = fane;
+  const erArena = fane === 'arena';
   document.getElementById('tab-editor').classList.toggle('active', fane === 'editor');
   document.getElementById('tab-merge').classList.toggle('active', fane === 'merge');
+  document.getElementById('tab-arena').classList.toggle('active', erArena);
   document.getElementById('editor-panel').classList.toggle('hidden', fane !== 'editor');
   document.getElementById('merge-panel').classList.toggle('hidden', fane !== 'merge');
+
+  // Arenakart er et helt separat arbeidsområde: skjul løype-/profilflaten og
+  // vis arena-workspace i stedet. All arena-logikk ligger i arena.js.
+  document.querySelector('.map-toolbar').classList.toggle('hidden', erArena);
+  document.getElementById('map').classList.toggle('hidden', erArena);
+  document.getElementById('profile-section').classList.toggle('arena-tvunget-skjult', erArena);
+  document.getElementById('arena-workspace').classList.toggle('hidden', !erArena);
+
+  if (erArena) {
+    if (window.arenaEditor) window.arenaEditor.aktiver();
+    return; // arena styrer sin egen scene
+  }
 
   // Tegn scenen som hører til fanen (state beholdes ved fanebytte)
   if (fane === 'editor') {
@@ -3448,6 +3470,7 @@ function byttFane(fane) {
 
 document.getElementById('tab-editor').addEventListener('click', () => byttFane('editor'));
 document.getElementById('tab-merge').addEventListener('click', () => byttFane('merge'));
+document.getElementById('tab-arena').addEventListener('click', () => byttFane('arena'));
 
 // Oppstart: gjenopprett lagrede valg, hent biblioteket, vis tom-tilstand
 settKartfliser(localStorage.getItem('gps-tool.kart') === '1');
@@ -3492,7 +3515,7 @@ oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 17;
+const FORVENTET_BACKEND = 18;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

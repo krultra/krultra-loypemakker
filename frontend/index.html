@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=20">
+  <link rel="stylesheet" href="style.css?v=23">
 </head>
 <body>
 
@@ -29,6 +29,7 @@
       <nav class="tabs">
         <button id="tab-editor" class="tab active">Rediger spor</button>
         <button id="tab-merge" class="tab">Slå sammen segmenter</button>
+        <button id="tab-arena" class="tab" title="Lag et arenakart: et oversiktsbilde med inntegnede områder og punkter">🏟️ Arenakart</button>
       </nav>
     </div>
   </header>
@@ -315,6 +316,54 @@
         </div>
       </section>
 
+      <!-- Arbeidsområde: Arenakart (helt separat fra løype-/profilflaten) -->
+      <section id="arena-workspace" class="arena-workspace hidden">
+        <div class="arena-toolbar">
+          <button id="arena-open" class="btn btn-small"
+                  title="Åpne et lagret arenakart">&#128194; Åpne&hellip;</button>
+          <button id="arena-new" class="btn btn-small"
+                  title="Start et nytt, tomt arenakart">&#10133; Nytt</button>
+          <span class="toolbar-divider"></span>
+          <label id="arena-image-label" for="arena-image-input" class="btn btn-small"
+                 title="Last inn et oversiktskart/bilde som bakgrunn">&#128444;&#65039; Last inn bilde&hellip;</label>
+          <input type="file" id="arena-image-input" accept="image/png,image/jpeg,image/webp" hidden>
+          <span class="toolbar-divider"></span>
+          <button id="arena-draw-polygon" class="btn btn-small"
+                  title="Tegn et område: klikk hjørner, dobbeltklikk (eller «Fullfør») for å lukke">&#11039; Tegn område</button>
+          <button id="arena-draw-point" class="btn btn-small"
+                  title="Sett et punkt: klikk der punktet skal være">&#128205; Sett punkt</button>
+          <button id="arena-draw-finish" class="btn btn-small btn-primary hidden">&#10004; Fullfør</button>
+          <button id="arena-draw-cancel" class="btn btn-small hidden">Avbryt tegning</button>
+          <span class="toolbar-divider"></span>
+          <button id="arena-types" class="btn btn-small"
+                  title="Definer typer (kategorier) med farger">&#127912; Typer&hellip;</button>
+          <span class="toolbar-divider"></span>
+          <button id="arena-save" class="btn btn-small btn-primary" title="Lagre arenakartet lokalt">&#128190; Lagre</button>
+          <button id="arena-publish" class="btn btn-small btn-primary"
+                  title="Publiser arenakartet så det får en egen nettadresse">&#127760; Publiser&hellip;</button>
+          <span id="arena-status" class="arena-status muted"></span>
+        </div>
+
+        <div class="arena-main">
+          <div id="arena-edit-map">
+            <div id="arena-map-empty" class="map-empty">
+              <p>🏟️ Last inn et bilde (oversiktskart) for å komme i gang,<br>
+              eller åpne et lagret arenakart.</p>
+            </div>
+            <div id="arena-draw-hint" class="arena-draw-hint hidden"></div>
+          </div>
+          <aside class="arena-edit-side">
+            <div class="arena-side-head">
+              <input type="text" id="arena-name" class="arena-name-input"
+                     placeholder="Navn på arenakartet (f.eks. «Teveltunet»)" autocomplete="off">
+              <p class="muted arena-side-hint">Klikk et sted i lista for å finne det på kartet. Klikk et område/punkt på kartet for å redigere det.</p>
+            </div>
+            <ul id="arena-feature-liste" class="arena-feature-liste"></ul>
+            <p id="arena-feature-tom" class="muted">Ingen steder ennå. Tegn et område eller sett et punkt.</p>
+          </aside>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -443,6 +492,11 @@
         <input type="checkbox" id="wpt-snap">
         Fest til løypa (snap) <span class="muted" id="wpt-snap-avstand"></span>
       </label>
+      <label class="field-label" for="wpt-arena"
+             title="Adressenavnet på et publisert arenakart. Er det satt, blir punktet klikkbart i den publiserte visningen og åpner arenakartet. Bruk «‹løype›/‹arena›» (f.eks. «mmc/teveltunet») for å peke til en arena publisert under en bestemt løype — da beholder et delt punkt riktig lenke også når det brukes i andre løyper. Bare «‹arena›» peker til en arena under samme løype som punktet publiseres i.">
+        Arenakart-lenke <span class="muted">(valgfri — f.eks. «mmc/teveltunet», eller bare «teveltunet» for samme løype)</span>
+      </label>
+      <input type="text" id="wpt-arena" placeholder="f.eks. mmc/teveltunet" autocomplete="off">
       <div id="wpt-stats" class="wpt-stats"></div>
       <div class="button-row">
         <button value="ok" class="btn btn-primary">Lagre</button>
@@ -535,11 +589,91 @@
     </form>
   </dialog>
 
+  <!-- Arenakart: rediger et område/punkt -->
+  <dialog id="arena-feature-dialog">
+    <form method="dialog">
+      <h3 id="arena-feature-title">Sted på arenakartet</h3>
+      <label class="field-label" for="arena-feature-navn">Navn</label>
+      <input type="text" id="arena-feature-navn" placeholder="F.eks. «Sekretariat»" autocomplete="off">
+      <label class="field-label" for="arena-feature-beskr">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-feature-beskr" rows="2" placeholder="F.eks. «Åpent fra kl. 08. Utlevering av startnummer.»"></textarea>
+      <label class="field-label" for="arena-feature-type">Type</label>
+      <select id="arena-feature-type"></select>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">Lagre</button>
+        <button value="delete" id="arena-feature-delete" class="btn btn-danger-subtle">Slett</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: typer (kategorier med farge) -->
+  <dialog id="arena-types-dialog">
+    <form method="dialog">
+      <h3>Typer</h3>
+      <p class="muted">Kategorier for stedene, hver med sin farge (f.eks. «Servering» grønn, «Sanitær» blå).</p>
+      <div id="arena-types-list" class="arena-types-list"></div>
+      <div class="arena-type-new">
+        <input type="text" id="arena-type-new-navn" placeholder="Ny type…" autocomplete="off">
+        <input type="color" id="arena-type-new-farge" value="#2563eb">
+        <button type="button" id="arena-type-add" class="btn btn-small">Legg til</button>
+      </div>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">Ferdig</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: åpne et lagret arenakart -->
+  <dialog id="arena-open-dialog">
+    <form method="dialog">
+      <h3>Åpne arenakart</h3>
+      <div id="arena-open-list" class="arena-open-list"><p class="muted">Laster …</p></div>
+      <div class="button-row">
+        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: publiser -->
+  <dialog id="arena-publish-dialog">
+    <form method="dialog">
+      <h3>Publiser arenakart</h3>
+      <label class="field-label" for="arena-publish-target">Publiseringsmål</label>
+      <select id="arena-publish-target"></select>
+      <label class="field-label" for="arena-publish-event">
+        Løype-/event-navn <span class="muted">(samme adressenavn som løypa — arenaen legges under denne)</span>
+      </label>
+      <input type="text" id="arena-publish-event" placeholder="f.eks. mmc-70k" autocomplete="off">
+      <label class="field-label" for="arena-publish-arena">
+        Arena-navn <span class="muted">(blir siste del av adressen — gjenbruk for å oppdatere)</span>
+      </label>
+      <input type="text" id="arena-publish-arena" placeholder="f.eks. teveltunet" autocomplete="off">
+      <label class="field-label" for="arena-publish-title">Tittel</label>
+      <input type="text" id="arena-publish-title" autocomplete="off">
+      <label class="field-label" for="arena-publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-publish-desc" rows="2"></textarea>
+      <p class="muted arena-publish-hint" id="arena-publish-slughint"></p>
+      <div id="arena-publish-result" class="publish-result hidden">
+        <p><strong>Publisert!</strong> <a id="arena-publish-url" href="#" target="_blank" rel="noopener"></a></p>
+        <p class="muted">Sett dette arena-navnet som «Arenakart-lenke» på et løypepunkt for å koble det til løypa.</p>
+        <label class="field-label">Lim inn denne snutten for å bygge inn arenakartet:</label>
+        <textarea id="arena-publish-embed" rows="3" readonly></textarea>
+        <button type="button" id="arena-publish-copy" class="btn btn-small">Kopier snutten</button>
+      </div>
+      <div class="button-row">
+        <button value="ok" id="arena-publish-go" class="btn btn-primary">Publiser</button>
+        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Små beskjeder nede i hjørnet ("lagret!", feilmeldinger osv.) -->
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="felles.js?v=23"></script>
+  <script src="app.js?v=23"></script>
+  <script src="arena.js?v=23"></script>
 </body>
 </html>

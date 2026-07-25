@@ -1,0 +1,256 @@
+/* ============================================================
+   Innbyggbart arenakart — utseende.
+   Layouten fyller hele viewporten (siden lever typisk i en iframe):
+   topptekst, en flate delt i kart (fleksibelt) + scrollbar liste, og en
+   diskret bunnlinje. På smale skjermer legges lista under kartet.
+   ============================================================ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+body { display: flex; flex-direction: column; }
+
+.skjult { display: none !important; }
+
+#arena-app { display: flex; flex-direction: column; height: 100%; }
+
+/* ---------- Topptekst ---------- */
+
+#arena-topp {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px 6px;
+  flex-shrink: 0;
+}
+#arena-topp h1 { margin: 0; font-size: 18px; }
+#arena-topp p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
+
+.arena-liste-toggle {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ---------- Hovedflate: kart + liste ---------- */
+
+#arena-hoved {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 0;
+}
+
+#arena-map {
+  flex: 1;
+  min-height: 240px;
+  position: relative;
+  background: #f1f5f9;
+}
+/* Leaflet-tiles/overlay er skarpe raster — la nettleseren skalere pent */
+#arena-map img.leaflet-image-layer { image-rendering: auto; }
+
+#arena-liste-panel {
+  width: 300px;
+  max-width: 42%;
+  flex-shrink: 0;
+  border-left: 1px solid #e2e8f0;
+  overflow-y: auto;
+  background: #ffffff;
+}
+#arena-app.liste-skjult #arena-liste-panel { display: none; }
+
+#arena-liste { padding: 8px 10px 16px; }
+.arena-liste-tom { color: #64748b; font-size: 14px; padding: 8px; }
+
+.arena-liste-verktoy {
+  display: flex;
+  gap: 6px;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid #eef2f7;
+  margin-bottom: 4px;
+}
+.arena-liste-verktoy-knapp {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #475569;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.arena-liste-verktoy-knapp:hover { background: #eef2f7; }
+
+.arena-gruppe { margin-bottom: 12px; }
+.arena-gruppe-tittel {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  margin: 10px 0 6px;
+  padding: 4px 4px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+  cursor: pointer;
+  border-radius: 6px;
+  text-align: left;
+}
+.arena-gruppe-tittel:hover { background: rgba(0, 0, 0, 0.04); }
+.arena-gruppe-navn { flex: 1; }
+.arena-gruppe-antall {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.arena-karet {
+  display: inline-block;
+  font-size: 11px;
+  transition: transform 0.15s;
+  color: #94a3b8;
+}
+.arena-gruppe.kollapset .arena-karet { transform: rotate(-90deg); }
+.arena-gruppe.kollapset .arena-liste-el { display: none; }
+.arena-prikk {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.arena-liste-el {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  border-left: 4px solid var(--farge, #64748b);
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 7px 10px;
+  margin: 4px 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.arena-liste-el:hover { background: #eef2f7; }
+.arena-liste-el.framhevet {
+  background: #e0e7ff;
+  border-color: var(--farge, #64748b);
+}
+.arena-liste-navn { display: block; font-size: 14px; font-weight: 500; color: #0f172a; }
+.arena-liste-beskr {
+  display: block;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Markert element: vis hele beskrivelsen (ikke avkortet med «…») */
+.arena-liste-el.framhevet .arena-liste-beskr {
+  white-space: normal;
+  overflow: visible;
+}
+
+/* ---------- Bunnlinje ---------- */
+
+#arena-bunn {
+  flex-shrink: 0;
+  padding: 6px 16px 8px;
+  font-size: 12px;
+  color: #94a3b8;
+}
+#arena-bunn a { color: #64748b; }
+
+/* ---------- Laster/hint ---------- */
+
+#arena-laster {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  text-align: center;
+  color: #475569;
+  background: #ffffff;
+}
+
+#arena-kart-hint {
+  position: absolute;
+  z-index: 500;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.82);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+#arena-kart-hint.usynlig { opacity: 0; }
+
+/* ---------- Smal skjerm: lista under kartet ---------- */
+
+@media (max-width: 640px) {
+  #arena-hoved { flex-direction: column; }
+  #arena-liste-panel {
+    width: 100%;
+    max-width: none;
+    max-height: 40vh;
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+  }
+}
+
+/* ---------- Mørk modus ---------- */
+
+@media (prefers-color-scheme: dark) {
+  html, body { color: #e2e8f0; background: #0f172a; }
+  #arena-topp p { color: #94a3b8; }
+  .arena-liste-toggle { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+  #arena-map { background: #1e293b; }
+  #arena-liste-panel { background: #0f172a; border-color: #334155; }
+  .arena-gruppe-tittel { color: #94a3b8; }
+  .arena-gruppe-tittel:hover { background: rgba(255, 255, 255, 0.06); }
+  .arena-gruppe-antall { background: rgba(255, 255, 255, 0.08); color: #94a3b8; }
+  .arena-liste-verktoy { border-color: #334155; }
+  .arena-liste-verktoy-knapp { background: #1e293b; color: #cbd5e1; border-color: #334155; }
+  .arena-liste-verktoy-knapp:hover { background: #273449; }
+  .arena-liste-el { background: #1e293b; }
+  .arena-liste-el:hover { background: #273449; }
+  .arena-liste-el.framhevet { background: #312e81; }
+  .arena-liste-navn { color: #f1f5f9; }
+  #arena-laster { color: #cbd5e1; background: #0f172a; }
+  #arena-liste-panel { border-color: #334155; }
+}

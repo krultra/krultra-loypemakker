@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<!--
+  Innbyggbart arenakart — publiseres av KrUltra Løypemakker.
+  Denne fila er en MAL: ved publisering byttes __V__ ut med gjeldende
+  arena-asset-versjon, og fila legges i arenaens mappe (<event>/<arena>/)
+  sammen med arena.json og bakgrunnsbildet. All logikk ligger i delte
+  assets (../../arena-assets/v<N>/), så en arena-mappe består kun av denne
+  lille fila + arena.json + bilde.
+-->
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Arenakart</title>
+  <link rel="icon" type="image/png" href="../../arena-assets/v__V__/favicon.png">
+  <link rel="stylesheet" href="../../arena-assets/v__V__/leaflet.css">
+  <link rel="stylesheet" href="../../arena-assets/v__V__/arena.css">
+</head>
+<body>
+
+  <div id="arena-app" class="skjult">
+    <header id="arena-topp">
+      <div id="arena-topp-tekst">
+        <h1 id="arena-tittel"></h1>
+        <p id="arena-beskrivelse"></p>
+      </div>
+      <button id="arena-liste-toggle" class="arena-liste-toggle"
+              title="Vis/skjul listen over steder" aria-expanded="true">☰ Steder</button>
+    </header>
+
+    <div id="arena-hoved">
+      <div id="arena-map">
+        <div id="arena-kart-hint" class="skjult">Bruk to fingre for å flytte kartet</div>
+      </div>
+      <aside id="arena-liste-panel">
+        <div id="arena-liste"></div>
+      </aside>
+    </div>
+
+    <footer id="arena-bunn"></footer>
+  </div>
+
+  <div id="arena-laster">Laster arenakartet …</div>
+
+  <script src="../../arena-assets/v__V__/leaflet.js"></script>
+  <script src="../../arena-assets/v__V__/arena.js"></script>
+</body>
+</html>

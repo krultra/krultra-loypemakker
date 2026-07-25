@@ -27,7 +27,7 @@ from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
 # at nye publiseringer laster opp friske assets uten å røre gamle løyper.
-ASSET_VERSJON = 7
+ASSET_VERSJON = 9
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -211,6 +211,9 @@ def bygg_course_json(
             "types": w.types or ([w.type] if w.type else None),
             "lab_lat": w.lab_lat, "lab_lon": w.lab_lon,
             "vis_ikon": w.vis_ikon,
+            # Valgfri arena-slug: gjør punktet klikkbart i visningen (lenker
+            # til arenakartet på ./<arena>/). Utelates når den ikke er satt.
+            "arena": w.arena or None,
         })
 
     return {
@@ -372,9 +375,55 @@ class _SftpMål:
         self.klient.close()
 
 
+def lag_skriver(mål: dict):
+    """Lag riktig skriver (mappe eller SFTP) for ett konkret mål.
+
+    Delt med arena-publiseringen, som skriver andre filer til de samme
+    målene gjennom det samme lille har_assets/skriv/lukk-grensesnittet.
+    """
+    return _MappeMål(mål) if mål.get("type") == "mappe" else _SftpMål(mål)
+
+
+def kjør_publisering(målnavn: str, skriv_en) -> dict:
+    """Kjør en publisering mot ett mål — eller alle medlemmer i en gruppe.
+
+    `skriv_en(mål)` gjør selve skrivingen til ETT konkret (ikke-gruppe) mål.
+    Ved gruppe publiseres det til alle medlemmene; feiler noen — men ikke
+    alle — fullføres de andre og feilen rapporteres som en advarsel.
+
+    Returnerer {"base_mål": <mål å bygge offentlig URL fra>, "advarsel": ...}.
+    Slug-validering overlates til kalleren (løyper og arenaer har egne krav).
+    """
+    mål = finn_mål(målnavn)
+    if mål.get("type") != "gruppe":
+        skriv_en(mål)
+        return {"base_mål": mål, "advarsel": None}
+
+    medlemmer = mål.get("medlemmer") or []
+    if not medlemmer:
+        raise ValueError("Gruppa «{}» har ingen medlemmer".format(målnavn))
+    feil = []
+    for navn in medlemmer:
+        try:
+            medlem = finn_mål(navn)
+            if medlem.get("type") == "gruppe":
+                raise ValueError("grupper kan ikke inneholde grupper")
+            skriv_en(medlem)
+        except ValueError as exc:
+            feil.append("{}: {}".format(navn, exc))
+    if len(feil) == len(medlemmer):
+        raise ValueError("Publiseringen feilet for alle målene i gruppa — " +
+                         " · ".join(feil))
+    advarsel = ("Publisert, men feilet for " + " · ".join(feil)) if feil else None
+    # Adressen tas fra gruppas egen baseUrl (typisk den offentlige adressen
+    # som DNS/failover peker på), ellers fra første medlem.
+    base_mål = mål if mål.get("baseUrl") else finn_mål(medlemmer[0])
+    return {"base_mål": base_mål, "advarsel": advarsel}
+
+
 def _publiser_til(mål: dict, slug: str, course: dict) -> None:
     """Skriv assets (ved behov) + løypefilene til ETT konkret mål."""
-    skriver = _MappeMål(mål) if mål.get("type") == "mappe" else _SftpMål(mål)
+    skriver = lag_skriver(mål)
     try:
         # Delte assets: bare første gang per viewer-versjon
         if not skriver.har_assets(ASSET_VERSJON):
@@ -415,28 +464,5 @@ def publiser(målnavn: str, slug: str, course: dict) -> dict:
         raise ValueError(
             "Ugyldig adressenavn (slug): bruk små bokstaver a–z, tall og bindestrek")
 
-    mål = finn_mål(målnavn)
-    if mål.get("type") != "gruppe":
-        _publiser_til(mål, slug, course)
-        return _resultat(mål, slug, course)
-
-    medlemmer = mål.get("medlemmer") or []
-    if not medlemmer:
-        raise ValueError("Gruppa «{}» har ingen medlemmer".format(målnavn))
-    feil = []
-    for navn in medlemmer:
-        try:
-            medlem = finn_mål(navn)
-            if medlem.get("type") == "gruppe":
-                raise ValueError("grupper kan ikke inneholde grupper")
-            _publiser_til(medlem, slug, course)
-        except ValueError as exc:
-            feil.append("{}: {}".format(navn, exc))
-    if len(feil) == len(medlemmer):
-        raise ValueError("Publiseringen feilet for alle målene i gruppa — " +
-                         " · ".join(feil))
-    advarsel = ("Publisert, men feilet for " + " · ".join(feil)) if feil else None
-    # Adressen tas fra gruppas egen baseUrl (typisk den offentlige adressen
-    # som DNS/failover peker på), ellers fra første medlem.
-    base_mål = mål if mål.get("baseUrl") else finn_mål(medlemmer[0])
-    return _resultat(base_mål, slug, course, advarsel)
+    res = kjør_publisering(målnavn, lambda mål: _publiser_til(mål, slug, course))
+    return _resultat(res["base_mål"], slug, course, res["advarsel"])

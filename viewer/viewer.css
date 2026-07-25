@@ -108,6 +108,18 @@ body { display: flex; flex-direction: column; }
 .wpt-popup-type { display: inline-flex; align-items: center; gap: 4px; }
 .wpt-popup-type svg { flex-shrink: 0; }
 .wpt-popup p { margin: 0 0 6px; font-size: 12px; color: #475569; }
+.wpt-popup-arena { margin: 0 0 8px; }
+.wpt-popup-arena a {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.wpt-popup-arena a:hover { background: #e0e7ff; }
 .wpt-popup table { font-size: 12px; border-collapse: collapse; }
 .wpt-popup td { padding: 1px 0; }
 .wpt-popup td:first-child { color: #64748b; padding-right: 10px; }

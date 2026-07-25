@@ -148,7 +148,19 @@ function byggKart(stil) {
     weight: stil.tykkelse || 4,
     opacity: 0.9,
   }).addTo(map);
-  map.fitBounds(sporLinje.getBounds().pad(0.08));
+
+  // Åpningsutsnitt: ta med både sporet OG veipunktene (med etikett-
+  // plasseringene der de finnes), så ingen ikoner havner utenfor. En
+  // pikselmargin reserverer plass til ikonrammene, som tegnes et stykke
+  // fra selve punktet. maxZoom hindrer at svært korte spor zoomer forbi
+  // kartflisenes nivå (som gir hvit/tom bakgrunn) — 16 gir alltid fliser
+  // og et lesbart arena-utsnitt.
+  const utsnitt = L.latLngBounds(latlngs);
+  for (const w of veipunkter) {
+    utsnitt.extend([w.lat, w.lon]);
+    if (w.lab_lat != null && w.lab_lon != null) utsnitt.extend([w.lab_lat, w.lab_lon]);
+  }
+  map.fitBounds(utsnitt, { maxZoom: 16, padding: [70, 70] });
 
   forsiktigKartNavigasjon();
 
@@ -307,9 +319,20 @@ function åpnePopup(w) {
   const typer = wptTyper(w).map((t) =>
     '<span class="wpt-popup-type">' + symbolGlyphHtml(t, 15) + ' ' +
     escHtml((WPT_SYMBOLER[t] || WPT_SYMBOLER.annet).navn) + '</span>').join('');
+  // Valgfri arenakart-lenke. To former:
+  //   «arena»          → samme løype: ./<arena>/  (arenaen ligger under denne
+  //                       løypas mappe, <event>/<arena>/)
+  //   «løype/arena»    → en bestemt løype: ../<løype>/<arena>/  (peker absolutt
+  //                       til arenaen uansett hvilken løype punktet vises i —
+  //                       viktig for delte punkter gjenbrukt på flere løyper)
+  // Slugene valideres til trygge tegn før de settes i href.
+  const arenaLenke = arenaHref(w.arena)
+    ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaHref(w.arena)) +
+      '" target="_blank" rel="noopener">🏟️ Se arenakart</a></p>' : '';
   const html = '<div class="wpt-popup"><h3>' + escHtml(w.name) + '</h3>' +
     '<div class="wpt-popup-typer">' + typer + '</div>' +
     (w.desc ? '<p>' + escHtml(w.desc) + '</p>' : '') +
+    arenaLenke +
     '<table>' +
     rad('Distanse fra start', fmtKm(st.dist)) +
     rad('Fra forrige punkt (' + escHtml(st.forrigeNavn) + ')', fmtKm(st.distForrige)) +
@@ -324,6 +347,19 @@ function åpnePopup(w) {
 function escHtml(s) {
   return String(s).replace(/[&<>"]/g, (c) => (
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+/**
+ * Bygg en trygg relativ lenke til et arenakart fra veipunktets arena-felt.
+ * «arena» → ./arena/ (samme løype); «løype/arena» → ../løype/arena/ (absolutt
+ * til publiseringsroten). Returnerer null for tomt/ugyldig felt.
+ */
+function arenaHref(felt) {
+  const s = String(felt || '');
+  const slug = '[a-z0-9][a-z0-9-]*';
+  if (new RegExp('^' + slug + '$').test(s)) return './' + s + '/';
+  if (new RegExp('^' + slug + '/' + slug + '$').test(s)) return '../' + s + '/';
+  return null;
 }
 
 /** Godta bare http(s)-lenker; alt annet (javascript:, data: …) forkastes. */

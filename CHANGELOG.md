@@ -17,6 +17,37 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.2.0 — 25. juli 2026
+
+- **Arenakart** — en helt ny, egen funksjon (fanen «🏟️ Arenakart»).
+  Arrangører kan lage et interaktivt oversiktskart over et arenaområde
+  (f.eks. Teveltunet for MMC):
+  - **Last inn et bilde** (oversiktskart) som bakgrunn.
+  - **Tegn områder** (polygoner) og **sett punkter**, og gi hvert av dem
+    navn, beskrivelse og en **type med fargekode** (f.eks. «Servering» grønn,
+    «Sanitær» blå). Områder/punkter kan flyttes ved å dra hjørnene.
+  - **Publiser** arenakartet til en egen nettadresse på formen
+    `loyper.krultra.no/‹løype›/‹arena›/`.
+  - I den publiserte visningen highlightes steder **begge veier**: hold over
+    eller klikk/trykk et område på kartet, eller klikk et navn i den
+    scrollbare lista — det korresponderende stedet framheves og navnet vises.
+- **Kobling fra løypepunkt:** et interessepunkt i en løype kan få en
+  **«Arenakart-lenke»**. Bruk `‹løype›/‹arena›` (f.eks. `mmc/teveltunet`) for
+  å peke til en arena publisert under en bestemt løype — da beholder et
+  **delt punkt riktig lenke også når det gjenbrukes i andre løyper** (arena-
+  lenken er nå et delt felt i punktbiblioteket). Bare `‹arena›` peker til en
+  arena under samme løype som punktet publiseres i.
+- **Bedre åpningsutsnitt i løypevisningen:** kartet zoomer ikke lenger så
+  langt inn på svært korte løyper at kartflisene blir borte (hvit bakgrunn),
+  og utsnittet tar nå med **alle løypepunkt-ikonene**, ikke bare selve
+  traseen.
+- **Arenakart-visningen:** beskrivelsen til et markert sted vises nå i sin
+  helhet (ikke avkortet med «…»), og stedene kan **kollapses/ekspanderes per
+  type** i lista (med egne **«Vis alle»/«Skjul alle»**-knapper) — nyttig når
+  det er mange steder.
+- **Publiseringsdialogen for arenakart** husker nå tittel og beskrivelse, så
+  de foreslås på nytt neste gang samme arenakart publiseres.
+
 ## 2.1.0 — 14. juli 2026
 
 - **Utjevning og Vektform: 5/5 er ny standard og anbefaling.** De to

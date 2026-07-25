@@ -101,6 +101,36 @@ class TestFlettOgSynk:
 
         assert storage.load_segment(b.id).waypoints[0].name == "Drikkestasjon Sulsjøan"
 
+    def test_arena_lenke_deles_og_beholdes(self, miljø):
+        """Et delt punkt tar med arenakart-lenken til andre løyper, uendret.
+
+        Slik frontend gjør det: ved gjenbruk kopieres arena fra biblioteket
+        inn i den lokale kopien, så lenken følger med til den nye løypa.
+        """
+        delt = punktbibliotek.opprett_punkt(_wpt("Mål", arena="mmc/teveltunet"))
+        assert delt.arena == "mmc/teveltunet"
+
+        # Gjenbrukt i «MMC 8K» med arena kopiert fra det delte punktet
+        seg = _segment("MMC 8K",
+                       [_wpt("Mål", bib_id=delt.id, arena=delt.arena)])
+        lastet = storage.load_segment(seg.id)
+        assert lastet.waypoints[0].arena == "mmc/teveltunet"
+
+    def test_arena_endring_flettes_inn_ved_apning(self, miljø):
+        """Endres arena-lenken på det delte punktet, får de andre løypene
+        den ferske verdien ved åpning (flett_inn)."""
+        delt = punktbibliotek.opprett_punkt(_wpt("Mål", arena="mmc/teveltunet"))
+        seg = _segment("MMC 8K",
+                       [_wpt("Mål", bib_id=delt.id, arena="mmc/teveltunet")])
+
+        # Endre lenken «utenfra» (som om en annen løype endret den)
+        punkter = punktbibliotek.les_bibliotek()
+        punkter[0].arena = "mmc/nytt-omraade"
+        punktbibliotek._skriv_bibliotek(punkter)
+
+        lastet = storage.load_segment(seg.id)
+        assert lastet.waypoints[0].arena == "mmc/nytt-omraade"
+
     def test_slettet_bibliotekpunkt_gir_lokal_kopi(self, miljø):
         delt = punktbibliotek.opprett_punkt(_wpt("Midlertidig"))
         seg = _segment("Løype A", [_wpt("Midlertidig", bib_id=delt.id)])

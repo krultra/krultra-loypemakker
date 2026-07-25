@@ -671,3 +671,156 @@ dialog input[type="datetime-local"] {
   .merge-grid { grid-template-columns: 1fr; }
   .topbar { flex-wrap: wrap; }
 }
+
+/* ============================================================
+   Arenakart-editor (fanen «Arenakart»)
+   ============================================================ */
+
+/* Skjul løype-profilen helt mens arena-fanen er aktiv (den har sin egen
+   synlighetslogikk via visningsmodus, så vi bruker en egen tvang). */
+.arena-tvunget-skjult { display: none !important; }
+
+.arena-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.arena-workspace.hidden { display: none; }
+
+.arena-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 6px 20px;
+  background: var(--flate);
+  border-bottom: 1px solid var(--kant);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.arena-status { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+.arena-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+#arena-edit-map {
+  flex: 1;
+  min-height: 200px;
+  background: var(--bakgrunn);
+  position: relative;
+}
+#arena-edit-map.arena-tegner { cursor: crosshair; }
+#arena-edit-map img.leaflet-image-layer { image-rendering: auto; }
+
+.arena-draw-hint {
+  position: absolute;
+  z-index: 500;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.85);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  pointer-events: none;
+  max-width: 80%;
+  text-align: center;
+}
+
+/* Dragbare hjørne-/punkt-håndtak på valgt feature */
+.arena-handle {
+  background: #fff;
+  border: 2px solid #2563eb;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+}
+
+.arena-edit-side {
+  width: 300px;
+  flex-shrink: 0;
+  border-left: 1px solid var(--kant);
+  background: var(--flate);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.arena-side-head { padding: 10px 12px 6px; border-bottom: 1px solid var(--kant); }
+.arena-name-input {
+  width: 100%;
+  padding: 7px 9px;
+  font-size: 14px;
+  font-family: inherit;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+}
+.arena-side-hint { font-size: 12px; margin: 6px 0 0; }
+
+.arena-feature-liste {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.arena-feature-el {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-left: 4px solid var(--farge, var(--tekst-dus));
+  border-radius: 6px;
+  background: var(--bakgrunn);
+  padding: 6px 8px;
+  margin: 4px 0;
+  cursor: pointer;
+}
+.arena-feature-el:hover { background: #eef2f7; }
+.arena-feature-el.framhevet { background: #e0e7ff; border-color: var(--farge); }
+.arena-feature-navn { flex: 1; font-size: 14px; }
+.arena-feature-rediger {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--tekst-dus);
+  padding: 2px 5px;
+  border-radius: 5px;
+}
+.arena-feature-rediger:hover { background: rgba(0, 0, 0, 0.06); }
+
+/* Typer-dialog */
+.arena-types-list { margin-bottom: 12px; }
+.arena-type-rad { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+.arena-type-rad input[type="color"] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--kant); border-radius: 6px; }
+.arena-type-navn { flex: 1; padding: 6px 8px; border: 1px solid var(--kant); border-radius: 6px; font-family: inherit; }
+.arena-type-new { display: flex; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.arena-type-new input[type="text"] { flex: 1; padding: 6px 8px; border: 1px solid var(--kant); border-radius: 6px; font-family: inherit; }
+.arena-type-new input[type="color"] { width: 34px; height: 30px; padding: 0; border: 1px solid var(--kant); border-radius: 6px; }
+
+/* Åpne-dialog */
+.arena-open-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; max-height: 50vh; overflow-y: auto; }
+.arena-open-el {
+  text-align: left;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  background: var(--flate);
+  padding: 8px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.arena-open-el:hover { background: var(--bakgrunn); }
+.arena-open-el strong { display: block; font-size: 14px; }
+.arena-open-el .muted { font-size: 12px; }
+
+.arena-publish-hint { font-size: 12px; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+
+@media (max-width: 720px) {
+  .arena-main { flex-direction: column; }
+  .arena-edit-side { width: 100%; border-left: none; border-top: 1px solid var(--kant); max-height: 40vh; }
+}

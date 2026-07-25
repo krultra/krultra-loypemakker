@@ -9,11 +9,26 @@ import re
 import urllib.parse
 from pathlib import Path
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, Response
 
-from . import elevation, gpx_io, publisering, punktbibliotek, segment_ops, storage, timestamps
+from . import (
+    arena_lagring,
+    arena_publisering,
+    elevation,
+    gpx_io,
+    publisering,
+    punktbibliotek,
+    segment_ops,
+    storage,
+    timestamps,
+)
 from .models import (
+    ArenaDetail,
+    ArenaListResponse,
+    ArenaPublishRequest,
+    ArenaPublishResponse,
+    ArenaSaveRequest,
     DeltePunkterResponse,
     DeltPunkt,
     ElevationRequest,
@@ -41,7 +56,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 17
+BACKEND_VERSJON = 18
 
 
 @router.get("/health")
@@ -318,3 +333,118 @@ def eksporter_gpx(req: ExportGpxRequest):
             )
         },
     )
+
+
+# ============================================================
+# Arenakart (helt separat funksjon fra løypene)
+# ============================================================
+
+# Øvre grense for opplastede arenabilder. Oversiktskart er sjelden over
+# noen få MB, men grensa hindrer at et ekstremt stort bilde spiser minnet.
+MAKS_BILDE_BYTES = 25 * 1024 * 1024  # 25 MB
+
+
+@router.get("/arenas", response_model=ArenaListResponse)
+def list_arenaer():
+    """List alle lagrede arenakart (til oversikten i editoren)."""
+    return ArenaListResponse(arenas=arena_lagring.list_arenaer())
+
+
+@router.post("/arenas", response_model=ArenaDetail, status_code=201)
+def opprett_arena(req: ArenaSaveRequest):
+    """Opprett et nytt arenakart. Bildet lastes opp separat etterpå."""
+    if not req.navn.strip():
+        raise HTTPException(status_code=400, detail="Arenaen må ha et navn")
+    return arena_lagring.opprett_arena(req)
+
+
+@router.get("/arenas/{arena_id}", response_model=ArenaDetail)
+def hent_arena(arena_id: str):
+    """Hent ett arenakart med typer, elementer og bildeinfo."""
+    try:
+        return arena_lagring.hent_arena(arena_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen")
+
+
+@router.put("/arenas/{arena_id}", response_model=ArenaDetail)
+def oppdater_arena(arena_id: str, req: ArenaSaveRequest):
+    """Lagre endringer på et arenakart (bildet røres ikke)."""
+    if not req.navn.strip():
+        raise HTTPException(status_code=400, detail="Arenaen må ha et navn")
+    try:
+        return arena_lagring.oppdater_arena(arena_id, req)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen")
+
+
+@router.delete("/arenas/{arena_id}", status_code=204)
+def slett_arena(arena_id: str):
+    """Slett et arenakart med bilde og alt."""
+    try:
+        arena_lagring.slett_arena(arena_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen")
+
+
+@router.post("/arenas/{arena_id}/image", response_model=ArenaDetail)
+async def last_opp_arenabilde(
+    arena_id: str,
+    file: UploadFile = File(...),
+    bredde: int = Form(...),
+    høyde: int = Form(...),
+):
+    """Last opp bakgrunnsbildet for en arena.
+
+    `bredde`/`høyde` er bildets naturlige mål i piksler (leses av nettleseren
+    når den viser bildet) og lagres til bruk i CRS.Simple-bounds i visningen.
+    """
+    ext = arena_lagring.BILDE_TYPER.get(file.content_type or "")
+    if not ext:
+        raise HTTPException(
+            status_code=400, detail="Bildet må være PNG, JPEG eller WebP")
+    innhold = await file.read(MAKS_BILDE_BYTES + 1)
+    if len(innhold) > MAKS_BILDE_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Bildet er for stort (maks {} MB)".format(MAKS_BILDE_BYTES // (1024 * 1024)))
+    if bredde < 1 or høyde < 1:
+        raise HTTPException(status_code=400, detail="Ugyldige bildemål")
+    try:
+        return arena_lagring.lagre_bilde(arena_id, innhold, ext, bredde, høyde)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen")
+
+
+@router.get("/arenas/{arena_id}/image")
+def hent_arenabilde(arena_id: str):
+    """Server det lagrede bildet, så editoren kan vise det."""
+    try:
+        sti = arena_lagring.bilde_sti(arena_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke bildet")
+    return FileResponse(str(sti))
+
+
+@router.post("/arenas/publish", response_model=ArenaPublishResponse)
+def publiser_arena(req: ArenaPublishRequest):
+    """Publiser et arenakart til <event>/<arena>/ på valgt mål."""
+    try:
+        arena = arena_lagring.hent_arena(req.arena_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen")
+    # Bruk tittel/beskrivelse fra dialogen (kan avvike fra det lagrede navnet),
+    # og husk de brukte slugene på arenaen til neste publisering.
+    arena.navn = req.navn.strip() or arena.navn
+    arena.beskrivelse = _trim(req.beskrivelse)
+    try:
+        resultat = arena_publisering.publiser_arena(
+            req.target, req.event_slug.strip().lower(),
+            req.arena_slug.strip().lower(), arena)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    # Lagre slugs + eventuell tittelendring for neste gang
+    arena.event_slug = req.event_slug.strip().lower()
+    arena.arena_slug = req.arena_slug.strip().lower()
+    arena_lagring._skriv(arena)
+    return ArenaPublishResponse(**resultat)

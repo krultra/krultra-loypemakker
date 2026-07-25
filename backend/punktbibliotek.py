@@ -30,7 +30,10 @@ BIBLIOTEK_FIL = Path(__file__).resolve().parent.parent / "data" / "waypoints.jso
 # Feltene som deles på tvers av løyper. Etikettplassering (lab_lat/lab_lon)
 # og ikonvisning (vis_ikon) er bevisst IKKE med — de er per løype, siden
 # hva som er en ryddig plassering avhenger av resten av kartet.
-_DELTE_FELT = ("lat", "lon", "ele", "name", "desc", "sym", "type", "types")
+# `arena` (lenke til arenakart) ER med: gjenbrukes punktet i en annen løype,
+# skal det beholde sin opprinnelige arenakart-lenke (typisk «‹løype›/‹arena›»,
+# som viewer-en løser absolutt, så den peker riktig uansett løype).
+_DELTE_FELT = ("lat", "lon", "ele", "name", "desc", "sym", "type", "types", "arena")
 
 
 def les_bibliotek() -> List[DeltPunkt]:

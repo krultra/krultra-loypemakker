@@ -61,6 +61,10 @@ class Waypoint(BaseModel):
     # koordinatene røres aldri, så biblioteket og de andre løypene påvirkes
     # ikke. Aktuelt for delte punkter som ligger et stykke unna traseen.
     snap: bool = False
+    # Valgfri kobling til et arenakart: arena-slugen (f.eks. «teveltunet»).
+    # Er den satt, blir løypepunktet klikkbart i den publiserte visningen og
+    # åpner arenakartet på ./<arena>/ (samme event-mappe — se arena_publisering).
+    arena: Optional[str] = None
 
 
 class DeltPunkt(BaseModel):
@@ -79,6 +83,8 @@ class DeltPunkt(BaseModel):
     sym: Optional[str] = None
     type: Optional[str] = None
     types: Optional[List[str]] = None
+    # Delt arenakart-lenke (se Waypoint.arena) — følger med ved gjenbruk.
+    arena: Optional[str] = None
 
 
 class SegmentSummary(BaseModel):
@@ -283,3 +289,111 @@ class ElevationResponse(BaseModel):
     """Svar: terrenghøyde per punkt (None = ingen dekning, behold original)."""
 
     elevations: List[Optional[float]]
+
+
+# ============================================================
+# Arenakart — oversiktskart over et arenaområde (helt separat funksjon)
+# ============================================================
+
+
+class ArenaType(BaseModel):
+    """En brukerdefinert kategori for områder/punkter på et arenakart.
+
+    F.eks. «Servering» (grønn) eller «Sanitær» (blå). `farge` er en
+    HEX-streng (#rrggbb) som brukes til å tegne og gruppere elementene.
+    """
+
+    id: str
+    navn: str
+    farge: str = "#2563eb"
+
+
+class ArenaFeature(BaseModel):
+    """Ett element på arenakartet: et område (polygon) eller et punkt.
+
+    `geometri` er NORMALISERTE koordinater i bildet: hvert par er [x, y]
+    med x og y i [0, 1] (x fra venstre, y fra topp). Et punkt har ett par,
+    et polygon har minst tre. Normaliseringen gjør elementene uavhengige
+    av bildets pikseloppløsning, så et bilde kan byttes med en skarpere
+    utgave uten at markeringene forskyver seg.
+    """
+
+    id: str
+    navn: str
+    beskrivelse: Optional[str] = None
+    # Referanse til en ArenaType.id. None = ingen type (nøytral farge).
+    type_id: Optional[str] = None
+    form: str  # "polygon" eller "punkt"
+    geometri: List[List[float]]
+
+
+class ArenaSummary(BaseModel):
+    """Kortversjon av et arenakart — det oversiktslista viser."""
+
+    id: str
+    navn: str
+    beskrivelse: Optional[str] = None
+    created_at: datetime
+    har_bilde: bool = False
+    feature_count: int = 0
+
+
+class ArenaDetail(ArenaSummary):
+    """Fullversjon av et arenakart, inkludert typer, elementer og bildeinfo."""
+
+    # Filnavnet på det lagrede bakgrunnsbildet (i arenaens egen mappe), samt
+    # bildets naturlige mål i piksler — brukes til CRS.Simple-bounds og
+    # riktig sideforhold i editor og viewer. None før et bilde er lastet inn.
+    bilde_fil: Optional[str] = None
+    bilde_bredde: Optional[int] = None
+    bilde_høyde: Optional[int] = None
+    typer: List[ArenaType] = []
+    features: List[ArenaFeature] = []
+    # Sist brukte slugs, så publiseringsdialogen kan foreslå dem på nytt.
+    event_slug: Optional[str] = None
+    arena_slug: Optional[str] = None
+
+
+class ArenaSaveRequest(BaseModel):
+    """Forespørsel til POST/PUT /api/arenas: lagre et arenakart.
+
+    Bildet lastes opp separat (POST /api/arenas/{id}/image) og røres ikke
+    her — derfor har ikke denne modellen bildefeltene.
+    """
+
+    navn: str
+    beskrivelse: Optional[str] = None
+    typer: List[ArenaType] = []
+    features: List[ArenaFeature] = []
+    event_slug: Optional[str] = None
+    arena_slug: Optional[str] = None
+
+
+class ArenaListResponse(BaseModel):
+    """Svar fra GET /api/arenas."""
+
+    arenas: List[ArenaSummary]
+
+
+class ArenaPublishRequest(BaseModel):
+    """Forespørsel til POST /api/arenas/publish: publiser et arenakart.
+
+    Arenaen publiseres til <baseUrl>/<event_slug>/<arena_slug>/, i samme
+    event-mappe som løypevisningen — så løypepunkter kan lenke til den med
+    en relativ ./<arena_slug>/-adresse.
+    """
+
+    arena_id: str
+    target: str
+    event_slug: str
+    arena_slug: str
+    navn: str
+    beskrivelse: Optional[str] = None
+
+
+class ArenaPublishResponse(BaseModel):
+    """Svar: offentlig adresse + iframe-snutt (som løypepublisering)."""
+
+    url: str
+    iframe: str
+    advarsel: Optional[str] = None
