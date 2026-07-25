@@ -4,7 +4,7 @@ import json
 import pytest
 
 from backend import arena_lagring, arena_publisering, publisering
-from backend.models import ArenaFeature, ArenaSaveRequest, ArenaType
+from backend.models import ArenaContact, ArenaFeature, ArenaSaveRequest, ArenaType
 
 
 @pytest.fixture
@@ -18,9 +18,14 @@ def _lag_request():
     return ArenaSaveRequest(
         navn="Teveltunet",
         typer=[ArenaType(id="t1", navn="Servering", farge="#22c55e")],
+        kontakter=[
+            ArenaContact(id="k1", tittel="Løpsleder", navn="Torgeir Kruke",
+                         telefon="913 51 909", epost="t@mmctrail.no",
+                         gyldig_fra="2026-08-15T08:00"),
+        ],
         features=[
             ArenaFeature(id="f1", navn="Mål", type_id="t1", form="punkt",
-                         geometri=[[0.5, 0.5]]),
+                         geometri=[[0.5, 0.5]], kontakt_ids=["k1"]),
             ArenaFeature(id="f2", navn="Messeområde", type_id="t1", form="polygon",
                          geometri=[[0.1, 0.1], [0.3, 0.1], [0.2, 0.3]]),
         ],
@@ -35,6 +40,16 @@ class TestArenaLagring:
         assert len(hentet.features) == 2
         assert hentet.typer[0].farge == "#22c55e"
         assert hentet.har_bilde is False
+
+    def test_kontakter_round_trip(self, arena_datamappe):
+        """Kontakter og kobling til steder (kontakt_ids) bevares."""
+        opprettet = arena_lagring.opprett_arena(_lag_request())
+        hentet = arena_lagring.hent_arena(opprettet.id)
+        assert [k.tittel for k in hentet.kontakter] == ["Løpsleder"]
+        assert hentet.kontakter[0].telefon == "913 51 909"
+        assert hentet.kontakter[0].gyldig_fra == "2026-08-15T08:00"
+        f1 = next(f for f in hentet.features if f.id == "f1")
+        assert f1.kontakt_ids == ["k1"]
 
     def test_oppdater_bevarer_bilde(self, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
@@ -91,6 +106,7 @@ class TestArenaPublisering:
             (mål / "mmc-70k" / "teveltunet" / "arena.json").read_text(encoding="utf-8"))
         assert arena_json["navn"] == "Teveltunet"
         assert len(arena_json["features"]) == 2
+        assert [k["tittel"] for k in arena_json["kontakter"]] == ["Løpsleder"]
         assert (mål / "mmc-70k" / "teveltunet" / "bilde.png").read_bytes() == b"\x89PNG-fake"
 
     def test_publiser_uten_bilde_feiler(self, mål, arena_datamappe):

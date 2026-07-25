@@ -26,7 +26,7 @@
         <p id="arena-beskrivelse"></p>
       </div>
       <button id="arena-liste-toggle" class="arena-liste-toggle"
-              title="Vis/skjul listen over steder" aria-expanded="true">☰ Steder</button>
+              title="Vis/skjul lista" aria-expanded="true">☰ Liste</button>
     </header>
 
     <div id="arena-hoved">
@@ -34,11 +34,24 @@
         <div id="arena-kart-hint" class="skjult">Bruk to fingre for å flytte kartet</div>
       </div>
       <aside id="arena-liste-panel">
+        <div id="arena-panel-faner" class="arena-panel-faner skjult">
+          <button id="arena-fane-steder" class="arena-panel-fane aktiv" type="button">Steder</button>
+          <button id="arena-fane-kontakter" class="arena-panel-fane" type="button">Kontakter</button>
+        </div>
         <div id="arena-liste"></div>
+        <div id="arena-kontaktliste" class="skjult"></div>
       </aside>
     </div>
 
     <footer id="arena-bunn"></footer>
+  </div>
+
+  <!-- Kontaktkort: vises når en kontakt klikkes -->
+  <div id="arena-kontakt-overlay" class="arena-kort-overlay skjult">
+    <div class="arena-kort" role="dialog" aria-modal="true">
+      <button id="arena-kort-lukk" class="arena-kort-lukk" aria-label="Lukk">×</button>
+      <div id="arena-kort-innhold"></div>
+    </div>
   </div>
 
   <div id="arena-laster">Laster arenakartet …</div>

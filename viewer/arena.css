@@ -254,3 +254,114 @@ body { display: flex; flex-direction: column; }
   #arena-laster { color: #cbd5e1; background: #0f172a; }
   #arena-liste-panel { border-color: #334155; }
 }
+
+/* ---------- Kontakter ---------- */
+
+.arena-panel-faner {
+  display: flex;
+  gap: 4px;
+  padding: 8px 10px 0;
+  position: sticky;
+  top: 0;
+  background: #ffffff;
+  z-index: 1;
+}
+.arena-panel-fane {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: #f8fafc;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.arena-panel-fane.aktiv { background: #ffffff; color: #0f172a; border-color: #cbd5e1; }
+
+#arena-kontaktliste { padding: 8px 10px 16px; }
+
+/* Kontaktbrikke: tittel + «…» — vises i lista når et sted er valgt, og i
+   den samlede kontaktlista */
+.arena-liste-kontakter {
+  padding: 4px 0 6px 6px;
+  margin: -2px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-left: 2px solid #e2e8f0;
+}
+.arena-kontakt-sjip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #f8fafc;
+  padding: 5px 9px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #0f172a;
+  cursor: pointer;
+}
+.arena-kontakt-sjip:hover { background: #eef2f7; }
+.arena-kontakt-sjip-tittel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.arena-kontakt-sjip-mer { color: #94a3b8; font-weight: 700; flex-shrink: 0; }
+.arena-kontakt-sjip-full { margin: 4px 0; }
+
+/* Kontaktkort-overlay */
+.arena-kort-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.arena-kort {
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 20px 22px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.3);
+}
+.arena-kort-lukk {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  border: none;
+  background: transparent;
+  font-size: 24px;
+  line-height: 1;
+  color: #94a3b8;
+  cursor: pointer;
+}
+.arena-kort-tittel { margin: 0 24px 2px 0; font-size: 18px; }
+.arena-kort-navn { margin: 0 0 12px; color: #475569; font-size: 15px; }
+.arena-kort-rad { display: flex; gap: 10px; margin: 6px 0; font-size: 14px; }
+.arena-kort-etikett { width: 70px; flex-shrink: 0; color: #64748b; }
+.arena-kort-verdi a { color: #2563eb; }
+.arena-kort-beskr { margin: 12px 0 0; font-size: 14px; color: #334155; line-height: 1.5; }
+
+@media (prefers-color-scheme: dark) {
+  .arena-panel-faner { background: #0f172a; }
+  .arena-panel-fane { background: #1e293b; color: #94a3b8; border-color: #334155; }
+  .arena-panel-fane.aktiv { background: #0f172a; color: #f1f5f9; border-color: #475569; }
+  .arena-liste-kontakter { border-color: #334155; }
+  .arena-kontakt-sjip { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+  .arena-kontakt-sjip:hover { background: #273449; }
+  .arena-kort { background: #1e293b; color: #e2e8f0; }
+  .arena-kort-navn { color: #cbd5e1; }
+  .arena-kort-etikett { color: #94a3b8; }
+  .arena-kort-beskr { color: #cbd5e1; }
+  .arena-kort-verdi a { color: #93c5fd; }
+}

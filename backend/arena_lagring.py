@@ -75,6 +75,7 @@ def opprett_arena(req: ArenaSaveRequest) -> ArenaDetail:
         created_at=datetime.now(timezone.utc),
         typer=req.typer,
         features=req.features,
+        kontakter=req.kontakter,
         event_slug=req.event_slug,
         arena_slug=req.arena_slug,
     )
@@ -89,6 +90,7 @@ def oppdater_arena(arena_id: str, req: ArenaSaveRequest) -> ArenaDetail:
     detail.beskrivelse = req.beskrivelse
     detail.typer = req.typer
     detail.features = req.features
+    detail.kontakter = req.kontakter
     if req.event_slug is not None:
         detail.event_slug = req.event_slug
     if req.arena_slug is not None:

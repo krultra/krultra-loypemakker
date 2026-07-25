@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=23">
+  <link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 
@@ -337,6 +337,8 @@
           <span class="toolbar-divider"></span>
           <button id="arena-types" class="btn btn-small"
                   title="Definer typer (kategorier) med farger">&#127912; Typer&hellip;</button>
+          <button id="arena-kontakter-btn" class="btn btn-small"
+                  title="Legg inn kontakter som kan knyttes til steder og vises i arenakartet">&#128100; Kontakter&hellip;</button>
           <span class="toolbar-divider"></span>
           <button id="arena-save" class="btn btn-small btn-primary" title="Lagre arenakartet lokalt">&#128190; Lagre</button>
           <button id="arena-publish" class="btn btn-small btn-primary"
@@ -599,9 +601,67 @@
       <textarea id="arena-feature-beskr" rows="2" placeholder="F.eks. «Åpent fra kl. 08. Utlevering av startnummer.»"></textarea>
       <label class="field-label" for="arena-feature-type">Type</label>
       <select id="arena-feature-type"></select>
+      <label class="field-label">Kontakter <span class="muted">(kryss av hvilke som hører til dette stedet)</span></label>
+      <div id="arena-feature-kontakter" class="arena-kontakt-kryss">
+        <p class="muted" id="arena-feature-kontakter-tom">Ingen kontakter lagt inn ennå — bruk «👤 Kontakter…» i verktøylinja.</p>
+      </div>
       <div class="button-row">
         <button value="ok" class="btn btn-primary">Lagre</button>
         <button value="delete" id="arena-feature-delete" class="btn btn-danger-subtle">Slett</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: kontaktliste (oversikt + legg til/rediger/slett) -->
+  <dialog id="arena-kontakter-dialog">
+    <form method="dialog">
+      <h3>Kontakter</h3>
+      <p class="muted">
+        Kontakter kan knyttes til ett eller flere steder og vises i en samlet
+        liste i arenakartet. Med gyldig-fra/-til vises en kontakt kun i det
+        angitte tidsrommet.
+      </p>
+      <div id="arena-kontakter-list" class="arena-kontakter-list"></div>
+      <div class="button-row">
+        <button value="ny" id="arena-kontakt-ny" class="btn btn-primary" formnovalidate>+ Ny kontakt</button>
+        <button value="cancel" class="btn" formnovalidate>Ferdig</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: én kontakt (rediger/opprett) -->
+  <dialog id="arena-kontakt-dialog">
+    <form method="dialog">
+      <h3 id="arena-kontakt-title">Kontakt</h3>
+      <label class="field-label" for="arena-kontakt-tittel">Tittel</label>
+      <input type="text" id="arena-kontakt-tittel" placeholder="F.eks. «Løpsleder»" autocomplete="off">
+      <label class="field-label" for="arena-kontakt-navn">Navn <span class="muted">(valgfri)</span></label>
+      <input type="text" id="arena-kontakt-navn" placeholder="F.eks. «Torgeir Kruke»" autocomplete="off">
+      <div class="field-pair">
+        <div>
+          <label class="field-label" for="arena-kontakt-telefon">Telefon <span class="muted">(valgfri)</span></label>
+          <input type="text" id="arena-kontakt-telefon" placeholder="F.eks. «913 51 909»" autocomplete="off">
+        </div>
+        <div>
+          <label class="field-label" for="arena-kontakt-epost">E-post <span class="muted">(valgfri)</span></label>
+          <input type="text" id="arena-kontakt-epost" placeholder="F.eks. «navn@mmctrail.no»" autocomplete="off">
+        </div>
+      </div>
+      <label class="field-label" for="arena-kontakt-beskr">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-kontakt-beskr" rows="2" placeholder="F.eks. «Kontakt primært sekretariatet.»"></textarea>
+      <div class="field-pair">
+        <div>
+          <label class="field-label" for="arena-kontakt-fra">Gyldig fra <span class="muted">(valgfri)</span></label>
+          <input type="datetime-local" id="arena-kontakt-fra">
+        </div>
+        <div>
+          <label class="field-label" for="arena-kontakt-til">Gyldig til <span class="muted">(valgfri)</span></label>
+          <input type="datetime-local" id="arena-kontakt-til">
+        </div>
+      </div>
+      <div class="button-row">
+        <button value="ok" class="btn btn-primary">Lagre</button>
         <button value="cancel" class="btn" formnovalidate>Avbryt</button>
       </div>
     </form>
@@ -672,8 +732,8 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=23"></script>
-  <script src="app.js?v=23"></script>
-  <script src="arena.js?v=23"></script>
+  <script src="felles.js?v=24"></script>
+  <script src="app.js?v=24"></script>
+  <script src="arena.js?v=24"></script>
 </body>
 </html>

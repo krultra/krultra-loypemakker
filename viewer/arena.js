@@ -17,6 +17,7 @@ let map = null;
 let bildeB = 1, bildeH = 1; // bildets naturlige mål (piksler)
 const lagFor = {};         // feature-id -> Leaflet-lag (polygon/circleMarker)
 const listeElFor = {};     // feature-id -> DOM-listeelement
+const kontaktBoksFor = {}; // feature-id -> DOM-boks med stedets kontakter
 let valgtId = null;
 
 const NØYTRAL = '#64748b'; // farge for elementer uten type
@@ -58,7 +59,10 @@ function startVisning() {
 
   byggKart();
   byggListe();
+  byggKontaktliste();
+  byggPanelFaner();
   byggListeToggle();
+  byggKontaktKort();
 }
 
 // ============================================================
@@ -232,9 +236,34 @@ function byggListe() {
       el.addEventListener('mouseleave', () => { if (valgtId !== f.id) framhev(f.id, false); });
       bolk.appendChild(el);
       listeElFor[f.id] = el;
+
+      // Kontakter knyttet til stedet (gyldige nå) — vises når stedet velges.
+      // Egen boks (søsken) fordi lista-elementet er en <button> og knapper
+      // ikke kan nøstes.
+      const kontakter = gyldigeKontakterFor(f);
+      if (kontakter.length) {
+        const boks = document.createElement('div');
+        boks.className = 'arena-liste-kontakter skjult';
+        for (const k of kontakter) boks.appendChild(lagKontaktSjip(k));
+        bolk.appendChild(boks);
+        kontaktBoksFor[f.id] = boks;
+      }
     }
     liste.appendChild(bolk);
   }
+}
+
+/** En klikkbar «brikke» med kontaktens tittel + ellipse → åpner kontaktkortet. */
+function lagKontaktSjip(k) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'arena-kontakt-sjip';
+  b.innerHTML = '<span class="arena-kontakt-sjip-tittel"></span>' +
+    '<span class="arena-kontakt-sjip-mer">…</span>';
+  b.querySelector('.arena-kontakt-sjip-tittel').textContent =
+    k.tittel + (k.navn ? ' — ' + k.navn : '');
+  b.addEventListener('click', (e) => { e.stopPropagation(); visKontaktKort(k); });
+  return b;
 }
 
 /** Kollaps eller ekspander alle type-gruppene i steder-lista på én gang. */
@@ -270,9 +299,15 @@ function velg(id, flyTil) {
     framhev(valgtId, false);
     const lag = lagFor[valgtId];
     if (lag && lag.closeTooltip) lag.closeTooltip();
+    if (kontaktBoksFor[valgtId]) kontaktBoksFor[valgtId].classList.add('skjult');
   }
   valgtId = id;
   if (!id) return;
+
+  // Vis stedets kontakter (om noen)
+  for (const fid of Object.keys(kontaktBoksFor)) {
+    kontaktBoksFor[fid].classList.toggle('skjult', fid !== id);
+  }
 
   const lag = lagFor[id];
   if (!lag) return;
@@ -298,6 +333,96 @@ function velg(id, flyTil) {
     }
   }
   if (lag.openTooltip) lag.openTooltip();
+}
+
+// ============================================================
+// Kontakter
+// ============================================================
+
+/** Er kontakten gyldig på oppslagstidspunktet (nå)? Tomme grenser = ubegrenset. */
+function kontaktGyldigNaa(k) {
+  const naa = Date.now();
+  if (k.gyldig_fra) { const t = new Date(k.gyldig_fra).getTime();
+    if (!isNaN(t) && naa < t) return false; }
+  if (k.gyldig_til) { const t = new Date(k.gyldig_til).getTime();
+    if (!isNaN(t) && naa > t) return false; }
+  return true;
+}
+
+/** Kontaktene som er knyttet til et sted OG gyldige nå. */
+function gyldigeKontakterFor(f) {
+  const ids = new Set(f.kontakt_ids || []);
+  return (arena.kontakter || []).filter((k) => ids.has(k.id) && kontaktGyldigNaa(k));
+}
+
+/** Bygg den samlede kontaktlista (alle kontakter som er gyldige nå). */
+function byggKontaktliste() {
+  const boks = document.getElementById('arena-kontaktliste');
+  boks.innerHTML = '';
+  const gyldige = (arena.kontakter || []).filter(kontaktGyldigNaa)
+    .slice().sort((a, b) => a.tittel.localeCompare(b.tittel, 'nb'));
+  if (!gyldige.length) {
+    boks.innerHTML = '<p class="arena-liste-tom">Ingen kontakter er tilgjengelige nå.</p>';
+    return;
+  }
+  for (const k of gyldige) {
+    const rad = lagKontaktSjip(k);
+    rad.classList.add('arena-kontakt-sjip-full');
+    boks.appendChild(rad);
+  }
+}
+
+/** Panel-faner (Steder / Kontakter) — vises bare når arenaen har kontakter. */
+function byggPanelFaner() {
+  const harKontakter = (arena.kontakter || []).some(kontaktGyldigNaa);
+  const faner = document.getElementById('arena-panel-faner');
+  if (!harKontakter) return; // ingen kontakter → behold bare steder-lista
+  faner.classList.remove('skjult');
+
+  const fSteder = document.getElementById('arena-fane-steder');
+  const fKontakter = document.getElementById('arena-fane-kontakter');
+  const listeSteder = document.getElementById('arena-liste');
+  const listeKontakter = document.getElementById('arena-kontaktliste');
+  const vis = (kontakter) => {
+    fSteder.classList.toggle('aktiv', !kontakter);
+    fKontakter.classList.toggle('aktiv', kontakter);
+    listeSteder.classList.toggle('skjult', kontakter);
+    listeKontakter.classList.toggle('skjult', !kontakter);
+  };
+  fSteder.addEventListener('click', () => vis(false));
+  fKontakter.addEventListener('click', () => vis(true));
+}
+
+/** Kontaktkort-overlay: vis all info om én kontakt. */
+function visKontaktKort(k) {
+  const innhold = document.getElementById('arena-kort-innhold');
+  const rad = (etikett, verdi, href) => {
+    if (!verdi) return '';
+    const v = href
+      ? '<a href="' + escHtml(href) + '">' + escHtml(verdi) + '</a>'
+      : escHtml(verdi);
+    return '<div class="arena-kort-rad"><span class="arena-kort-etikett">' +
+      escHtml(etikett) + '</span><span class="arena-kort-verdi">' + v + '</span></div>';
+  };
+  const telHref = k.telefon ? 'tel:' + k.telefon.replace(/\s+/g, '') : null;
+  const epostHref = k.epost ? 'mailto:' + k.epost : null;
+  innhold.innerHTML =
+    '<h3 class="arena-kort-tittel">' + escHtml(k.tittel) + '</h3>' +
+    (k.navn ? '<p class="arena-kort-navn">' + escHtml(k.navn) + '</p>' : '') +
+    rad('Telefon', k.telefon, telHref) +
+    rad('E-post', k.epost, epostHref) +
+    (k.beskrivelse ? '<p class="arena-kort-beskr">' + escHtml(k.beskrivelse) + '</p>' : '');
+  document.getElementById('arena-kontakt-overlay').classList.remove('skjult');
+}
+
+function byggKontaktKort() {
+  const overlay = document.getElementById('arena-kontakt-overlay');
+  const lukk = () => overlay.classList.add('skjult');
+  document.getElementById('arena-kort-lukk').addEventListener('click', lukk);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) lukk(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.classList.contains('skjult')) lukk();
+  });
 }
 
 // ============================================================

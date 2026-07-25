@@ -308,6 +308,25 @@ class ArenaType(BaseModel):
     farge: str = "#2563eb"
 
 
+class ArenaContact(BaseModel):
+    """En kontakt på et arenakart (f.eks. løpsleder, sikkerhetsansvarlig).
+
+    Kan knyttes til flere steder (via ArenaFeature.kontakt_ids) og vises også
+    i en samlet kontaktliste. `gyldig_fra`/`gyldig_til` er valgfrie
+    datetime-local-strenger («2026-08-15T08:00»): er de satt, vises kontakten
+    kun når oppslaget gjøres innenfor tidsrommet (tom = ubegrenset).
+    """
+
+    id: str
+    tittel: str
+    navn: Optional[str] = None
+    telefon: Optional[str] = None
+    epost: Optional[str] = None
+    beskrivelse: Optional[str] = None
+    gyldig_fra: Optional[str] = None
+    gyldig_til: Optional[str] = None
+
+
 class ArenaFeature(BaseModel):
     """Ett element på arenakartet: et område (polygon) eller et punkt.
 
@@ -325,6 +344,9 @@ class ArenaFeature(BaseModel):
     type_id: Optional[str] = None
     form: str  # "polygon" eller "punkt"
     geometri: List[List[float]]
+    # Id-ene til kontaktene som er knyttet til dette stedet (ArenaContact.id).
+    # En kontakt kan være knyttet til flere steder.
+    kontakt_ids: List[str] = []
 
 
 class ArenaSummary(BaseModel):
@@ -349,6 +371,7 @@ class ArenaDetail(ArenaSummary):
     bilde_høyde: Optional[int] = None
     typer: List[ArenaType] = []
     features: List[ArenaFeature] = []
+    kontakter: List[ArenaContact] = []
     # Sist brukte slugs, så publiseringsdialogen kan foreslå dem på nytt.
     event_slug: Optional[str] = None
     arena_slug: Optional[str] = None
@@ -365,6 +388,7 @@ class ArenaSaveRequest(BaseModel):
     beskrivelse: Optional[str] = None
     typer: List[ArenaType] = []
     features: List[ArenaFeature] = []
+    kontakter: List[ArenaContact] = []
     event_slug: Optional[str] = None
     arena_slug: Optional[str] = None
 

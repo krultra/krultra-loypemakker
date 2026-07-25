@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 3
+ARENA_ASSET_VERSJON = 4
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -47,6 +47,7 @@ def bygg_arena_json(arena: ArenaDetail) -> dict:
         "bilde_høyde": arena.bilde_høyde,
         "typer": [t.model_dump() for t in arena.typer],
         "features": [f.model_dump() for f in arena.features],
+        "kontakter": [k.model_dump() for k in arena.kontakter],
     }
 
 

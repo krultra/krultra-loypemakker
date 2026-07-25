@@ -35,7 +35,7 @@ window.arenaEditor = (function () {
     return {
       id: null, navn: '', beskrivelse: null,
       bilde_fil: null, bilde_bredde: null, bilde_høyde: null,
-      typer: [], features: [], event_slug: null, arena_slug: null,
+      typer: [], features: [], kontakter: [], event_slug: null, arena_slug: null,
     };
   }
 
@@ -204,7 +204,7 @@ window.arenaEditor = (function () {
     const feature = {
       id: nyId('f'), navn: '', beskrivelse: null,
       type_id: arena.typer.length ? arena.typer[0].id : null,
-      form, geometri,
+      form, geometri, kontakt_ids: [],
     };
     const svar = await visFeatureDialog(feature, true);
     if (!svar) return; // avbrutt → forkast
@@ -304,17 +304,40 @@ window.arenaEditor = (function () {
     document.getElementById('arena-feature-beskr').value = feature.beskrivelse || '';
     document.getElementById('arena-feature-delete').classList.toggle('hidden', erNy);
     fyllTypeVelger(document.getElementById('arena-feature-type'), feature.type_id);
+    byggKontaktKryss(feature.kontakt_ids || []);
 
     const løfte = ventPåDialog(dialog);
     document.getElementById('arena-feature-navn').select();
     const handling = await løfte;
     if (handling === 'delete') return { _slett: true };
     if (handling !== 'ok') return null;
+    const kontakt_ids = [...document.querySelectorAll(
+      '#arena-feature-kontakter input:checked')].map((b) => b.value);
     return {
       navn: document.getElementById('arena-feature-navn').value.trim() || 'Uten navn',
       beskrivelse: document.getElementById('arena-feature-beskr').value.trim() || null,
       type_id: document.getElementById('arena-feature-type').value || null,
+      kontakt_ids,
     };
+  }
+
+  /** Bygg avkryssingslista med arenaens kontakter i feature-dialogen. */
+  function byggKontaktKryss(valgteIds) {
+    const boks = document.getElementById('arena-feature-kontakter');
+    const tom = document.getElementById('arena-feature-kontakter-tom');
+    boks.querySelectorAll('.arena-kontakt-kryss-rad').forEach((el) => el.remove());
+    tom.classList.toggle('hidden', arena.kontakter.length > 0);
+    const valgt = new Set(valgteIds);
+    for (const k of arena.kontakter) {
+      const rad = document.createElement('label');
+      rad.className = 'arena-kontakt-kryss-rad';
+      const boks2 = document.createElement('input');
+      boks2.type = 'checkbox'; boks2.value = k.id; boks2.checked = valgt.has(k.id);
+      const tekst = document.createElement('span');
+      tekst.textContent = k.tittel + (k.navn ? ' — ' + k.navn : '');
+      rad.appendChild(boks2); rad.appendChild(tekst);
+      boks.appendChild(rad);
+    }
   }
 
   async function redigerFeature(id) {
@@ -444,6 +467,98 @@ window.arenaEditor = (function () {
   }
 
   // ============================================================
+  // Kontakter
+  // ============================================================
+
+  async function åpneKontakter() {
+    tegnKontaktliste();
+    const dialog = document.getElementById('arena-kontakter-dialog');
+    // «+ Ny kontakt» åpner enkeltkontakt-dialogen og kommer tilbake hit
+    let handling;
+    do {
+      handling = await ventPåDialog(dialog);
+      if (handling === 'ny') {
+        await redigerKontakt(null);
+        tegnKontaktliste();
+      }
+    } while (handling === 'ny');
+  }
+
+  function tegnKontaktliste() {
+    const boks = document.getElementById('arena-kontakter-list');
+    boks.innerHTML = '';
+    if (!arena.kontakter.length) {
+      boks.innerHTML = '<p class="muted">Ingen kontakter ennå.</p>';
+      return;
+    }
+    for (const k of arena.kontakter) {
+      const rad = document.createElement('div');
+      rad.className = 'arena-kontakt-rad';
+      const info = document.createElement('div');
+      info.className = 'arena-kontakt-info';
+      info.innerHTML = '<strong></strong><span class="muted"></span>';
+      info.querySelector('strong').textContent = k.tittel;
+      info.querySelector('.muted').textContent =
+        [k.navn, k.telefon, k.epost].filter(Boolean).join(' · ');
+      const rediger = document.createElement('button');
+      rediger.type = 'button'; rediger.className = 'btn btn-small';
+      rediger.textContent = 'Endre';
+      rediger.addEventListener('click', async () => { await redigerKontakt(k.id); tegnKontaktliste(); });
+      const slett = document.createElement('button');
+      slett.type = 'button'; slett.className = 'btn btn-small btn-danger-subtle';
+      slett.textContent = 'Slett';
+      slett.addEventListener('click', () => {
+        arena.kontakter = arena.kontakter.filter((x) => x.id !== k.id);
+        for (const f of arena.features) {
+          f.kontakt_ids = (f.kontakt_ids || []).filter((id) => id !== k.id);
+        }
+        merkEndret();
+        tegnKontaktliste();
+      });
+      rad.appendChild(info); rad.appendChild(rediger); rad.appendChild(slett);
+      boks.appendChild(rad);
+    }
+  }
+
+  /** Opprett (id=null) eller rediger en kontakt via enkeltkontakt-dialogen. */
+  async function redigerKontakt(id) {
+    const k = id ? arena.kontakter.find((x) => x.id === id) : null;
+    const g = (felt) => document.getElementById('arena-kontakt-' + felt);
+    document.getElementById('arena-kontakt-title').textContent =
+      k ? 'Rediger kontakt' : 'Ny kontakt';
+    g('tittel').value = (k && k.tittel) || '';
+    g('navn').value = (k && k.navn) || '';
+    g('telefon').value = (k && k.telefon) || '';
+    g('epost').value = (k && k.epost) || '';
+    g('beskr').value = (k && k.beskrivelse) || '';
+    g('fra').value = (k && k.gyldig_fra) || '';
+    g('til').value = (k && k.gyldig_til) || '';
+
+    const dialog = document.getElementById('arena-kontakt-dialog');
+    const løfte = ventPåDialog(dialog);
+    g('tittel').select();
+    const handling = await løfte;
+    if (handling !== 'ok') return;
+    const tittel = g('tittel').value.trim();
+    if (!tittel) { toast('Kontakten må ha en tittel', 'error'); return; }
+    const verdier = {
+      tittel,
+      navn: g('navn').value.trim() || null,
+      telefon: g('telefon').value.trim() || null,
+      epost: g('epost').value.trim() || null,
+      beskrivelse: g('beskr').value.trim() || null,
+      gyldig_fra: g('fra').value || null,
+      gyldig_til: g('til').value || null,
+    };
+    if (k) {
+      Object.assign(k, verdier);
+    } else {
+      arena.kontakter.push(Object.assign({ id: nyId('k') }, verdier));
+    }
+    merkEndret();
+  }
+
+  // ============================================================
   // Lagring / åpning
   // ============================================================
 
@@ -453,6 +568,7 @@ window.arenaEditor = (function () {
       beskrivelse: arena.beskrivelse,
       typer: arena.typer,
       features: arena.features,
+      kontakter: arena.kontakter,
       event_slug: arena.event_slug,
       arena_slug: arena.arena_slug,
     };
@@ -544,7 +660,7 @@ window.arenaEditor = (function () {
       arena = {
         id: data.id, navn: data.navn, beskrivelse: data.beskrivelse,
         bilde_fil: data.bilde_fil, bilde_bredde: data.bilde_bredde, bilde_høyde: data.bilde_høyde,
-        typer: data.typer || [], features: data.features || [],
+        typer: data.typer || [], features: data.features || [], kontakter: data.kontakter || [],
         event_slug: data.event_slug, arena_slug: data.arena_slug,
       };
       valgtId = null; endret = false;
@@ -684,6 +800,7 @@ window.arenaEditor = (function () {
     på('arena-draw-cancel', avbrytTegning);
     på('arena-types', åpneTyper);
     på('arena-type-add', leggTilType);
+    på('arena-kontakter-btn', åpneKontakter);
     på('arena-save', () => lagre(false));
     på('arena-publish', åpnePubliser);
     på('arena-name', () => {});

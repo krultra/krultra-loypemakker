@@ -824,3 +824,21 @@ dialog input[type="datetime-local"] {
   .arena-main { flex-direction: column; }
   .arena-edit-side { width: 100%; border-left: none; border-top: 1px solid var(--kant); max-height: 40vh; }
 }
+
+/* Arenakart: kontakter (feature-dialog avkryssing + håndteringsliste) */
+.arena-kontakt-kryss { margin-bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.arena-kontakt-kryss-rad { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.arena-kontakt-kryss-rad input { width: auto; }
+
+.arena-kontakter-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; max-height: 50vh; overflow-y: auto; }
+.arena-kontakt-rad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.arena-kontakt-info { flex: 1; min-width: 0; }
+.arena-kontakt-info strong { display: block; font-size: 14px; }
+.arena-kontakt-info .muted { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

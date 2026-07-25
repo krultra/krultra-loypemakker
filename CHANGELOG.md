@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.3.0 — 25. juli 2026
+
+- **Kontaktliste i arenakart.** Legg inn kontakter (f.eks. løpsleder,
+  sikkerhetsansvarlig) med tittel, navn, telefon, e-post og beskrivelse — og
+  valgfritt **gyldig fra/til**, så en kontakt bare vises i det angitte
+  tidsrommet.
+  - Kontakter kan **knyttes til ett eller flere steder** (områder/punkter).
+    Én kontakt kan gjelde flere steder (f.eks. løpslederen på «Løpsledelse»,
+    «Sikkerhetsledelse» og «Sekretariat»).
+  - I den publiserte visningen får arenakartet en **egen «Kontakter»-fane**
+    med en samlet liste over alle kontakter som er gyldige akkurat nå.
+  - Når et sted markeres, vises **kontaktene knyttet til stedet** (tittel +
+    «…»); klikk på en kontakt åpner et **kontaktkort** med all informasjon
+    (telefon og e-post er klikkbare).
+
 ## 2.2.0 — 25. juli 2026
 
 - **Arenakart** — en helt ny, egen funksjon (fanen «🏟️ Arenakart»).
