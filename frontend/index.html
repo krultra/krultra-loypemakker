@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=24">
+  <link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -325,8 +325,15 @@
                   title="Start et nytt, tomt arenakart">&#10133; Nytt</button>
           <span class="toolbar-divider"></span>
           <label id="arena-image-label" for="arena-image-input" class="btn btn-small"
-                 title="Last inn et oversiktskart/bilde som bakgrunn">&#128444;&#65039; Last inn bilde&hellip;</label>
+                 title="Legg til et oversiktskart/bilde som bakgrunn">&#128444;&#65039; Legg til bilde&hellip;</label>
           <input type="file" id="arena-image-input" accept="image/png,image/jpeg,image/webp" hidden>
+          <button id="arena-bilder-btn" class="btn btn-small"
+                  title="Håndter bakgrunnsbilder (navngi, fjerne)">&#128506; Bakgrunnsbilder&hellip;</button>
+          <label id="arena-bg-wrap" class="profile-control hidden"
+                 title="Bytt hvilket bakgrunnsbilde du ser mens du tegner">
+            Bakgrunn
+            <select id="arena-bg-select"></select>
+          </label>
           <span class="toolbar-divider"></span>
           <button id="arena-draw-polygon" class="btn btn-small"
                   title="Tegn et område: klikk hjørner, dobbeltklikk (eller «Fullfør») for å lukke">&#11039; Tegn område</button>
@@ -601,6 +608,10 @@
       <textarea id="arena-feature-beskr" rows="2" placeholder="F.eks. «Åpent fra kl. 08. Utlevering av startnummer.»"></textarea>
       <label class="field-label" for="arena-feature-type">Type</label>
       <select id="arena-feature-type"></select>
+      <div id="arena-feature-bilder-rad" class="hidden">
+        <label class="field-label">Vis på bakgrunnsbilder <span class="muted">(kryss av — alle avkrysset = vises på alle, også nye)</span></label>
+        <div id="arena-feature-bilder" class="arena-kontakt-kryss"></div>
+      </div>
       <label class="field-label">Kontakter <span class="muted">(kryss av hvilke som hører til dette stedet)</span></label>
       <div id="arena-feature-kontakter" class="arena-kontakt-kryss">
         <p class="muted" id="arena-feature-kontakter-tom">Ingen kontakter lagt inn ennå — bruk «👤 Kontakter…» i verktøylinja.</p>
@@ -609,6 +620,25 @@
         <button value="ok" class="btn btn-primary">Lagre</button>
         <button value="delete" id="arena-feature-delete" class="btn btn-danger-subtle">Slett</button>
         <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Arenakart: bakgrunnsbilder (kartlag) -->
+  <dialog id="arena-bilder-dialog">
+    <form method="dialog">
+      <h3>Bakgrunnsbilder</h3>
+      <p class="muted">
+        Flere bakgrunnsbilder (f.eks. «Norgeskart», «Satellitt», «Flyfoto») kan
+        legges inn. De må dekke samme område i samme målestokk, så inntegnede
+        områder og punkter passer på alle. Ved publisering velger du hvilke som
+        skal være med; er det flere enn ett, kan sluttbrukeren bytte mellom dem.
+      </p>
+      <div id="arena-bilder-list" class="arena-bilder-list"></div>
+      <label id="arena-bilder-add-label" for="arena-bilder-add" class="btn btn-small">&#10133; Legg til bilde&hellip;</label>
+      <input type="file" id="arena-bilder-add" accept="image/png,image/jpeg,image/webp" hidden>
+      <div class="button-row">
+        <button value="cancel" class="btn" formnovalidate>Ferdig</button>
       </div>
     </form>
   </dialog>
@@ -713,6 +743,10 @@
       <input type="text" id="arena-publish-title" autocomplete="off">
       <label class="field-label" for="arena-publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="arena-publish-desc" rows="2"></textarea>
+      <div id="arena-publish-bilder-rad" class="hidden">
+        <label class="field-label">Bakgrunnsbilder som skal publiseres <span class="muted">(kryss av — flere gir en lagvelger for sluttbrukeren)</span></label>
+        <div id="arena-publish-bilder" class="arena-kontakt-kryss"></div>
+      </div>
       <p class="muted arena-publish-hint" id="arena-publish-slughint"></p>
       <div id="arena-publish-result" class="publish-result hidden">
         <p><strong>Publisert!</strong> <a id="arena-publish-url" href="#" target="_blank" rel="noopener"></a></p>
@@ -732,8 +766,8 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=24"></script>
-  <script src="app.js?v=24"></script>
-  <script src="arena.js?v=24"></script>
+  <script src="felles.js?v=25"></script>
+  <script src="app.js?v=25"></script>
+  <script src="arena.js?v=25"></script>
 </body>
 </html>

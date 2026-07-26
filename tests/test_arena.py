@@ -51,15 +51,52 @@ class TestArenaLagring:
         f1 = next(f for f in hentet.features if f.id == "f1")
         assert f1.kontakt_ids == ["k1"]
 
-    def test_oppdater_bevarer_bilde(self, arena_datamappe):
+    def test_bilder_og_kanoniske_dims(self, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
-        arena_lagring.lagre_bilde(a.id, b"\x89PNG-fake", "png", 800, 600)
+        a = arena_lagring.legg_til_bilde(a.id, b"P1", "png", "Norgeskart", 800, 500)
+        a = arena_lagring.legg_til_bilde(a.id, b"P2", "png", "Satellitt", 1600, 1000)
+        assert [b.navn for b in a.bilder] == ["Norgeskart", "Satellitt"]
+        assert a.har_bilde is True
+        # Kanoniske mål = første bildets, uansett senere bilder
+        assert (a.bilde_bredde, a.bilde_høyde) == (800, 500)
+        # Metadata (navn) bevares gjennom vanlig lagring
         req = _lag_request()
         req.navn = "Nytt navn"
+        req.bilder = a.bilder
         oppdatert = arena_lagring.oppdater_arena(a.id, req)
         assert oppdatert.navn == "Nytt navn"
-        assert oppdatert.bilde_fil == "bilde.png"
-        assert oppdatert.bilde_bredde == 800
+        assert [b.navn for b in oppdatert.bilder] == ["Norgeskart", "Satellitt"]
+
+    def test_slett_bilde_rydder_referanser(self, arena_datamappe):
+        a = arena_lagring.opprett_arena(_lag_request())
+        a = arena_lagring.legg_til_bilde(a.id, b"P1", "png", "A", 800, 500)
+        a = arena_lagring.legg_til_bilde(a.id, b"P2", "png", "B", 800, 500)
+        img2 = a.bilder[1].id
+        req = _lag_request()
+        req.bilder = a.bilder
+        req.features = [ArenaFeature(id="f1", navn="X", form="punkt",
+                                     geometri=[[0.5, 0.5]], bilde_ids=[img2])]
+        arena_lagring.oppdater_arena(a.id, req)
+        etter = arena_lagring.slett_bilde(a.id, img2)
+        assert [b.navn for b in etter.bilder] == ["A"]
+        assert etter.features[0].bilde_ids == []  # referansen fjernet
+
+    def test_migrering_fra_enkeltbilde(self, arena_datamappe, monkeypatch):
+        """Eldre arena med bare bilde_fil migreres til bilder-lista ved lasting."""
+        a = arena_lagring.opprett_arena(_lag_request())
+        # Skriv en «gammel» arena.json manuelt (uten bilder-lista)
+        import json as _json
+        fil = arena_lagring._mappe_for(a.id) / "arena.json"
+        data = _json.loads(fil.read_text(encoding="utf-8"))
+        data["bilder"] = []
+        data["bilde_fil"] = "bilde.png"
+        data["bilde_bredde"] = 640
+        data["bilde_høyde"] = 480
+        fil.write_text(_json.dumps(data), encoding="utf-8")
+        hentet = arena_lagring.hent_arena(a.id)
+        assert len(hentet.bilder) == 1
+        assert hentet.bilder[0].fil == "bilde.png"
+        assert (hentet.bilde_bredde, hentet.bilde_høyde) == (640, 480)
 
     def test_list_nyeste_forst(self, arena_datamappe):
         a1 = arena_lagring.opprett_arena(_lag_request())
@@ -90,8 +127,9 @@ class TestArenaPublisering:
 
     def test_publiser_filstruktur(self, mål, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
-        arena_lagring.lagre_bilde(a.id, b"\x89PNG-fake", "png", 800, 600)
+        arena_lagring.legg_til_bilde(a.id, b"\x89PNG-fake", "png", "Kart", 800, 600)
         arena = arena_lagring.hent_arena(a.id)
+        bilde_fil = arena.bilder[0].fil
 
         res = arena_publisering.publiser_arena("test", "mmc-70k", "teveltunet", arena)
         assert res["url"] == "https://x.no/mmc-70k/teveltunet/"
@@ -107,7 +145,21 @@ class TestArenaPublisering:
         assert arena_json["navn"] == "Teveltunet"
         assert len(arena_json["features"]) == 2
         assert [k["tittel"] for k in arena_json["kontakter"]] == ["Løpsleder"]
-        assert (mål / "mmc-70k" / "teveltunet" / "bilde.png").read_bytes() == b"\x89PNG-fake"
+        assert [b["navn"] for b in arena_json["bilder"]] == ["Kart"]
+        assert (mål / "mmc-70k" / "teveltunet" / bilde_fil).read_bytes() == b"\x89PNG-fake"
+
+    def test_publiser_utvalg_av_bilder(self, mål, arena_datamappe):
+        a = arena_lagring.opprett_arena(_lag_request())
+        a = arena_lagring.legg_til_bilde(a.id, b"P1", "png", "Norgeskart", 800, 500)
+        a = arena_lagring.legg_til_bilde(a.id, b"P2", "png", "Satellitt", 800, 500)
+        norges_id, sat = a.bilder[0].id, a.bilder[1]
+        arena = arena_lagring.hent_arena(a.id)
+        arena_publisering.publiser_arena("test", "ev", "ar", arena, bilde_ids=[norges_id])
+        arena_json = json.loads(
+            (mål / "ev" / "ar" / "arena.json").read_text(encoding="utf-8"))
+        assert [b["navn"] for b in arena_json["bilder"]] == ["Norgeskart"]
+        assert (mål / "ev" / "ar" / a.bilder[0].fil).exists()
+        assert not (mål / "ev" / "ar" / sat.fil).exists()  # Satellitt ikke publisert
 
     def test_publiser_uten_bilde_feiler(self, mål, arena_datamappe):
         arena = arena_lagring.opprett_arena(_lag_request())
@@ -116,7 +168,7 @@ class TestArenaPublisering:
 
     def test_ugyldig_slug_feiler(self, mål, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
-        arena_lagring.lagre_bilde(a.id, b"x", "png", 10, 10)
+        arena_lagring.legg_til_bilde(a.id, b"x", "png", "Kart", 10, 10)
         arena = arena_lagring.hent_arena(a.id)
         with pytest.raises(ValueError):
             arena_publisering.publiser_arena("test", "Ugyldig Slug!", "arena", arena)

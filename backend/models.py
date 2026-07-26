@@ -308,6 +308,23 @@ class ArenaType(BaseModel):
     farge: str = "#2563eb"
 
 
+class ArenaImage(BaseModel):
+    """Ett bakgrunnsbilde (kartlag) på et arenakart.
+
+    Flere bilder kan legges inn (f.eks. «Norgeskart», «Satellitt», «Flyfoto»)
+    som sluttbrukeren kan bytte mellom. Alle forutsettes å dekke samme område
+    i samme målestokk, så de normaliserte koordinatene til områder/punkter
+    gjelder likt for alle. `fil` er filnavnet i arenaens mappe; `bredde`/
+    `høyde` er bildets naturlige mål i piksler.
+    """
+
+    id: str
+    navn: str
+    fil: str
+    bredde: int
+    høyde: int
+
+
 class ArenaContact(BaseModel):
     """En kontakt på et arenakart (f.eks. løpsleder, sikkerhetsansvarlig).
 
@@ -347,6 +364,11 @@ class ArenaFeature(BaseModel):
     # Id-ene til kontaktene som er knyttet til dette stedet (ArenaContact.id).
     # En kontakt kan være knyttet til flere steder.
     kontakt_ids: List[str] = []
+    # Hvilke bakgrunnsbilder stedet vises på (ArenaImage.id):
+    #   None      = alle bilder (standard)
+    #   []        = ingen (skjult på alle bakgrunner)
+    #   [id, ...] = kun de utvalgte
+    bilde_ids: Optional[List[str]] = None
 
 
 class ArenaSummary(BaseModel):
@@ -363,9 +385,12 @@ class ArenaSummary(BaseModel):
 class ArenaDetail(ArenaSummary):
     """Fullversjon av et arenakart, inkludert typer, elementer og bildeinfo."""
 
-    # Filnavnet på det lagrede bakgrunnsbildet (i arenaens egen mappe), samt
-    # bildets naturlige mål i piksler — brukes til CRS.Simple-bounds og
-    # riktig sideforhold i editor og viewer. None før et bilde er lastet inn.
+    # Bakgrunnsbildene (kartlagene). Alle forutsettes å dekke samme område i
+    # samme målestokk. Det første bildet definerer det felles koordinat-
+    # systemet (kanoniske mål), så alle bilder og elementer ligger på linje.
+    bilder: List[ArenaImage] = []
+    # Bakoverkompatible enkeltbilde-felt (eldre arenaer hadde bare ett bilde).
+    # Migreres til `bilder` ved lasting; beholdes som reserve for kanoniske mål.
     bilde_fil: Optional[str] = None
     bilde_bredde: Optional[int] = None
     bilde_høyde: Optional[int] = None
@@ -375,22 +400,26 @@ class ArenaDetail(ArenaSummary):
     # Sist brukte slugs, så publiseringsdialogen kan foreslå dem på nytt.
     event_slug: Optional[str] = None
     arena_slug: Optional[str] = None
+    # Sist valgte bilder ved publisering (ArenaImage.id) — foreslås på nytt.
+    publiser_bilde_ids: Optional[List[str]] = None
 
 
 class ArenaSaveRequest(BaseModel):
     """Forespørsel til POST/PUT /api/arenas: lagre et arenakart.
 
-    Bildet lastes opp separat (POST /api/arenas/{id}/image) og røres ikke
-    her — derfor har ikke denne modellen bildefeltene.
+    Bildene lastes opp separat (POST /api/arenas/{id}/images) — men
+    bilde-METADATA (navn/rekkefølge) lagres her, så `bilder` er med.
     """
 
     navn: str
     beskrivelse: Optional[str] = None
+    bilder: List[ArenaImage] = []
     typer: List[ArenaType] = []
     features: List[ArenaFeature] = []
     kontakter: List[ArenaContact] = []
     event_slug: Optional[str] = None
     arena_slug: Optional[str] = None
+    publiser_bilde_ids: Optional[List[str]] = None
 
 
 class ArenaListResponse(BaseModel):
@@ -413,6 +442,9 @@ class ArenaPublishRequest(BaseModel):
     arena_slug: str
     navn: str
     beskrivelse: Optional[str] = None
+    # Hvilke bakgrunnsbilder som skal publiseres (ArenaImage.id). None = alle.
+    # Tom liste = ingen bakgrunn (bare områder/punkter på blank flate).
+    bilde_ids: Optional[List[str]] = None
 
 
 class ArenaPublishResponse(BaseModel):

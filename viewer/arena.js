@@ -14,7 +14,8 @@
 
 let arena = null;          // hele arena.json
 let map = null;
-let bildeB = 1, bildeH = 1; // bildets naturlige mål (piksler)
+let bildeB = 1, bildeH = 1; // kanoniske mål (fra første bilde) — koordinatsystem
+let aktivtBildeId = null;  // hvilket bakgrunnsbilde som vises nå
 const lagFor = {};         // feature-id -> Leaflet-lag (polygon/circleMarker)
 const listeElFor = {};     // feature-id -> DOM-listeelement
 const kontaktBoksFor = {}; // feature-id -> DOM-boks med stedets kontakter
@@ -42,8 +43,18 @@ fetch('./arena.json', { cache: 'no-cache' })
   });
 
 function startVisning() {
-  bildeB = arena.bilde_bredde || 1000;
-  bildeH = arena.bilde_høyde || 1000;
+  // Bakoverkompatibilitet: eldre publiserte arenaer hadde ett bilde (bilde_fil)
+  if ((!arena.bilder || !arena.bilder.length) && arena.bilde_fil) {
+    arena.bilder = [{
+      id: 'hoved', navn: 'Kart', fil: arena.bilde_fil,
+      bredde: arena.bilde_bredde || 1000, høyde: arena.bilde_høyde || 1000,
+    }];
+  }
+  arena.bilder = arena.bilder || [];
+  // Kanoniske mål = første bildets (koordinatsystemet), ellers publiserte mål
+  bildeB = (arena.bilder[0] && arena.bilder[0].bredde) || arena.bilde_bredde || 1000;
+  bildeH = (arena.bilder[0] && arena.bilder[0].høyde) || arena.bilde_høyde || 1000;
+  aktivtBildeId = arena.bilder[0] ? arena.bilder[0].id : null;
 
   document.title = 'Arenakart – ' + (arena.navn || '');
   document.getElementById('arena-tittel').textContent = arena.navn || 'Arenakart';
@@ -98,18 +109,55 @@ function byggKart() {
   });
 
   const bounds = [[0, 0], [bildeH, bildeB]];
-  if (arena.bilde_fil) {
-    L.imageOverlay('./' + arena.bilde_fil, bounds).addTo(map);
-  }
   map.fitBounds(bounds);
   map.setMaxBounds(L.latLngBounds(bounds).pad(0.5));
 
+  // Bakgrunnsbilder som kartlag. Alle legges på samme (kanoniske) bounds, så
+  // de ligger på linje uansett egen pikseloppløsning. Er det flere enn ett,
+  // får sluttbrukeren en lagvelger (Leaflet-standard) og kan bytte mellom dem.
+  const baseLag = {};
+  arena.bilder.forEach((b, i) => {
+    const overlay = L.imageOverlay('./' + b.fil, bounds);
+    overlay._imgId = b.id;
+    baseLag[b.navn] = overlay;
+    if (i === 0) overlay.addTo(map); // vis første som standard
+  });
+  if (arena.bilder.length > 1) {
+    // Sammenleggbar lagvelger øverst til høyre (Leaflet-standard) på berørings-
+    // frie skjermer; alltid utvidet der berøring gjør hover upraktisk.
+    const berøring = 'ontouchstart' in window;
+    L.control.layers(baseLag, null, { collapsed: !berøring }).addTo(map);
+    map.on('baselayerchange', (e) => {
+      aktivtBildeId = e.layer._imgId;
+      // Var det valgte stedet skjult på det nye bildet, nullstill valget
+      const valgt = valgtId && (arena.features || []).find((f) => f.id === valgtId);
+      if (valgt && !synligPå(valgt, aktivtBildeId)) velg(null);
+      tegnFeatures();
+      byggListe();
+    });
+  }
+
   forsiktigKartNavigasjon();
 
-  for (const f of (arena.features || [])) tegnFeature(f);
+  tegnFeatures();
 
   // Klikk på tomt kart lukker valget
   map.on('click', () => velg(null));
+}
+
+/** Vises stedet på det angitte bakgrunnsbildet? null bilde_ids = alle. */
+function synligPå(f, imgId) {
+  if (!imgId) return true;            // ingen bilder → vis alt
+  if (f.bilde_ids == null) return true; // null = alle bilder
+  return f.bilde_ids.indexOf(imgId) !== -1;
+}
+
+/** Tegn (på nytt) bare de stedene som er synlige på det aktive bildet. */
+function tegnFeatures() {
+  for (const id of Object.keys(lagFor)) { lagFor[id].remove(); delete lagFor[id]; }
+  for (const f of (arena.features || [])) {
+    if (synligPå(f, aktivtBildeId)) tegnFeature(f);
+  }
 }
 
 function tegnFeature(f) {
@@ -174,7 +222,11 @@ function forsiktigKartNavigasjon() {
 function byggListe() {
   const liste = document.getElementById('arena-liste');
   liste.innerHTML = '';
-  const features = arena.features || [];
+  // Nullstill oppslag (bygges på nytt for de synlige stedene)
+  for (const k of Object.keys(listeElFor)) delete listeElFor[k];
+  for (const k of Object.keys(kontaktBoksFor)) delete kontaktBoksFor[k];
+  // Bare steder som er synlige på det aktive bakgrunnsbildet
+  const features = (arena.features || []).filter((f) => synligPå(f, aktivtBildeId));
   if (!features.length) {
     liste.innerHTML = '<p class="arena-liste-tom">Ingen steder er markert ennå.</p>';
     return;

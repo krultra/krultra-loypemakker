@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.4.0 — 26. juli 2026
+
+- **Flere bakgrunnsbilder (kartlag) i arenakart.** Du kan nå legge inn flere
+  oversiktsbilder — f.eks. «Norgeskart», «Satellitt», «Flyfoto», «Topo» — som
+  dekker samme område i samme målestokk. Inntegnede områder og punkter beholder
+  sin plassering på alle bildene (det første bildet definerer målestokken).
+  - **«Bakgrunnsbilder…»** i verktøylinja for å legge til, navngi og fjerne
+    bilder, og en **bakgrunnsvelger** for å bytte hvilket du tegner på.
+  - **Ved publisering** velger du hvilke bilder som skal være med (fra ingen til
+    alle). Er det flere enn ett, får sluttbrukeren en **lagvelger** i det
+    publiserte arenakartet og kan bytte mellom dem — som på vanlige kart.
+  - **Per sted** kan du angi hvilke bakgrunnsbilder området/punktet skal vises
+    på (alle, utvalgte, eller ingen). Lista over steder følger det aktive
+    bildet.
+
 ## 2.3.0 — 25. juli 2026
 
 - **Kontaktliste i arenakart.** Legg inn kontakter (f.eks. løpsleder,

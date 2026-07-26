@@ -842,3 +842,9 @@ dialog input[type="datetime-local"] {
 .arena-kontakt-info { flex: 1; min-width: 0; }
 .arena-kontakt-info strong { display: block; font-size: 14px; }
 .arena-kontakt-info .muted { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Arenakart: bakgrunnsbilder-liste (manager-dialog) */
+.arena-bilder-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.arena-bilde-rad { display: flex; align-items: center; gap: 8px; }
+.arena-bilde-rad .arena-type-navn { flex: 1; }
+#arena-bg-wrap select { font-family: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--kant); border-radius: 6px; }

@@ -15,7 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
-from .models import ArenaDetail, ArenaSaveRequest, ArenaSummary
+from .models import ArenaDetail, ArenaImage, ArenaSaveRequest, ArenaSummary
 
 # Rotmappa arenaene lagres i: <prosjektrot>/data/arenaer
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "arenaer"
@@ -49,9 +49,29 @@ def _til_sammendrag(detail: ArenaDetail) -> ArenaSummary:
         navn=detail.navn,
         beskrivelse=detail.beskrivelse,
         created_at=detail.created_at,
-        har_bilde=bool(detail.bilde_fil),
+        har_bilde=bool(detail.bilder or detail.bilde_fil),
         feature_count=len(detail.features),
     )
+
+
+def _migrer(detail: ArenaDetail) -> ArenaDetail:
+    """Migrer eldre enkeltbilde-arenaer til bilder-lista (ved lasting).
+
+    Hadde arenaen bare `bilde_fil` (før flere bakgrunnsbilder), lages ett
+    ArenaImage av det, så resten av koden kan forholde seg til `bilder`.
+    """
+    if not detail.bilder and detail.bilde_fil:
+        detail.bilder = [ArenaImage(
+            id="hoved", navn="Kart", fil=detail.bilde_fil,
+            bredde=detail.bilde_bredde or 1000,
+            høyde=detail.bilde_høyde or 1000,
+        )]
+    # Kanoniske mål = første bildets, så koordinatsystemet er stabilt
+    if detail.bilder:
+        detail.bilde_bredde = detail.bilder[0].bredde
+        detail.bilde_høyde = detail.bilder[0].høyde
+        detail.bilde_fil = detail.bilder[0].fil
+    return detail
 
 
 def _ferdig(detail: ArenaDetail) -> ArenaDetail:
@@ -59,7 +79,8 @@ def _ferdig(detail: ArenaDetail) -> ArenaDetail:
 
     De lagres ikke pålitelig i arena.json (avhenger av bilde og elementer),
     så vi regner dem alltid ut fra gjeldende innhold når en detalj hentes."""
-    detail.har_bilde = bool(detail.bilde_fil)
+    _migrer(detail)
+    detail.har_bilde = bool(detail.bilder)
     detail.feature_count = len(detail.features)
     return detail
 
@@ -73,21 +94,28 @@ def opprett_arena(req: ArenaSaveRequest) -> ArenaDetail:
         navn=req.navn,
         beskrivelse=req.beskrivelse,
         created_at=datetime.now(timezone.utc),
+        bilder=req.bilder,
         typer=req.typer,
         features=req.features,
         kontakter=req.kontakter,
         event_slug=req.event_slug,
         arena_slug=req.arena_slug,
+        publiser_bilde_ids=req.publiser_bilde_ids,
     )
     _skriv(detail)
     return _ferdig(detail)
 
 
 def oppdater_arena(arena_id: str, req: ArenaSaveRequest) -> ArenaDetail:
-    """Lagre endringer på et arenakart. Bildet og created_at bevares."""
+    """Lagre endringer på et arenakart (bildefilene røres ikke).
+
+    `bilder`-lista lagres (navn/rekkefølge kan endres i editoren), men selve
+    bildefilene legges til/fjernes via egne bilde-endepunkter.
+    """
     detail = hent_arena(arena_id)
     detail.navn = req.navn
     detail.beskrivelse = req.beskrivelse
+    detail.bilder = req.bilder
     detail.typer = req.typer
     detail.features = req.features
     detail.kontakter = req.kontakter
@@ -95,6 +123,7 @@ def oppdater_arena(arena_id: str, req: ArenaSaveRequest) -> ArenaDetail:
         detail.event_slug = req.event_slug
     if req.arena_slug is not None:
         detail.arena_slug = req.arena_slug
+    detail.publiser_bilde_ids = req.publiser_bilde_ids
     _skriv(detail)
     return _ferdig(detail)
 
@@ -145,29 +174,51 @@ def slett_arena(arena_id: str) -> None:
     mappe.rmdir()
 
 
-def lagre_bilde(arena_id: str, innhold: bytes, ext: str, bredde: int, høyde: int) -> ArenaDetail:
-    """Lagre bakgrunnsbildet for en arena og oppdater arena.json.
+def legg_til_bilde(arena_id: str, innhold: bytes, ext: str, navn: str,
+                   bredde: int, høyde: int) -> ArenaDetail:
+    """Legg til et bakgrunnsbilde på en arena og oppdater arena.json.
 
-    Et tidligere bilde (med annen filendelse) fjernes, så mappa alltid
-    har nøyaktig ett bilde. `bredde`/`høyde` er bildets naturlige mål i
-    piksler (leses ut av kalleren) og lagres til bruk i CRS.Simple-bounds.
+    Bildet lagres som bilde-<img_id>.<ext>, så flere bilder kan ligge side
+    om side. Det første bildet definerer arenaens kanoniske mål (koordinat-
+    systemet alle bilder og elementer deler).
     """
     detail = hent_arena(arena_id)
     mappe = _mappe_for(arena_id)
-    for gammelt in mappe.glob("bilde.*"):
-        gammelt.unlink()
-    filnavn = "bilde.{}".format(ext)
+    img_id = uuid.uuid4().hex[:8]
+    filnavn = "bilde-{}.{}".format(img_id, ext)
     (mappe / filnavn).write_bytes(innhold)
-    detail.bilde_fil = filnavn
-    detail.bilde_bredde = bredde
-    detail.bilde_høyde = høyde
+    detail.bilder.append(ArenaImage(
+        id=img_id, navn=navn or "Bilde {}".format(len(detail.bilder) + 1),
+        fil=filnavn, bredde=bredde, høyde=høyde))
     _skriv(detail)
     return _ferdig(detail)
 
 
-def bilde_sti(arena_id: str) -> Path:
-    """Full sti til det lagrede bildet. FileNotFoundError hvis det mangler."""
+def slett_bilde(arena_id: str, img_id: str) -> ArenaDetail:
+    """Fjern et bakgrunnsbilde (fil + referanser). FileNotFoundError hvis ukjent."""
     detail = hent_arena(arena_id)
-    if not detail.bilde_fil:
-        raise FileNotFoundError("Arenaen har ikke noe bilde ennå")
-    return _mappe_for(arena_id) / detail.bilde_fil
+    bilde = next((b for b in detail.bilder if b.id == img_id), None)
+    if bilde is None:
+        raise FileNotFoundError("Fant ikke bilde {}".format(img_id))
+    mappe = _mappe_for(arena_id)
+    filsti = mappe / bilde.fil
+    if filsti.exists():
+        filsti.unlink()
+    detail.bilder = [b for b in detail.bilder if b.id != img_id]
+    # Rydd bort referanser til det slettede bildet
+    for f in detail.features:
+        if f.bilde_ids is not None:
+            f.bilde_ids = [i for i in f.bilde_ids if i != img_id]
+    if detail.publiser_bilde_ids is not None:
+        detail.publiser_bilde_ids = [i for i in detail.publiser_bilde_ids if i != img_id]
+    _skriv(detail)
+    return _ferdig(detail)
+
+
+def bilde_sti_for(arena_id: str, img_id: str) -> Path:
+    """Full sti til ett bestemt bilde. FileNotFoundError hvis det mangler."""
+    detail = hent_arena(arena_id)
+    bilde = next((b for b in detail.bilder if b.id == img_id), None)
+    if bilde is None:
+        raise FileNotFoundError("Fant ikke bilde {}".format(img_id))
+    return _mappe_for(arena_id) / bilde.fil

@@ -17,8 +17,8 @@ window.arenaEditor = (function () {
   let arena = tomArena();     // gjeldende arenakart (in-memory)
   let map = null;             // Leaflet-instans (lat-init ved første aktivering)
   let bildeLag = null;        // L.imageOverlay
-  let bildeUrl = null;        // object-URL for nylig opplastet bilde (visning)
-  let bildeB = 1, bildeH = 1; // bildets naturlige mål (piksler)
+  let bildeB = 1, bildeH = 1; // kanoniske mål (fra første bilde) — koordinatsystem
+  let visBildeId = null;      // hvilket bakgrunnsbilde som vises i editoren
   const lagFor = {};          // feature-id -> Leaflet-lag
   let valgtId = null;
   let endret = false;         // ulagrede endringer?
@@ -34,8 +34,9 @@ window.arenaEditor = (function () {
   function tomArena() {
     return {
       id: null, navn: '', beskrivelse: null,
-      bilde_fil: null, bilde_bredde: null, bilde_høyde: null,
-      typer: [], features: [], kontakter: [], event_slug: null, arena_slug: null,
+      bilder: [], bilde_bredde: null, bilde_høyde: null,
+      typer: [], features: [], kontakter: [],
+      event_slug: null, arena_slug: null, publiser_bilde_ids: null,
     };
   }
 
@@ -83,67 +84,97 @@ window.arenaEditor = (function () {
   }
 
   // ============================================================
-  // Bildet
+  // Bakgrunnsbilder (kartlag)
   // ============================================================
 
-  function visBilde(url) {
-    const bounds = [[0, 0], [bildeH, bildeB]];
-    if (bildeLag) bildeLag.remove();
-    bildeLag = L.imageOverlay(url, bounds).addTo(map);
-    map.fitBounds(bounds);
-    map.setMaxBounds(L.latLngBounds(bounds).pad(0.5));
-    document.getElementById('arena-map-empty').classList.add('hidden');
+  /** Kanoniske mål = første bildets. Alle bilder og elementer deler dette. */
+  function settKanonDims() {
+    if (arena.bilder.length) {
+      bildeB = arena.bilder[0].bredde || 1000;
+      bildeH = arena.bilder[0].høyde || 1000;
+    }
   }
 
-  async function lastInnBilde(fil) {
-    // Les dimensjoner i nettleseren (serveren har ingen bildelib)
-    const url = URL.createObjectURL(fil);
-    let dim;
-    try {
-      dim = await new Promise((resolve, reject) => {
-        const bilde = new Image();
-        bilde.onload = () => resolve({ b: bilde.naturalWidth, h: bilde.naturalHeight });
-        bilde.onerror = () => reject(new Error('Kunne ikke lese bildet'));
-        bilde.src = url;
-      });
-    } catch (feil) {
-      URL.revokeObjectURL(url);
-      toast(feil.message, 'error');
-      return;
-    }
+  /** Vis ett bakgrunnsbilde i editoren (fra serveren). imgId null = tom flate.
+   *  `tilpass` = true zoomer/sentrerer til bildet (bare når nødvendig). */
+  function visBakgrunn(imgId, tilpass) {
+    if (bildeLag) { bildeLag.remove(); bildeLag = null; }
+    const bilde = arena.bilder.find((b) => b.id === imgId) || arena.bilder[0] || null;
+    const tom = document.getElementById('arena-map-empty');
+    if (!bilde) { visBildeId = null; tom.classList.remove('hidden'); oppdaterBakgrunnsvelger(); return; }
+    visBildeId = bilde.id;
+    const bounds = [[0, 0], [bildeH, bildeB]]; // alltid kanoniske mål
+    bildeLag = L.imageOverlay('/api/arenas/' + arena.id + '/images/' + bilde.id, bounds).addTo(map);
+    bildeLag.bringToBack();
+    map.setMaxBounds(L.latLngBounds(bounds).pad(0.5));
+    if (tilpass) map.fitBounds(bounds);
+    tom.classList.add('hidden');
+    oppdaterBakgrunnsvelger();
+  }
 
-    // Sørg for at arenaen finnes på serveren (bildet lagres på id-en)
+  /** Fyll bakgrunnsvelgeren i verktøylinja med arenaens bilder. */
+  function oppdaterBakgrunnsvelger() {
+    const velger = document.getElementById('arena-bg-select');
+    const wrap = document.getElementById('arena-bg-wrap');
+    wrap.classList.toggle('hidden', arena.bilder.length < 2);
+    velger.innerHTML = '';
+    for (const b of arena.bilder) {
+      const o = document.createElement('option');
+      o.value = b.id; o.textContent = b.navn;
+      if (b.id === visBildeId) o.selected = true;
+      velger.appendChild(o);
+    }
+  }
+
+  /** Last inn dimensjonene til en bildefil i nettleseren (serveren har ingen bildelib). */
+  function lesDim(fil) {
+    const url = URL.createObjectURL(fil);
+    return new Promise((resolve, reject) => {
+      const bilde = new Image();
+      bilde.onload = () => { URL.revokeObjectURL(url); resolve({ b: bilde.naturalWidth, h: bilde.naturalHeight }); };
+      bilde.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Kunne ikke lese bildet')); };
+      bilde.src = url;
+    });
+  }
+
+  /** Legg til et bakgrunnsbilde (spør om et forklarende navn). */
+  async function leggTilBilde(fil) {
+    let dim;
+    try { dim = await lesDim(fil); }
+    catch (feil) { toast(feil.message, 'error'); return; }
+    const forslag = fil.name.replace(/\.[^.]+$/, '');
+    const svar = prompt('Navn på bakgrunnsbildet (f.eks. «Norgeskart», «Satellitt»):', forslag);
+    if (svar === null) return; // avbrutt
+    const navn = svar.trim() || forslag;
     try {
       if (!arena.id) await opprettPåServer();
       const skjema = new FormData();
       skjema.append('file', fil);
+      skjema.append('navn', navn);
       skjema.append('bredde', String(dim.b));
       skjema.append('høyde', String(dim.h));
-      const res = await api('/api/arenas/' + arena.id + '/image', { method: 'POST', body: skjema });
+      const res = await api('/api/arenas/' + arena.id + '/images', { method: 'POST', body: skjema });
       const oppdatert = await res.json();
-      arena.bilde_fil = oppdatert.bilde_fil;
+      const førsteGang = arena.bilder.length === 0;
+      arena.bilder = oppdatert.bilder;
       arena.bilde_bredde = oppdatert.bilde_bredde;
       arena.bilde_høyde = oppdatert.bilde_høyde;
+      settKanonDims();
+      // Første bilde: sett koordinatsystemet og tegn elementene på nytt
+      if (førsteGang) { visBakgrunn(arena.bilder[0].id, true); tegnAlle(); }
+      else { visBakgrunn(arena.bilder[arena.bilder.length - 1].id, false); }
+      toast('Bakgrunnsbildet «' + navn + '» er lagt til');
+      settStatus();
     } catch (feil) {
-      URL.revokeObjectURL(url);
       toast('Kunne ikke lagre bildet: ' + feil.message, 'error');
-      return;
     }
-
-    if (bildeUrl) URL.revokeObjectURL(bildeUrl);
-    bildeUrl = url;
-    bildeB = dim.b; bildeH = dim.h;
-    visBilde(url);
-    tegnAlle();
-    toast('Bildet er lastet inn');
-    settStatus();
   }
 
   // ============================================================
   // Tegning
   // ============================================================
 
-  function harBilde() { return !!arena.bilde_fil; }
+  function harBilde() { return arena.bilder.length > 0; }
 
   function startTegning(modus) {
     if (!harBilde()) { toast('Last inn et bilde først', 'error'); return; }
@@ -204,7 +235,7 @@ window.arenaEditor = (function () {
     const feature = {
       id: nyId('f'), navn: '', beskrivelse: null,
       type_id: arena.typer.length ? arena.typer[0].id : null,
-      form, geometri, kontakt_ids: [],
+      form, geometri, kontakt_ids: [], bilde_ids: null,
     };
     const svar = await visFeatureDialog(feature, true);
     if (!svar) return; // avbrutt → forkast
@@ -304,6 +335,7 @@ window.arenaEditor = (function () {
     document.getElementById('arena-feature-beskr').value = feature.beskrivelse || '';
     document.getElementById('arena-feature-delete').classList.toggle('hidden', erNy);
     fyllTypeVelger(document.getElementById('arena-feature-type'), feature.type_id);
+    byggBildeKryss(feature.bilde_ids);
     byggKontaktKryss(feature.kontakt_ids || []);
 
     const løfte = ventPåDialog(dialog);
@@ -313,12 +345,41 @@ window.arenaEditor = (function () {
     if (handling !== 'ok') return null;
     const kontakt_ids = [...document.querySelectorAll(
       '#arena-feature-kontakter input:checked')].map((b) => b.value);
+    // Bilde-synlighet: alle avkrysset → null (=alle, også nye bilder);
+    // ingen → []; noen → lista. Bare relevant når det er ≥2 bilder.
+    let bilde_ids = feature.bilde_ids || null;
+    if (arena.bilder.length >= 2) {
+      const valgte = [...document.querySelectorAll('#arena-feature-bilder input:checked')].map((b) => b.value);
+      bilde_ids = (valgte.length === arena.bilder.length) ? null : valgte;
+    }
     return {
       navn: document.getElementById('arena-feature-navn').value.trim() || 'Uten navn',
       beskrivelse: document.getElementById('arena-feature-beskr').value.trim() || null,
       type_id: document.getElementById('arena-feature-type').value || null,
       kontakt_ids,
+      bilde_ids,
     };
+  }
+
+  /** Bygg avkryssingslista for hvilke bakgrunnsbilder stedet vises på. */
+  function byggBildeKryss(bildeIds) {
+    const rad = document.getElementById('arena-feature-bilder-rad');
+    const boks = document.getElementById('arena-feature-bilder');
+    boks.innerHTML = '';
+    rad.classList.toggle('hidden', arena.bilder.length < 2);
+    if (arena.bilder.length < 2) return;
+    // null = alle → alle avkrysset
+    const valgt = (bildeIds === null || bildeIds === undefined)
+      ? new Set(arena.bilder.map((b) => b.id)) : new Set(bildeIds);
+    for (const b of arena.bilder) {
+      const l = document.createElement('label');
+      l.className = 'arena-kontakt-kryss-rad';
+      const c = document.createElement('input');
+      c.type = 'checkbox'; c.value = b.id; c.checked = valgt.has(b.id);
+      const s = document.createElement('span'); s.textContent = b.navn;
+      l.appendChild(c); l.appendChild(s);
+      boks.appendChild(l);
+    }
   }
 
   /** Bygg avkryssingslista med arenaens kontakter i feature-dialogen. */
@@ -566,11 +627,13 @@ window.arenaEditor = (function () {
     return {
       navn: (document.getElementById('arena-name').value.trim()) || arena.navn || 'Arenakart',
       beskrivelse: arena.beskrivelse,
+      bilder: arena.bilder,
       typer: arena.typer,
       features: arena.features,
       kontakter: arena.kontakter,
       event_slug: arena.event_slug,
       arena_slug: arena.arena_slug,
+      publiser_bilde_ids: arena.publiser_bilde_ids,
     };
   }
 
@@ -609,11 +672,11 @@ window.arenaEditor = (function () {
     avbrytTegning();
     for (const id of Object.keys(lagFor)) { lagFor[id].remove(); delete lagFor[id]; }
     if (bildeLag) { bildeLag.remove(); bildeLag = null; }
-    if (bildeUrl) { URL.revokeObjectURL(bildeUrl); bildeUrl = null; }
     arena = tomArena();
-    valgtId = null; endret = false;
+    valgtId = null; endret = false; visBildeId = null; bildeB = 1; bildeH = 1;
     document.getElementById('arena-name').value = '';
     document.getElementById('arena-map-empty').classList.remove('hidden');
+    oppdaterBakgrunnsvelger();
     byggListe();
     settStatus();
   }
@@ -656,21 +719,21 @@ window.arenaEditor = (function () {
       avbrytTegning();
       for (const fid of Object.keys(lagFor)) { lagFor[fid].remove(); delete lagFor[fid]; }
       if (bildeLag) { bildeLag.remove(); bildeLag = null; }
-      if (bildeUrl) { URL.revokeObjectURL(bildeUrl); bildeUrl = null; }
       arena = {
         id: data.id, navn: data.navn, beskrivelse: data.beskrivelse,
-        bilde_fil: data.bilde_fil, bilde_bredde: data.bilde_bredde, bilde_høyde: data.bilde_høyde,
+        bilder: data.bilder || [], bilde_bredde: data.bilde_bredde, bilde_høyde: data.bilde_høyde,
         typer: data.typer || [], features: data.features || [], kontakter: data.kontakter || [],
         event_slug: data.event_slug, arena_slug: data.arena_slug,
+        publiser_bilde_ids: data.publiser_bilde_ids,
       };
-      valgtId = null; endret = false;
+      valgtId = null; endret = false; visBildeId = null;
       document.getElementById('arena-name').value = arena.navn || '';
-      if (arena.bilde_fil) {
-        bildeB = arena.bilde_bredde || 1000;
-        bildeH = arena.bilde_høyde || 1000;
-        visBilde('/api/arenas/' + arena.id + '/image');
+      settKanonDims();
+      if (arena.bilder.length) {
+        visBakgrunn(arena.bilder[0].id, true);
         tegnAlle();
       } else {
+        oppdaterBakgrunnsvelger();
         document.getElementById('arena-map-empty').classList.remove('hidden');
       }
       byggListe();
@@ -718,6 +781,7 @@ window.arenaEditor = (function () {
     arenaFelt.value = arena.arena_slug || lagSlug(arena.navn || '');
     tittelFelt.value = arena.navn || '';
     beskrFelt.value = arena.beskrivelse || '';
+    byggPubliserBilder();
     oppdaterSlughint();
     eventFelt.oninput = arenaFelt.oninput = målVelger.onchange = oppdaterSlughint;
 
@@ -728,6 +792,11 @@ window.arenaEditor = (function () {
     const arena_slug = lagSlug(arenaFelt.value.trim());
     if (!event_slug || !arena_slug) { toast('Fyll inn både løype- og arena-navn', 'error'); return; }
 
+    // Valgte bakgrunnsbilder: alle avkrysset → null (=alle); ellers lista
+    const alle = arena.bilder.map((b) => b.id);
+    const valgte = [...document.querySelectorAll('#arena-publish-bilder input:checked')].map((b) => b.value);
+    const bilde_ids = (valgte.length === alle.length) ? null : valgte;
+
     try {
       const res = await api('/api/arenas/publish', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -736,9 +805,11 @@ window.arenaEditor = (function () {
           event_slug, arena_slug,
           navn: tittelFelt.value.trim() || arena.navn || arena_slug,
           beskrivelse: beskrFelt.value.trim() || null,
+          bilde_ids,
         }),
       });
       const svar = await res.json();
+      arena.publiser_bilde_ids = bilde_ids;
       // Husk tittel/beskrivelse/slugs i minnet også, så en ny publisering i
       // samme økt (uten å åpne på nytt) foreslår de samme verdiene. Serveren
       // har allerede lagret dem, så gjenåpning senere foreslår dem også.
@@ -754,6 +825,91 @@ window.arenaEditor = (function () {
       toast(svar.advarsel || 'Arenakartet er publisert', svar.advarsel ? 'error' : 'success');
     } catch (feil) {
       toast('Publisering feilet: ' + feil.message, 'error');
+    }
+  }
+
+  /** Bygg avkryssingslista for hvilke bakgrunnsbilder som skal publiseres. */
+  function byggPubliserBilder() {
+    const rad = document.getElementById('arena-publish-bilder-rad');
+    const boks = document.getElementById('arena-publish-bilder');
+    boks.innerHTML = '';
+    rad.classList.toggle('hidden', arena.bilder.length < 2);
+    if (arena.bilder.length < 2) return;
+    // Forhåndsvalg: sist publiserte utvalg, ellers alle
+    const valgt = arena.publiser_bilde_ids === null || arena.publiser_bilde_ids === undefined
+      ? new Set(arena.bilder.map((b) => b.id))
+      : new Set(arena.publiser_bilde_ids);
+    for (const b of arena.bilder) {
+      const l = document.createElement('label');
+      l.className = 'arena-kontakt-kryss-rad';
+      const c = document.createElement('input');
+      c.type = 'checkbox'; c.value = b.id; c.checked = valgt.has(b.id);
+      const s = document.createElement('span'); s.textContent = b.navn;
+      l.appendChild(c); l.appendChild(s);
+      boks.appendChild(l);
+    }
+  }
+
+  // ============================================================
+  // Bakgrunnsbilder — håndteringsdialog
+  // ============================================================
+
+  async function åpneBilder() {
+    tegnBildeliste();
+    await ventPåDialog(document.getElementById('arena-bilder-dialog'));
+    // Navneendringer ligger allerede i arena.bilder; oppdater velgeren
+    oppdaterBakgrunnsvelger();
+  }
+
+  function tegnBildeliste() {
+    const boks = document.getElementById('arena-bilder-list');
+    boks.innerHTML = '';
+    if (!arena.bilder.length) {
+      boks.innerHTML = '<p class="muted">Ingen bakgrunnsbilder ennå.</p>';
+      return;
+    }
+    arena.bilder.forEach((b, i) => {
+      const rad = document.createElement('div');
+      rad.className = 'arena-bilde-rad';
+      const navn = document.createElement('input');
+      navn.type = 'text'; navn.value = b.navn; navn.className = 'arena-type-navn';
+      navn.addEventListener('input', () => { b.navn = navn.value; merkEndret(); });
+      const vis = document.createElement('button');
+      vis.type = 'button'; vis.className = 'btn btn-small';
+      vis.textContent = i === 0 ? 'Vis (referanse)' : 'Vis';
+      vis.title = i === 0 ? 'Første bilde definerer målestokken' : 'Vis dette bildet i editoren';
+      vis.addEventListener('click', () => visBakgrunn(b.id, false));
+      const slett = document.createElement('button');
+      slett.type = 'button'; slett.className = 'btn btn-small btn-danger-subtle';
+      slett.textContent = 'Slett';
+      slett.addEventListener('click', () => slettBilde(b.id));
+      rad.appendChild(navn); rad.appendChild(vis); rad.appendChild(slett);
+      boks.appendChild(rad);
+    });
+  }
+
+  async function slettBilde(imgId) {
+    const bilde = arena.bilder.find((b) => b.id === imgId);
+    if (!bilde) return;
+    if (!confirm('Slette bakgrunnsbildet «' + bilde.navn + '»?')) return;
+    try {
+      const res = await api('/api/arenas/' + arena.id + '/images/' + imgId, { method: 'DELETE' });
+      const oppdatert = await res.json();
+      arena.bilder = oppdatert.bilder;
+      arena.bilde_bredde = oppdatert.bilde_bredde;
+      arena.bilde_høyde = oppdatert.bilde_høyde;
+      // Rydd bort referanser lokalt også (serveren har gjort det på disk)
+      for (const f of arena.features) {
+        if (f.bilde_ids) f.bilde_ids = f.bilde_ids.filter((id) => id !== imgId);
+      }
+      settKanonDims();
+      if (visBildeId === imgId) visBakgrunn(arena.bilder[0] ? arena.bilder[0].id : null, true);
+      else oppdaterBakgrunnsvelger();
+      tegnBildeliste();
+      settStatus();
+      toast('Bildet er slettet');
+    } catch (feil) {
+      toast('Kunne ikke slette: ' + feil.message, 'error');
     }
   }
 
@@ -801,15 +957,23 @@ window.arenaEditor = (function () {
     på('arena-types', åpneTyper);
     på('arena-type-add', leggTilType);
     på('arena-kontakter-btn', åpneKontakter);
+    på('arena-bilder-btn', åpneBilder);
     på('arena-save', () => lagre(false));
     på('arena-publish', åpnePubliser);
-    på('arena-name', () => {});
     document.getElementById('arena-name').addEventListener('input', merkEndret);
-    document.getElementById('arena-image-input').addEventListener('change', (e) => {
-      const fil = e.target.files[0];
-      if (fil) lastInnBilde(fil);
-      e.target.value = ''; // tillat å velge samme fil igjen
+    document.getElementById('arena-bg-select').addEventListener('change', (e) => {
+      visBakgrunn(e.target.value, false);
     });
+    const bildeInn = (e) => {
+      const fil = e.target.files[0];
+      if (fil) leggTilBilde(fil).then(() => {
+        // Oppdater manager-lista hvis den er åpen
+        if (document.getElementById('arena-bilder-dialog').open) tegnBildeliste();
+      });
+      e.target.value = ''; // tillat å velge samme fil igjen
+    };
+    document.getElementById('arena-image-input').addEventListener('change', bildeInn);
+    document.getElementById('arena-bilder-add').addEventListener('change', bildeInn);
     document.getElementById('arena-publish-copy').addEventListener('click', () => {
       const felt = document.getElementById('arena-publish-embed');
       felt.select();

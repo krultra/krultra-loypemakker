@@ -56,7 +56,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 19
+BACKEND_VERSJON = 20
 
 
 @router.get("/health")
@@ -387,17 +387,19 @@ def slett_arena(arena_id: str):
         raise HTTPException(status_code=404, detail="Fant ikke arenaen")
 
 
-@router.post("/arenas/{arena_id}/image", response_model=ArenaDetail)
+@router.post("/arenas/{arena_id}/images", response_model=ArenaDetail)
 async def last_opp_arenabilde(
     arena_id: str,
     file: UploadFile = File(...),
+    navn: str = Form(""),
     bredde: int = Form(...),
     høyde: int = Form(...),
 ):
-    """Last opp bakgrunnsbildet for en arena.
+    """Legg til et bakgrunnsbilde (kartlag) på en arena.
 
-    `bredde`/`høyde` er bildets naturlige mål i piksler (leses av nettleseren
-    når den viser bildet) og lagres til bruk i CRS.Simple-bounds i visningen.
+    `navn` er den forklarende etiketten (f.eks. «Norgeskart», «Satellitt»).
+    `bredde`/`høyde` er bildets naturlige mål i piksler (leses av nettleseren)
+    og lagres til bruk i CRS.Simple-bounds i visningen.
     """
     ext = arena_lagring.BILDE_TYPER.get(file.content_type or "")
     if not ext:
@@ -411,16 +413,25 @@ async def last_opp_arenabilde(
     if bredde < 1 or høyde < 1:
         raise HTTPException(status_code=400, detail="Ugyldige bildemål")
     try:
-        return arena_lagring.lagre_bilde(arena_id, innhold, ext, bredde, høyde)
+        return arena_lagring.legg_til_bilde(arena_id, innhold, ext, navn.strip(), bredde, høyde)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke arenaen")
 
 
-@router.get("/arenas/{arena_id}/image")
-def hent_arenabilde(arena_id: str):
-    """Server det lagrede bildet, så editoren kan vise det."""
+@router.delete("/arenas/{arena_id}/images/{img_id}", response_model=ArenaDetail)
+def slett_arenabilde(arena_id: str, img_id: str):
+    """Fjern et bakgrunnsbilde fra en arena."""
     try:
-        sti = arena_lagring.bilde_sti(arena_id)
+        return arena_lagring.slett_bilde(arena_id, img_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke arenaen eller bildet")
+
+
+@router.get("/arenas/{arena_id}/images/{img_id}")
+def hent_arenabilde(arena_id: str, img_id: str):
+    """Server ett lagret bilde, så editoren kan vise det."""
+    try:
+        sti = arena_lagring.bilde_sti_for(arena_id, img_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke bildet")
     return FileResponse(str(sti))
@@ -440,11 +451,12 @@ def publiser_arena(req: ArenaPublishRequest):
     try:
         resultat = arena_publisering.publiser_arena(
             req.target, req.event_slug.strip().lower(),
-            req.arena_slug.strip().lower(), arena)
+            req.arena_slug.strip().lower(), arena, req.bilde_ids)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    # Lagre slugs + eventuell tittelendring for neste gang
+    # Lagre slugs + bilde-utvalg + eventuell tittelendring for neste gang
     arena.event_slug = req.event_slug.strip().lower()
     arena.arena_slug = req.arena_slug.strip().lower()
+    arena.publiser_bilde_ids = req.bilde_ids
     arena_lagring._skriv(arena)
     return ArenaPublishResponse(**resultat)

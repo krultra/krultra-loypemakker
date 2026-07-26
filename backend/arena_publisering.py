@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 5
+ARENA_ASSET_VERSJON = 6
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -35,14 +35,32 @@ VIEWER_DIR = _ROT / "viewer"
 # arena.json
 # ============================================================
 
-def bygg_arena_json(arena: ArenaDetail) -> dict:
-    """Bygg innholdet i arena.json som den publiserte viewer-en leser."""
+def _valgte_bilder(arena: ArenaDetail, bilde_ids):
+    """Bildene som skal publiseres, i arenaens rekkefølge.
+
+    bilde_ids None = alle; ellers bare de oppgitte (som finnes).
+    """
+    if bilde_ids is None:
+        return list(arena.bilder)
+    ønsket = set(bilde_ids)
+    return [b for b in arena.bilder if b.id in ønsket]
+
+
+def bygg_arena_json(arena: ArenaDetail, bilde_ids=None) -> dict:
+    """Bygg innholdet i arena.json som den publiserte viewer-en leser.
+
+    Bare de valgte bakgrunnsbildene tas med. De kanoniske målene
+    (bilde_bredde/høyde) kommer fra arenaens FØRSTE bilde, så koordinat-
+    systemet er stabilt uansett hvilke bilder som publiseres.
+    """
+    valgte = _valgte_bilder(arena, bilde_ids)
     return {
-        "versjon": 1,
+        "versjon": 2,
         "generert": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "navn": arena.navn or "Arenakart",
         "beskrivelse": arena.beskrivelse,
-        "bilde_fil": arena.bilde_fil,
+        "bilder": [b.model_dump() for b in valgte],
+        # Kanoniske mål (koordinatsystemet features er relative til)
         "bilde_bredde": arena.bilde_bredde,
         "bilde_høyde": arena.bilde_høyde,
         "typer": [t.model_dump() for t in arena.typer],
@@ -93,9 +111,10 @@ def _skriv_til(mål: dict, event_slug: str, arena_slug: str,
             "{}/arena.json".format(mappe),
             json.dumps(arena_json, ensure_ascii=False).encode("utf-8"),
         )
-        if arena.bilde_fil:
-            bilde = arena_lagring.bilde_sti(arena.id).read_bytes()
-            skriver.skriv("{}/{}".format(mappe, arena.bilde_fil), bilde)
+        # Bare de publiserte bildene (arena_json["bilder"]) lastes opp
+        for b in arena_json.get("bilder", []):
+            bilde = arena_lagring.bilde_sti_for(arena.id, b["id"]).read_bytes()
+            skriver.skriv("{}/{}".format(mappe, b["fil"]), bilde)
     finally:
         skriver.lukk()
 
@@ -135,9 +154,10 @@ def _resultat(mål: dict, event_slug: str, arena_slug: str, navn: str, advarsel=
 
 
 def publiser_arena(målnavn: str, event_slug: str, arena_slug: str,
-                   arena: ArenaDetail) -> dict:
+                   arena: ArenaDetail, bilde_ids=None) -> dict:
     """Publiser et arenakart til <event_slug>/<arena_slug>/ på valgt mål.
 
+    `bilde_ids` velger hvilke bakgrunnsbilder som publiseres (None = alle).
     Returnerer {url, iframe, advarsel}. Gruppemål håndteres som for løyper
     (publiser til alle medlemmer, delvis suksess gir advarsel).
     """
@@ -145,10 +165,10 @@ def publiser_arena(målnavn: str, event_slug: str, arena_slug: str,
         if not publisering.GYLDIG_SLUG.match(verdi):
             raise ValueError(
                 "Ugyldig {}-navn: bruk små bokstaver a–z, tall og bindestrek".format(navn))
-    if not arena.bilde_fil:
+    if not arena.bilder:
         raise ValueError("Arenaen mangler et bakgrunnsbilde — last inn et bilde først")
 
-    arena_json = bygg_arena_json(arena)
+    arena_json = bygg_arena_json(arena, bilde_ids)
     res = publisering.kjør_publisering(
         målnavn,
         lambda mål: _skriv_til(mål, event_slug, arena_slug, arena, arena_json),
