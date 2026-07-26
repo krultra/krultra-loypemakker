@@ -367,3 +367,76 @@ body { display: flex; flex-direction: column; }
   .arena-kort-beskr { color: #cbd5e1; }
   .arena-kort-verdi a { color: #93c5fd; }
 }
+
+/* ---------- Lagvelger (bakgrunnskart) — egen, med miniatyrbilder ---------- */
+
+.arena-lagvelger { user-select: none; }
+
+/* Sammenlagt: miniatyr av aktivt kart + navn under (klikkbart kort) */
+.arena-lagvelger-knapp {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 72px;
+  padding: 3px 3px 4px;
+  border: 2px solid #ffffff;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  font-family: inherit;
+}
+.arena-lagvelger-mini {
+  width: 64px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+  background: #e2e8f0;
+}
+.arena-lagvelger-navn {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.1;
+  text-align: center;
+  max-width: 66px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Utvidet: valgliste med miniatyr + navn per kart */
+.arena-lagvelger-liste {
+  margin-top: 4px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  min-width: 132px;
+}
+.arena-lagvelger-el {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.arena-lagvelger-el:hover { background: #eef2f7; }
+.arena-lagvelger-el.aktiv { background: #e0e7ff; }
+.arena-lagvelger-el .arena-lagvelger-mini { width: 44px; height: 33px; }
+.arena-lagvelger-el .arena-lagvelger-navn { font-size: 13px; font-weight: 500; max-width: none; }
+
+@media (prefers-color-scheme: dark) {
+  .arena-lagvelger-knapp { background: #1e293b; border-color: #334155; }
+  .arena-lagvelger-navn { color: #f1f5f9; }
+  .arena-lagvelger-liste { background: #1e293b; }
+  .arena-lagvelger-el:hover { background: #273449; }
+  .arena-lagvelger-el.aktiv { background: #312e81; }
+}

@@ -31,6 +31,9 @@ Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
   - **Per sted** kan du angi hvilke bakgrunnsbilder området/punktet skal vises
     på (alle, utvalgte, eller ingen). Lista over steder følger det aktive
     bildet.
+  - **Lagvelgeren** i det publiserte kartet viser et lite miniatyrbilde av det
+    aktive kartet med navn under (som på Norgeskart) — klikk åpner en liste med
+    miniatyrer og navn å velge mellom.
 
 ## 2.3.0 — 25. juli 2026
 

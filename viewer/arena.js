@@ -16,6 +16,8 @@ let arena = null;          // hele arena.json
 let map = null;
 let bildeB = 1, bildeH = 1; // kanoniske mål (fra første bilde) — koordinatsystem
 let aktivtBildeId = null;  // hvilket bakgrunnsbilde som vises nå
+const overlayFor = {};     // bilde-id -> L.imageOverlay
+let lagvelgerEl = null;    // referanser til lagvelgerens DOM (knapp/liste)
 const lagFor = {};         // feature-id -> Leaflet-lag (polygon/circleMarker)
 const listeElFor = {};     // feature-id -> DOM-listeelement
 const kontaktBoksFor = {}; // feature-id -> DOM-boks med stedets kontakter
@@ -113,29 +115,14 @@ function byggKart() {
   map.setMaxBounds(L.latLngBounds(bounds).pad(0.5));
 
   // Bakgrunnsbilder som kartlag. Alle legges på samme (kanoniske) bounds, så
-  // de ligger på linje uansett egen pikseloppløsning. Er det flere enn ett,
-  // får sluttbrukeren en lagvelger (Leaflet-standard) og kan bytte mellom dem.
-  const baseLag = {};
+  // de ligger på linje uansett egen pikseloppløsning. Første vises som standard.
   arena.bilder.forEach((b, i) => {
     const overlay = L.imageOverlay('./' + b.fil, bounds);
-    overlay._imgId = b.id;
-    baseLag[b.navn] = overlay;
-    if (i === 0) overlay.addTo(map); // vis første som standard
+    overlayFor[b.id] = overlay;
+    if (i === 0) overlay.addTo(map);
   });
-  if (arena.bilder.length > 1) {
-    // Sammenleggbar lagvelger øverst til høyre (Leaflet-standard) på berørings-
-    // frie skjermer; alltid utvidet der berøring gjør hover upraktisk.
-    const berøring = 'ontouchstart' in window;
-    L.control.layers(baseLag, null, { collapsed: !berøring }).addTo(map);
-    map.on('baselayerchange', (e) => {
-      aktivtBildeId = e.layer._imgId;
-      // Var det valgte stedet skjult på det nye bildet, nullstill valget
-      const valgt = valgtId && (arena.features || []).find((f) => f.id === valgtId);
-      if (valgt && !synligPå(valgt, aktivtBildeId)) velg(null);
-      tegnFeatures();
-      byggListe();
-    });
-  }
+  // Er det flere enn ett bilde: egen lagvelger med miniatyrbilder.
+  if (arena.bilder.length > 1) byggLagvelger();
 
   forsiktigKartNavigasjon();
 
@@ -143,6 +130,77 @@ function byggKart() {
 
   // Klikk på tomt kart lukker valget
   map.on('click', () => velg(null));
+}
+
+/** Bytt aktivt bakgrunnsbilde: swap overlay + oppdater steder og liste. */
+function settAktivtBilde(imgId) {
+  if (imgId === aktivtBildeId || !overlayFor[imgId]) return;
+  if (overlayFor[aktivtBildeId]) overlayFor[aktivtBildeId].remove();
+  overlayFor[imgId].addTo(map);
+  overlayFor[imgId].bringToBack();
+  aktivtBildeId = imgId;
+  // Var det valgte stedet skjult på det nye bildet, nullstill valget
+  const valgt = valgtId && (arena.features || []).find((f) => f.id === valgtId);
+  if (valgt && !synligPå(valgt, aktivtBildeId)) velg(null);
+  tegnFeatures();
+  byggListe();
+  oppdaterLagvelger();
+}
+
+/** Egen lagvelger: aktivt kart som miniatyr + navn; klikk åpner valgliste. */
+function byggLagvelger() {
+  const kontroll = L.control({ position: 'topright' });
+  kontroll.onAdd = function () {
+    const rot = L.DomUtil.create('div', 'arena-lagvelger');
+
+    // Sammenlagt: miniatyr av aktivt kart + navn (klikkbart)
+    const knapp = L.DomUtil.create('button', 'arena-lagvelger-knapp', rot);
+    knapp.type = 'button';
+    knapp.title = 'Velg bakgrunnskart';
+    knapp.innerHTML = '<img class="arena-lagvelger-mini" alt="">' +
+      '<span class="arena-lagvelger-navn"></span>';
+
+    // Utvidet: lista med alle kartene
+    const liste = L.DomUtil.create('div', 'arena-lagvelger-liste skjult', rot);
+    for (const b of arena.bilder) {
+      const el = L.DomUtil.create('button', 'arena-lagvelger-el', liste);
+      el.type = 'button';
+      el.dataset.id = b.id;
+      const img = L.DomUtil.create('img', 'arena-lagvelger-mini', el);
+      img.src = './' + b.fil; img.alt = '';
+      const navn = L.DomUtil.create('span', 'arena-lagvelger-navn', el);
+      navn.textContent = b.navn;
+      el.addEventListener('click', () => { settAktivtBilde(b.id); lukkListe(); });
+    }
+
+    const lukkListe = () => liste.classList.add('skjult');
+    knapp.addEventListener('click', () => liste.classList.toggle('skjult'));
+    // Klikk utenfor lukker lista
+    document.addEventListener('click', (e) => {
+      if (!rot.contains(e.target)) lukkListe();
+    });
+
+    L.DomEvent.disableClickPropagation(rot);
+    L.DomEvent.disableScrollPropagation(rot);
+    lagvelgerEl = { knappImg: knapp.querySelector('.arena-lagvelger-mini'),
+                    knappNavn: knapp.querySelector('.arena-lagvelger-navn'), liste };
+    return rot;
+  };
+  kontroll.addTo(map);
+  oppdaterLagvelger();
+}
+
+/** Oppdater lagvelgerens miniatyr/navn + marker det aktive valget i lista. */
+function oppdaterLagvelger() {
+  if (!lagvelgerEl) return;
+  const aktiv = arena.bilder.find((b) => b.id === aktivtBildeId);
+  if (aktiv) {
+    lagvelgerEl.knappImg.src = './' + aktiv.fil;
+    lagvelgerEl.knappNavn.textContent = aktiv.navn;
+  }
+  lagvelgerEl.liste.querySelectorAll('.arena-lagvelger-el').forEach((el) => {
+    el.classList.toggle('aktiv', el.dataset.id === aktivtBildeId);
+  });
 }
 
 /** Vises stedet på det angitte bakgrunnsbildet? null bilde_ids = alle. */
