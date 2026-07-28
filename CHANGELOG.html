@@ -105,6 +105,22 @@ for hver versjon ligger i <a href="docs/"><code>docs/</code></a>.</p>
 </ul>
 <p>Versjonene før 2.0.0 (under <strong>Utviklingshistorikk</strong> nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.</p>
+<h2 id="250-28-juli-2026">2.5.0 — 28. juli 2026</h2>
+<ul>
+<li><strong>Flerspråklige publiserte visninger (norsk + engelsk):</strong> de publiserte
+  løype- og arenakartene har nå all fast tekst (Distanse, Høyde, Steder,
+  Kontakter, punkttyper, «Full skjerm» osv.) på både norsk og engelsk, med
+  tall- og datoformat tilpasset språket.</li>
+<li><strong>Språkvelger (NO/EN)</strong> i visningen som leseren kan klikke.</li>
+<li><strong>Standardspråk for innbygging</strong> velges i publiseringsdialogen og legges
+    inn som <code>?lang=</code> i iframe-snutten, så samme kart kan bygges inn med ulikt
+    startspråk på ulike sider. Arkitekturen er språk-agnostisk (flere språk kan
+    legges til senere).</li>
+<li><strong>Bakoverkompatibelt:</strong> publiserte kart uten språkangivelse vises på norsk.</li>
+<li>(Dette gjelder foreløpig fast GUI-tekst. Oversettelse av eget innhold —
+    navn og beskrivelser — kommer i neste steg. Selve KUL-verktøyet er fortsatt
+    norsk.)</li>
+</ul>
 <h2 id="240-26-juli-2026">2.4.0 — 26. juli 2026</h2>
 <ul>
 <li><strong>Flere bakgrunnsbilder (kartlag) i arenakart.</strong> Du kan nå legge inn flere

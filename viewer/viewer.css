@@ -37,7 +37,23 @@ body { display: flex; flex-direction: column; }
 #topp p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
 #nokkeltall { font-variant-numeric: tabular-nums; }
 
-#topp-knapper { display: flex; gap: 6px; flex-shrink: 0; }
+#topp-knapper { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+
+/* Språkvelger (NO/EN) */
+.sprakvelger { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+.sprakvelger-knapp {
+  border: none;
+  background: #ffffff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.sprakvelger-knapp + .sprakvelger-knapp { border-left: 1px solid #e2e8f0; }
+.sprakvelger-knapp.aktiv { background: #e0e7ff; color: #0f172a; }
+.sprakvelger-knapp:hover:not(.aktiv) { background: #f1f5f9; }
 
 /* ---------- Kart ---------- */
 

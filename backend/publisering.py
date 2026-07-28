@@ -27,7 +27,7 @@ from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
 # at nye publiseringer laster opp friske assets uten å røre gamle løyper.
-ASSET_VERSJON = 9
+ASSET_VERSJON = 10
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -222,6 +222,8 @@ def bygg_course_json(
         "navn": meta.get("navn") or "Løype",
         "beskrivelse": meta.get("beskrivelse"),
         "link": meta.get("link"),
+        # Standardspråk for visningen (no/en). Viewer bruker ?lang= over dette.
+        "standard_sprak": meta.get("standard_sprak") or "no",
         "stil": stil,
         "punkter": [
             [round(p.lat, 6), round(p.lon, 6), None if p.ele is None else round(p.ele, 1)]
@@ -443,13 +445,18 @@ def _resultat(mål: dict, slug: str, course: dict, advarsel: Optional[str] = Non
     base = (mål.get("baseUrl") or "").rstrip("/")
     url = "{}/{}/".format(base, slug) if base else str(
         (_MappeMål(mål).rot / slug).resolve())
+    # Standardspråk bakes inn i iframe-snutten som ?lang=, så innbyggingen får
+    # riktig språk (og arrangøren kan endre det per side). Den direkte URL-en
+    # holdes ren — den faller tilbake på standard_sprak i course.json.
+    sprak = course.get("standard_sprak") or "no"
+    iframe_src = url + "?lang=" + sprak
     # Høyden tilpasser seg skjermen: opptil 820 px på store skjermer,
     # 85 % av vindushøyden på små (640 px er reserve for eldre nettlesere)
     iframe = (
         '<iframe src="{}" '
         'style="width:100%;height:640px;height:min(85vh,820px);border:0" '
         'loading="lazy" title="Løypekart {}"></iframe>'
-    ).format(url, course.get("navn", slug))
+    ).format(iframe_src, course.get("navn", slug))
     return {"url": url, "iframe": iframe, "advarsel": advarsel}
 
 

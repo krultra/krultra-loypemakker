@@ -148,6 +148,21 @@ class TestArenaPublisering:
         assert [b["navn"] for b in arena_json["bilder"]] == ["Kart"]
         assert (mål / "mmc-70k" / "teveltunet" / bilde_fil).read_bytes() == b"\x89PNG-fake"
 
+    def test_standardsprak_i_json_og_iframe(self, mål, arena_datamappe):
+        a = arena_lagring.opprett_arena(_lag_request())
+        arena_lagring.legg_til_bilde(a.id, b"x", "png", "Kart", 10, 10)
+        arena = arena_lagring.hent_arena(a.id)
+        res = arena_publisering.publiser_arena(
+            "test", "ev", "ar", arena, standard_sprak="en")
+        arena_json = json.loads(
+            (mål / "ev" / "ar" / "arena.json").read_text(encoding="utf-8"))
+        assert arena_json["standard_sprak"] == "en"
+        assert "?lang=en" in res["iframe"]
+        # Uten standard_sprak → norsk (bakoverkompatibelt)
+        res2 = arena_publisering.publiser_arena("test", "ev2", "ar", arena)
+        aj2 = json.loads((mål / "ev2" / "ar" / "arena.json").read_text(encoding="utf-8"))
+        assert aj2["standard_sprak"] == "no"
+
     def test_publiser_utvalg_av_bilder(self, mål, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
         a = arena_lagring.legg_til_bilde(a.id, b"P1", "png", "Norgeskart", 800, 500)

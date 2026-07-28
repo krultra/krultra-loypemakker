@@ -265,6 +265,9 @@ class PublishRequest(BaseModel):
     stil: Dict = {}
     points: List[Point]
     waypoints: List[Waypoint] = []
+    # Standardspråk for innbygging (no/en). Lagres i course.json og settes som
+    # ?lang= i iframe-snutten. None = norsk (bakoverkompatibelt).
+    standard_sprak: Optional[str] = None
 
 
 class PublishResponse(BaseModel):
@@ -445,6 +448,9 @@ class ArenaPublishRequest(BaseModel):
     # Hvilke bakgrunnsbilder som skal publiseres (ArenaImage.id). None = alle.
     # Tom liste = ingen bakgrunn (bare områder/punkter på blank flate).
     bilde_ids: Optional[List[str]] = None
+    # Standardspråk for innbygging (no/en). Lagres i arena.json og settes som
+    # ?lang= i iframe-snutten. None = norsk (bakoverkompatibelt).
+    standard_sprak: Optional[str] = None
 
 
 class ArenaPublishResponse(BaseModel):

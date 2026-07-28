@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=25">
+  <link rel="stylesheet" href="style.css?v=26">
 </head>
 <body>
 
@@ -440,6 +440,13 @@
       <input type="text" id="publish-name" autocomplete="off">
       <label class="field-label" for="publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="publish-desc" rows="2"></textarea>
+      <label class="field-label" for="publish-sprak">
+        Standardspråk for innbygging <span class="muted">(språket iframe-snutten starter med; leseren kan bytte i visningen)</span>
+      </label>
+      <select id="publish-sprak">
+        <option value="no">Norsk</option>
+        <option value="en">Engelsk</option>
+      </select>
       <div id="publish-result" class="publish-result hidden">
         <p><strong>Publisert!</strong> <a id="publish-url" href="#" target="_blank" rel="noopener"></a></p>
         <label class="field-label">Lim inn denne snutten på nettsiden (én gang):</label>
@@ -747,6 +754,13 @@
         <label class="field-label">Bakgrunnsbilder som skal publiseres <span class="muted">(kryss av — flere gir en lagvelger for sluttbrukeren)</span></label>
         <div id="arena-publish-bilder" class="arena-kontakt-kryss"></div>
       </div>
+      <label class="field-label" for="arena-publish-sprak">
+        Standardspråk for innbygging <span class="muted">(språket iframe-snutten starter med; leseren kan bytte i visningen)</span>
+      </label>
+      <select id="arena-publish-sprak">
+        <option value="no">Norsk</option>
+        <option value="en">Engelsk</option>
+      </select>
       <p class="muted arena-publish-hint" id="arena-publish-slughint"></p>
       <div id="arena-publish-result" class="publish-result hidden">
         <p><strong>Publisert!</strong> <a id="arena-publish-url" href="#" target="_blank" rel="noopener"></a></p>
@@ -766,8 +780,8 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=25"></script>
-  <script src="app.js?v=25"></script>
-  <script src="arena.js?v=25"></script>
+  <script src="felles.js?v=26"></script>
+  <script src="app.js?v=26"></script>
+  <script src="arena.js?v=26"></script>
 </body>
 </html>

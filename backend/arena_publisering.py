@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 7
+ARENA_ASSET_VERSJON = 8
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -46,7 +46,7 @@ def _valgte_bilder(arena: ArenaDetail, bilde_ids):
     return [b for b in arena.bilder if b.id in ønsket]
 
 
-def bygg_arena_json(arena: ArenaDetail, bilde_ids=None) -> dict:
+def bygg_arena_json(arena: ArenaDetail, bilde_ids=None, standard_sprak=None) -> dict:
     """Bygg innholdet i arena.json som den publiserte viewer-en leser.
 
     Bare de valgte bakgrunnsbildene tas med. De kanoniske målene
@@ -59,6 +59,8 @@ def bygg_arena_json(arena: ArenaDetail, bilde_ids=None) -> dict:
         "generert": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "navn": arena.navn or "Arenakart",
         "beskrivelse": arena.beskrivelse,
+        # Standardspråk for visningen (no/en). Viewer bruker ?lang= over dette.
+        "standard_sprak": standard_sprak or "no",
         "bilder": [b.model_dump() for b in valgte],
         # Kanoniske mål (koordinatsystemet features er relative til)
         "bilde_bredde": arena.bilde_bredde,
@@ -138,26 +140,31 @@ def _har_arena_assets(skriver, versjon: int) -> bool:
         return False
 
 
-def _resultat(mål: dict, event_slug: str, arena_slug: str, navn: str, advarsel=None) -> dict:
+def _resultat(mål: dict, event_slug: str, arena_slug: str, navn: str,
+              advarsel=None, standard_sprak="no") -> dict:
     base = (mål.get("baseUrl") or "").rstrip("/")
     sti = "{}/{}".format(event_slug, arena_slug)
     if base:
         url = "{}/{}/".format(base, sti)
     else:
         url = str((publisering._MappeMål(mål).rot / sti).resolve())
+    # Standardspråk bakes inn i iframe-snutten som ?lang= (arrangøren kan endre
+    # det per side); den direkte URL-en holdes ren (bruker standard_sprak i JSON).
+    iframe_src = url + "?lang=" + (standard_sprak or "no")
     iframe = (
         '<iframe src="{}" '
         'style="width:100%;height:640px;height:min(85vh,820px);border:0" '
         'loading="lazy" title="Arenakart {}"></iframe>'
-    ).format(url, navn)
+    ).format(iframe_src, navn)
     return {"url": url, "iframe": iframe, "advarsel": advarsel}
 
 
 def publiser_arena(målnavn: str, event_slug: str, arena_slug: str,
-                   arena: ArenaDetail, bilde_ids=None) -> dict:
+                   arena: ArenaDetail, bilde_ids=None, standard_sprak=None) -> dict:
     """Publiser et arenakart til <event_slug>/<arena_slug>/ på valgt mål.
 
     `bilde_ids` velger hvilke bakgrunnsbilder som publiseres (None = alle).
+    `standard_sprak` er standardspråket for innbygging (no/en).
     Returnerer {url, iframe, advarsel}. Gruppemål håndteres som for løyper
     (publiser til alle medlemmer, delvis suksess gir advarsel).
     """
@@ -168,10 +175,10 @@ def publiser_arena(målnavn: str, event_slug: str, arena_slug: str,
     if not arena.bilder:
         raise ValueError("Arenaen mangler et bakgrunnsbilde — last inn et bilde først")
 
-    arena_json = bygg_arena_json(arena, bilde_ids)
+    arena_json = bygg_arena_json(arena, bilde_ids, standard_sprak)
     res = publisering.kjør_publisering(
         målnavn,
         lambda mål: _skriv_til(mål, event_slug, arena_slug, arena, arena_json),
     )
     return _resultat(res["base_mål"], event_slug, arena_slug,
-                     arena.navn or arena_slug, res["advarsel"])
+                     arena.navn or arena_slug, res["advarsel"], standard_sprak or "no")

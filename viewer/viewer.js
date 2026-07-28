@@ -27,8 +27,58 @@ let map, sporLinje, posMarkør;
 const profilCanvas = document.getElementById('profil');
 
 // ============================================================
+// Språk (i18n) — norsk + engelsk, språk-agnostisk oppbygd
+// ============================================================
+// Faste GUI-strenger per språk. Ukjente språk / manglende nøkler faller
+// tilbake til norsk. Nye språk legges til ved å utvide TEKST.
+const TEKST = {
+  no: {
+    satellitt: 'Satellitt', kart: 'Kart', fullskjerm: '⛶ Full skjerm',
+    satellittTittel: 'Bytt mellom kart og satellittbilde',
+    fullskjermTittel: 'Åpne løypevisningen i egen fane i full størrelse',
+    distanse: 'Distanse', hoyde: 'Høyde', hoydemeterFraStart: 'Høydemeter fra start',
+    moh: 'moh.', fraForrige: 'Fra forrige punkt', fra: 'Fra', start: 'start',
+    distanseFraStart: 'Distanse fra start', seArenakart: '🏟️ Se arenakart',
+    oppdatert: 'Oppdatert', kartKilde: 'Kart', publisertAv: 'Laget og publisert av',
+    omLopet: 'Om løpet', tofinger: 'Bruk to fingre for å flytte kartet',
+    laster: 'Laster løypa …', lasterFeil: 'Kunne ikke laste løypa',
+    proevOppdater: 'Prøv å oppdatere siden.', loypekartTittel: 'Løypekart', loype: 'Løype',
+  },
+  en: {
+    satellitt: 'Satellite', kart: 'Map', fullskjerm: '⛶ Full screen',
+    satellittTittel: 'Switch between map and satellite imagery',
+    fullskjermTittel: 'Open the course view in its own tab at full size',
+    distanse: 'Distance', hoyde: 'Elevation', hoydemeterFraStart: 'Ascent/descent from start',
+    moh: 'm a.s.l.', fraForrige: 'From previous point', fra: 'From', start: 'start',
+    distanseFraStart: 'Distance from start', seArenakart: '🏟️ View arena map',
+    oppdatert: 'Updated', kartKilde: 'Map', publisertAv: 'Created and published by',
+    omLopet: 'About the race', tofinger: 'Use two fingers to move the map',
+    laster: 'Loading the course …', lasterFeil: 'Could not load the course',
+    proevOppdater: 'Please refresh the page.', loypekartTittel: 'Course map', loype: 'Course',
+  },
+};
+
+let lang = 'no';
+/** Hvilket språk er valgt: ?lang= (validert) → standardSprak → 'no'. */
+function velgSprak(standardSprak) {
+  const url = new URLSearchParams(location.search).get('lang');
+  const kandidat = String(url || standardSprak || 'no').toLowerCase();
+  lang = TEKST[kandidat] ? kandidat : 'no';
+  document.documentElement.lang = lang === 'en' ? 'en' : 'nb';
+}
+/** Oversett en fast GUI-streng (faller tilbake til norsk). */
+function t(nokkel) { return (TEKST[lang] && TEKST[lang][nokkel]) || TEKST.no[nokkel]; }
+/** Locale for tall/dato etter valgt språk. */
+function locale() { return lang === 'en' ? 'en-GB' : 'nb-NO'; }
+/** Km formatert i riktig locale for valgt språk. */
+function kmT(km) { return fmtKm(km, locale()); }
+
+// ============================================================
 // Oppstart: hent løypedata
 // ============================================================
+
+velgSprak(null); // foreløpig fra URL (for laster-teksten); finpusses ved lasting
+document.getElementById('laster').textContent = t('laster');
 
 fetch('./course.json', { cache: 'no-cache' })
   .then((res) => {
@@ -37,12 +87,13 @@ fetch('./course.json', { cache: 'no-cache' })
   })
   .then((data) => {
     løype = data;
+    if (!new URLSearchParams(location.search).get('lang')) velgSprak(løype.standard_sprak);
     startVisning();
     document.getElementById('laster').remove();
   })
   .catch((feil) => {
     document.getElementById('laster').textContent =
-      'Kunne ikke laste løypa (' + feil.message + '). Prøv å oppdatere siden.';
+      t('lasterFeil') + ' (' + feil.message + '). ' + t('proevOppdater');
   });
 
 function startVisning() {
@@ -79,13 +130,25 @@ function startVisning() {
     .map((w) => Object.assign({}, w, { idx: klem(w.idx || 0, 0, punkter.length - 1) }))
     .sort((a, b) => a.idx - b.idx);
 
+  // Faste GUI-etiketter etter valgt språk
+  const settTekst = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
+  settTekst('lag-knapp', t('satellitt'));
+  document.getElementById('lag-knapp').title = t('satellittTittel');
+  settTekst('i-lbl-dist', t('distanse'));
+  settTekst('i-lbl-hoyde', t('hoyde'));
+  settTekst('i-lbl-hm-start', t('hoydemeterFraStart'));
+  settTekst('i-lbl-hm-forrige', t('fraForrige'));
+  const hint = document.getElementById('kart-hint');
+  if (hint) hint.textContent = t('tofinger');
+  byggSpraakvelger();
+
   // Topptekst og nøkkeltall
-  document.title = 'Løypekart – ' + (løype.navn || '');
-  document.getElementById('tittel').textContent = løype.navn || 'Løype';
+  document.title = t('loypekartTittel') + ' – ' + (løype.navn || '');
+  document.getElementById('tittel').textContent = løype.navn || t('loype');
   const beskr = document.getElementById('beskrivelse');
   if (løype.beskrivelse) beskr.textContent = løype.beskrivelse; else beskr.remove();
   document.getElementById('nokkeltall').textContent =
-    fmtKm(avstander[avstander.length - 1]) +
+    kmT(avstander[avstander.length - 1]) +
     ' · ↑ ' + Math.round(oppAkk[oppAkk.length - 1]) + ' m' +
     ' · ↓ ' + Math.round(nedAkk[nedAkk.length - 1]) + ' m';
   document.getElementById('topp').classList.remove('skjult');
@@ -96,16 +159,18 @@ function startVisning() {
   // ondsinnet lenke ikke kan injisere skript på publiseringsdomenet.
   const trygglenke = tryggUrl(løype.link);
   document.getElementById('bunn').innerHTML =
-    (generert ? 'Oppdatert ' + generert.toLocaleDateString('nb-NO') + ' · ' : '') +
-    'Kart: © <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a>' +
-    ' · Laget og publisert av <a href="https://krultra.no" target="_blank" rel="noopener">KrUltra</a>' +
+    (generert ? t('oppdatert') + ' ' + generert.toLocaleDateString(locale()) + ' · ' : '') +
+    t('kartKilde') + ': © <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a>' +
+    ' · ' + t('publisertAv') + ' <a href="https://krultra.no" target="_blank" rel="noopener">KrUltra</a>' +
     (trygglenke ? ' · <a href="' + escHtml(trygglenke) +
-      '" target="_blank" rel="noopener">Om løpet</a>' : '');
+      '" target="_blank" rel="noopener">' + escHtml(t('omLopet')) + '</a>' : '');
 
   // «Vis i full skjerm»: bare når visningen er bygd inn i en annen side
   // (iframe) — åpner den direkte adressen i en egen fane
   if (window.self !== window.top) {
     const fs = document.getElementById('fullskjerm-knapp');
+    fs.textContent = t('fullskjerm');
+    fs.title = t('fullskjermTittel');
     fs.classList.remove('skjult');
     fs.addEventListener('click', () =>
       window.open(window.location.href, '_blank', 'noopener'));
@@ -139,7 +204,7 @@ function byggKart(stil) {
     satellitt = !satellitt;
     map.removeLayer(satellitt ? KARTLAG_V.topo : KARTLAG_V.satellitt);
     (satellitt ? KARTLAG_V.satellitt : KARTLAG_V.topo).addTo(map);
-    e.target.textContent = satellitt ? 'Kart' : 'Satellitt';
+    e.target.textContent = satellitt ? t('kart') : t('satellitt');
   });
 
   const latlngs = punkter.map((p) => [p.lat, p.lon]);
@@ -308,17 +373,23 @@ function statistikkFor(idx) {
     nedStart: Math.round(nedAkk[idx]),
     oppForrige: Math.round(oppAkk[idx] - oppAkk[fIdx]),
     nedForrige: Math.round(nedAkk[idx] - nedAkk[fIdx]),
-    forrigeNavn: forrige ? forrige.name : 'start',
+    forrigeNavn: forrige ? forrige.name : t('start'),
   };
+}
+
+/** Navnet på en punkttype i valgt språk (engelsk faller tilbake til norsk). */
+function typeNavn(typeKey) {
+  const d = WPT_SYMBOLER[typeKey] || WPT_SYMBOLER.annet;
+  return (lang === 'en' && d.navn_en) ? d.navn_en : d.navn;
 }
 
 function åpnePopup(w) {
   const st = statistikkFor(w.idx);
   const rad = (n, v) => '<tr><td>' + n + '</td><td>' + v + '</td></tr>';
   // Symbolene med tilhørende tekst («Sjekkpunkt», «Varm mat» …)
-  const typer = wptTyper(w).map((t) =>
-    '<span class="wpt-popup-type">' + symbolGlyphHtml(t, 15) + ' ' +
-    escHtml((WPT_SYMBOLER[t] || WPT_SYMBOLER.annet).navn) + '</span>').join('');
+  const typer = wptTyper(w).map((typ) =>
+    '<span class="wpt-popup-type">' + symbolGlyphHtml(typ, 15) + ' ' +
+    escHtml(typeNavn(typ)) + '</span>').join('');
   // Valgfri arenakart-lenke. To former:
   //   «arena»          → samme løype: ./<arena>/  (arenaen ligger under denne
   //                       løypas mappe, <event>/<arena>/)
@@ -328,17 +399,17 @@ function åpnePopup(w) {
   // Slugene valideres til trygge tegn før de settes i href.
   const arenaLenke = arenaHref(w.arena)
     ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaHref(w.arena)) +
-      '" target="_blank" rel="noopener">🏟️ Se arenakart</a></p>' : '';
+      '" target="_blank" rel="noopener">' + escHtml(t('seArenakart')) + '</a></p>' : '';
   const html = '<div class="wpt-popup"><h3>' + escHtml(w.name) + '</h3>' +
     '<div class="wpt-popup-typer">' + typer + '</div>' +
     (w.desc ? '<p>' + escHtml(w.desc) + '</p>' : '') +
     arenaLenke +
     '<table>' +
-    rad('Distanse fra start', fmtKm(st.dist)) +
-    rad('Fra forrige punkt (' + escHtml(st.forrigeNavn) + ')', fmtKm(st.distForrige)) +
-    rad('Høyde', Math.round(st.høyde) + ' moh.') +
-    rad('Høydemeter fra start', '↑ ' + st.oppStart + ' m · ↓ ' + st.nedStart + ' m') +
-    rad('Fra forrige punkt', '↑ ' + st.oppForrige + ' m · ↓ ' + st.nedForrige + ' m') +
+    rad(t('distanseFraStart'), kmT(st.dist)) +
+    rad(t('fraForrige') + ' (' + escHtml(st.forrigeNavn) + ')', kmT(st.distForrige)) +
+    rad(t('hoyde'), Math.round(st.høyde) + ' ' + t('moh')) +
+    rad(t('hoydemeterFraStart'), '↑ ' + st.oppStart + ' m · ↓ ' + st.nedStart + ' m') +
+    rad(t('fraForrige'), '↑ ' + st.oppForrige + ' m · ↓ ' + st.nedForrige + ' m') +
     '</table></div>';
   L.popup({ maxWidth: 320 }).setLatLng([w.lat, w.lon]).setContent(html).openOn(map);
   settValgtIdx(w.idx);
@@ -360,6 +431,29 @@ function arenaHref(felt) {
   if (new RegExp('^' + slug + '$').test(s)) return './' + s + '/';
   if (new RegExp('^' + slug + '/' + slug + '$').test(s)) return '../' + s + '/';
   return null;
+}
+
+/** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */
+function byggSpraakvelger() {
+  const knapper = document.getElementById('topp-knapper');
+  if (!knapper || document.getElementById('sprakvelger')) return;
+  const velger = document.createElement('div');
+  velger.id = 'sprakvelger';
+  velger.className = 'sprakvelger';
+  for (const kode of ['no', 'en']) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sprakvelger-knapp' + (kode === lang ? ' aktiv' : '');
+    b.textContent = kode.toUpperCase();
+    b.addEventListener('click', () => {
+      if (kode === lang) return;
+      const url = new URL(location.href);
+      url.searchParams.set('lang', kode);
+      location.href = url.href; // last på nytt med nytt språk
+    });
+    velger.appendChild(b);
+  }
+  knapper.insertBefore(velger, knapper.firstChild);
 }
 
 /** Godta bare http(s)-lenker; alt annet (javascript:, data: …) forkastes. */
@@ -385,10 +479,10 @@ function settValgtIdx(idx) {
   if (posMarkør) posMarkør.setLatLng([punkter[valgtIdx].lat, punkter[valgtIdx].lon]);
 
   const st = statistikkFor(valgtIdx);
-  document.getElementById('i-dist').textContent = fmtKm(st.dist);
-  document.getElementById('i-forrige-navn').textContent = 'Fra ' + st.forrigeNavn;
-  document.getElementById('i-dist-forrige').textContent = fmtKm(st.distForrige);
-  document.getElementById('i-hoyde').textContent = Math.round(st.høyde) + ' moh.';
+  document.getElementById('i-dist').textContent = kmT(st.dist);
+  document.getElementById('i-forrige-navn').textContent = t('fra') + ' ' + st.forrigeNavn;
+  document.getElementById('i-dist-forrige').textContent = kmT(st.distForrige);
+  document.getElementById('i-hoyde').textContent = Math.round(st.høyde) + ' ' + t('moh');
   document.getElementById('i-hm-start').textContent = '↑ ' + st.oppStart + ' · ↓ ' + st.nedStart + ' m';
   document.getElementById('i-hm-forrige').textContent = '↑ ' + st.oppForrige + ' · ↓ ' + st.nedForrige + ' m';
   document.getElementById('info').classList.remove('skjult');

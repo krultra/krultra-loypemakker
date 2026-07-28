@@ -37,7 +37,23 @@ body { display: flex; flex-direction: column; }
 #arena-topp h1 { margin: 0; font-size: 18px; }
 #arena-topp p { margin: 2px 0 0; font-size: 13px; color: #64748b; }
 
-#arena-topp-knapper { display: flex; gap: 6px; flex-shrink: 0; }
+#arena-topp-knapper { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+
+/* Språkvelger (NO/EN) */
+.arena-sprak { display: inline-flex; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; }
+.arena-sprak-knapp {
+  border: none;
+  background: #ffffff;
+  color: #64748b;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.arena-sprak-knapp + .arena-sprak-knapp { border-left: 1px solid #e2e8f0; }
+.arena-sprak-knapp.aktiv { background: #e0e7ff; color: #0f172a; }
+.arena-sprak-knapp:hover:not(.aktiv) { background: #f1f5f9; }
 
 .arena-liste-toggle {
   padding: 6px 12px;
@@ -241,6 +257,11 @@ body { display: flex; flex-direction: column; }
   html, body { color: #e2e8f0; background: #0f172a; }
   #arena-topp p { color: #94a3b8; }
   .arena-liste-toggle { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+  .arena-sprak { border-color: #334155; }
+  .arena-sprak-knapp { background: #1e293b; color: #94a3b8; }
+  .arena-sprak-knapp + .arena-sprak-knapp { border-color: #334155; }
+  .arena-sprak-knapp.aktiv { background: #312e81; color: #f1f5f9; }
+  .arena-sprak-knapp:hover:not(.aktiv) { background: #273449; }
   #arena-map { background: #1e293b; }
   #arena-liste-panel { background: #0f172a; border-color: #334155; }
   .arena-gruppe-tittel { color: #94a3b8; }

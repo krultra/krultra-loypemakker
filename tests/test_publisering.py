@@ -154,6 +154,20 @@ class TestPubliser:
         lagret = json.loads(
             (mappemål / "test-loype" / "course.json").read_text(encoding="utf-8"))
         assert lagret["navn"] == "Test"
+        # Mangler standard_sprak → norsk (bakoverkompatibelt)
+        assert lagret["standard_sprak"] == "no"
+
+    def test_standardsprak_i_json_og_iframe(self, mappemål):
+        punkter = _spor(20)
+        course = publisering.bygg_course_json(
+            punkter, [], {"navn": "T", "standard_sprak": "en"}, {})
+        resultat = publisering.publiser("test", "en-loype", course)
+        lagret = json.loads(
+            (mappemål / "en-loype" / "course.json").read_text(encoding="utf-8"))
+        assert lagret["standard_sprak"] == "en"
+        # iframe-snutten peker med ?lang=en; den direkte URL-en holdes ren
+        assert "?lang=en" in resultat["iframe"]
+        assert resultat["url"].endswith("/en-loype/")
 
     def test_republisering_overskriver_course_json(self, mappemål):
         punkter = _spor(50)

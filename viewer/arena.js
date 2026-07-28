@@ -26,8 +26,58 @@ let valgtId = null;
 const NØYTRAL = '#64748b'; // farge for elementer uten type
 
 // ============================================================
+// Språk (i18n) — norsk + engelsk, språk-agnostisk oppbygd
+// ============================================================
+// Faste GUI-strenger per språk. Ukjente språk / manglende nøkler faller
+// tilbake til norsk. Nye språk legges til ved å utvide TEKST.
+const TEKST = {
+  no: {
+    liste: 'Liste', fullskjerm: '⛶ Full skjerm', steder: 'Steder', kontakter: 'Kontakter',
+    visAlle: '▾ Vis alle', skjulAlle: '▸ Skjul alle', annet: 'Annet',
+    ingenSteder: 'Ingen steder er markert ennå.',
+    ingenKontakter: 'Ingen kontakter er tilgjengelige nå.',
+    telefon: 'Telefon', epost: 'E-post', velgBakgrunn: 'Velg bakgrunnskart',
+    tofinger: 'Bruk to fingre for å flytte kartet', laster: 'Laster arenakartet …',
+    lasterFeil: 'Kunne ikke laste arenakartet', proevOppdater: 'Prøv å oppdatere siden.',
+    oppdatert: 'Oppdatert', publisertAv: 'Laget og publisert av', arenakartTittel: 'Arenakart',
+    listeTittel: 'Vis/skjul lista',
+    fullskjermTittel: 'Åpne arenakartet i egen fane i full størrelse',
+  },
+  en: {
+    liste: 'List', fullskjerm: '⛶ Full screen', steder: 'Places', kontakter: 'Contacts',
+    visAlle: '▾ Expand all', skjulAlle: '▸ Collapse all', annet: 'Other',
+    ingenSteder: 'No places marked yet.',
+    ingenKontakter: 'No contacts are available right now.',
+    telefon: 'Phone', epost: 'Email', velgBakgrunn: 'Choose base map',
+    tofinger: 'Use two fingers to move the map', laster: 'Loading the arena map …',
+    lasterFeil: 'Could not load the arena map', proevOppdater: 'Please refresh the page.',
+    oppdatert: 'Updated', publisertAv: 'Created and published by', arenakartTittel: 'Arena map',
+    listeTittel: 'Show/hide the list',
+    fullskjermTittel: 'Open the arena map in its own tab at full size',
+  },
+};
+
+let lang = 'no';
+/** Hvilket språk er valgt: ?lang= (validert) → standardSprak → 'no'. */
+function velgSprak(standardSprak) {
+  const url = new URLSearchParams(location.search).get('lang');
+  const kandidat = String(url || standardSprak || 'no').toLowerCase();
+  lang = TEKST[kandidat] ? kandidat : 'no';
+  document.documentElement.lang = lang === 'en' ? 'en' : 'nb';
+}
+/** Oversett en fast GUI-streng (faller tilbake til norsk). */
+function t(nokkel) { return (TEKST[lang] && TEKST[lang][nokkel]) || TEKST.no[nokkel]; }
+/** Locale for tall/dato etter valgt språk. */
+function locale() { return lang === 'en' ? 'en-GB' : 'nb-NO'; }
+/** Om innbyggingen har låst språket via ?lang= (skjuler velgeren da ikke). */
+function urlHarSprak() { return !!new URLSearchParams(location.search).get('lang'); }
+
+// ============================================================
 // Oppstart: hent arenadata
 // ============================================================
+
+velgSprak(null); // foreløpig fra URL (for laster-teksten); finpusses ved lasting
+document.getElementById('arena-laster').textContent = t('laster');
 
 fetch('./arena.json', { cache: 'no-cache' })
   .then((res) => {
@@ -36,12 +86,13 @@ fetch('./arena.json', { cache: 'no-cache' })
   })
   .then((data) => {
     arena = data;
+    if (!urlHarSprak()) velgSprak(arena.standard_sprak); // standardspråk fra publisering
     startVisning();
     document.getElementById('arena-laster').remove();
   })
   .catch((feil) => {
     document.getElementById('arena-laster').textContent =
-      'Kunne ikke laste arenakartet (' + feil.message + '). Prøv å oppdatere siden.';
+      t('lasterFeil') + ' (' + feil.message + '). ' + t('proevOppdater');
   });
 
 function startVisning() {
@@ -58,15 +109,24 @@ function startVisning() {
   bildeH = (arena.bilder[0] && arena.bilder[0].høyde) || arena.bilde_høyde || 1000;
   aktivtBildeId = arena.bilder[0] ? arena.bilder[0].id : null;
 
-  document.title = 'Arenakart – ' + (arena.navn || '');
-  document.getElementById('arena-tittel').textContent = arena.navn || 'Arenakart';
+  document.title = t('arenakartTittel') + ' – ' + (arena.navn || '');
+  document.getElementById('arena-tittel').textContent = arena.navn || t('arenakartTittel');
   const beskr = document.getElementById('arena-beskrivelse');
   if (arena.beskrivelse) beskr.textContent = arena.beskrivelse; else beskr.remove();
 
+  // Faste GUI-etiketter etter valgt språk
+  const settTekst = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
+  settTekst('arena-liste-toggle', '☰ ' + t('liste'));
+  document.getElementById('arena-liste-toggle').title = t('listeTittel');
+  settTekst('arena-fane-steder', t('steder'));
+  settTekst('arena-fane-kontakter', t('kontakter'));
+  document.getElementById('arena-kart-hint').textContent = t('tofinger');
+  byggSpraakvelger();
+
   const generert = arena.generert ? new Date(arena.generert) : null;
   document.getElementById('arena-bunn').innerHTML =
-    (generert ? 'Oppdatert ' + generert.toLocaleDateString('nb-NO') + ' · ' : '') +
-    'Laget og publisert av <a href="https://krultra.no" target="_blank" rel="noopener">KrUltra</a>';
+    (generert ? t('oppdatert') + ' ' + generert.toLocaleDateString(locale()) + ' · ' : '') +
+    t('publisertAv') + ' <a href="https://krultra.no" target="_blank" rel="noopener">KrUltra</a>';
 
   document.getElementById('arena-app').classList.remove('skjult');
 
@@ -156,7 +216,7 @@ function byggLagvelger() {
     // Sammenlagt: miniatyr av aktivt kart + navn (klikkbart)
     const knapp = L.DomUtil.create('button', 'arena-lagvelger-knapp', rot);
     knapp.type = 'button';
-    knapp.title = 'Velg bakgrunnskart';
+    knapp.title = t('velgBakgrunn');
     knapp.innerHTML = '<img class="arena-lagvelger-mini" alt="">' +
       '<span class="arena-lagvelger-navn"></span>';
 
@@ -286,7 +346,7 @@ function byggListe() {
   // Bare steder som er synlige på det aktive bakgrunnsbildet
   const features = (arena.features || []).filter((f) => synligPå(f, aktivtBildeId));
   if (!features.length) {
-    liste.innerHTML = '<p class="arena-liste-tom">Ingen steder er markert ennå.</p>';
+    liste.innerHTML = '<p class="arena-liste-tom">' + escHtml(t('ingenSteder')) + '</p>';
     return;
   }
 
@@ -298,7 +358,7 @@ function byggListe() {
   })).filter((g) => g.features.length);
   const utenType = features.filter(
     (f) => !typer.some((t) => t.id === f.type_id));
-  if (utenType.length) grupper.push({ tittel: 'Annet', farge: NØYTRAL, features: utenType });
+  if (utenType.length) grupper.push({ tittel: t('annet'), farge: NØYTRAL, features: utenType });
 
   // Verktøylinje: kollaps/ekspander alle gruppene på én gang (vises når det
   // er mer enn én type å styre)
@@ -313,8 +373,8 @@ function byggListe() {
       b.addEventListener('click', () => settAlleGrupper(kollaps));
       return b;
     };
-    verktøy.appendChild(knapp('▾ Vis alle', false));
-    verktøy.appendChild(knapp('▸ Skjul alle', true));
+    verktøy.appendChild(knapp(t('visAlle'), false));
+    verktøy.appendChild(knapp(t('skjulAlle'), true));
     liste.appendChild(verktøy);
   }
 
@@ -472,9 +532,9 @@ function byggKontaktliste() {
   const boks = document.getElementById('arena-kontaktliste');
   boks.innerHTML = '';
   const gyldige = (arena.kontakter || []).filter(kontaktGyldigNaa)
-    .slice().sort((a, b) => a.tittel.localeCompare(b.tittel, 'nb'));
+    .slice().sort((a, b) => a.tittel.localeCompare(b.tittel, locale()));
   if (!gyldige.length) {
-    boks.innerHTML = '<p class="arena-liste-tom">Ingen kontakter er tilgjengelige nå.</p>';
+    boks.innerHTML = '<p class="arena-liste-tom">' + escHtml(t('ingenKontakter')) + '</p>';
     return;
   }
   for (const k of gyldige) {
@@ -521,8 +581,8 @@ function visKontaktKort(k) {
   innhold.innerHTML =
     '<h3 class="arena-kort-tittel">' + escHtml(k.tittel) + '</h3>' +
     (k.navn ? '<p class="arena-kort-navn">' + escHtml(k.navn) + '</p>' : '') +
-    rad('Telefon', k.telefon, telHref) +
-    rad('E-post', k.epost, epostHref) +
+    rad(t('telefon'), k.telefon, telHref) +
+    rad(t('epost'), k.epost, epostHref) +
     (k.beskrivelse ? '<p class="arena-kort-beskr">' + escHtml(k.beskrivelse) + '</p>' : '');
   document.getElementById('arena-kontakt-overlay').classList.remove('skjult');
 }
@@ -573,9 +633,34 @@ function settListeAuto() {
 function byggFullskjerm() {
   if (window.self === window.top) return;
   const fs = document.getElementById('arena-fullskjerm');
+  fs.textContent = t('fullskjerm');
+  fs.title = t('fullskjermTittel');
   fs.classList.remove('skjult');
   fs.addEventListener('click', () =>
     window.open(window.location.href, '_blank', 'noopener'));
+}
+
+/** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */
+function byggSpraakvelger() {
+  const knapper = document.getElementById('arena-topp-knapper');
+  if (!knapper || document.getElementById('arena-sprak')) return;
+  const velger = document.createElement('div');
+  velger.id = 'arena-sprak';
+  velger.className = 'arena-sprak';
+  for (const kode of ['no', 'en']) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'arena-sprak-knapp' + (kode === lang ? ' aktiv' : '');
+    b.textContent = kode.toUpperCase();
+    b.addEventListener('click', () => {
+      if (kode === lang) return;
+      const url = new URL(location.href);
+      url.searchParams.set('lang', kode);
+      location.href = url.href; // last på nytt med nytt språk
+    });
+    velger.appendChild(b);
+  }
+  knapper.insertBefore(velger, knapper.firstChild);
 }
 
 // ============================================================

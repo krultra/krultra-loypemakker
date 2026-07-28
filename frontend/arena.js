@@ -781,6 +781,7 @@ window.arenaEditor = (function () {
     arenaFelt.value = arena.arena_slug || lagSlug(arena.navn || '');
     tittelFelt.value = arena.navn || '';
     beskrFelt.value = arena.beskrivelse || '';
+    document.getElementById('arena-publish-sprak').value = arena.standard_sprak || 'no';
     byggPubliserBilder();
     oppdaterSlughint();
     eventFelt.oninput = arenaFelt.oninput = målVelger.onchange = oppdaterSlughint;
@@ -796,6 +797,7 @@ window.arenaEditor = (function () {
     const alle = arena.bilder.map((b) => b.id);
     const valgte = [...document.querySelectorAll('#arena-publish-bilder input:checked')].map((b) => b.value);
     const bilde_ids = (valgte.length === alle.length) ? null : valgte;
+    const standard_sprak = document.getElementById('arena-publish-sprak').value;
 
     try {
       const res = await api('/api/arenas/publish', {
@@ -805,11 +807,12 @@ window.arenaEditor = (function () {
           event_slug, arena_slug,
           navn: tittelFelt.value.trim() || arena.navn || arena_slug,
           beskrivelse: beskrFelt.value.trim() || null,
-          bilde_ids,
+          bilde_ids, standard_sprak,
         }),
       });
       const svar = await res.json();
       arena.publiser_bilde_ids = bilde_ids;
+      arena.standard_sprak = standard_sprak; // husk til neste publisering (samme økt)
       // Husk tittel/beskrivelse/slugs i minnet også, så en ny publisering i
       // samme økt (uten å åpne på nytt) foreslår de samme verdiene. Serveren
       // har allerede lagret dem, så gjenåpning senere foreslår dem også.

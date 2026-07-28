@@ -36,9 +36,11 @@ function kumulativAvstand(punkter) {
   return d;
 }
 
-/** Formater km pent på norsk, f.eks. "3,42 km". */
-function fmtKm(km) {
-  return km.toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
+/** Formater km pent, f.eks. "3,42 km" (nb-NO) eller "3.42 km" (en-GB).
+ *  `locale` er valgfri; standard norsk, så verktøyet og eldre viewere er uendret. */
+function fmtKm(km, locale) {
+  return km.toLocaleString(locale || 'nb-NO',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
 }
 
 /** Begrens en verdi til intervallet [min, maks]. */
@@ -135,22 +137,24 @@ function fintSteg(spenn, målAntall) {
 // start/mål først, så sjekkpunkt, drikke, de tre matvalgene, så resten.
 // NB: `mat` må stå før `varmmat` — begge har GPX-symbolet «Restaurant», og
 // wptType() velger det første treffet når eldre punkter leses inn.
+// `navn` er norsk (verktøyet bruker alltid dette); `navn_en` er engelsk og
+// brukes av de publiserte visningene når språket er engelsk.
 const WPT_SYMBOLER = {
   // Start tegnes som en grønn «play»-knapp (grønn sirkel + hvit trekant)
-  start: { sym: 'Flag, Green', emoji: '\u{25B6}', navn: 'Start', form: 'play' },
-  maal: { sym: 'Flag, Checkered', emoji: '\u{1F3C1}', navn: 'Mål' },
-  sjekkpunkt: { sym: 'Flag, Blue', emoji: '\u{1F6A9}', navn: 'Sjekkpunkt' },
-  drikke: { sym: 'Drinking Water', emoji: '\u{1F4A7}', navn: 'Drikke' },
-  snacks: { sym: 'Convenience Store', emoji: '\u{1F36B}', navn: 'Snacks' },
-  mat: { sym: 'Restaurant', emoji: '\u{1F374}', navn: 'Mat' },
-  varmmat: { sym: 'Restaurant', emoji: '\u{1F372}', navn: 'Varm mat' },
-  toalett: { sym: 'Restroom', emoji: '\u{1F6BB}', navn: 'Toalett' },
-  dusj: { sym: 'Shower', emoji: '\u{1F6BF}', navn: 'Dusj' },
-  dropbag: { sym: 'Bag', emoji: '\u{1F392}', navn: 'Drop bag' },
-  husly: { sym: 'Lodging', emoji: '\u{1F3E0}', navn: 'Husly' },
-  tidtaking: { sym: 'Stopwatch', emoji: '⏱', navn: 'Tidtaking' },
-  informasjon: { sym: 'Information', emoji: 'ℹ', navn: 'Informasjon' },
-  annet: { sym: 'Waypoint', emoji: '\u{1F4CD}', navn: 'Annet' },
+  start: { sym: 'Flag, Green', emoji: '\u{25B6}', navn: 'Start', navn_en: 'Start', form: 'play' },
+  maal: { sym: 'Flag, Checkered', emoji: '\u{1F3C1}', navn: 'Mål', navn_en: 'Finish' },
+  sjekkpunkt: { sym: 'Flag, Blue', emoji: '\u{1F6A9}', navn: 'Sjekkpunkt', navn_en: 'Checkpoint' },
+  drikke: { sym: 'Drinking Water', emoji: '\u{1F4A7}', navn: 'Drikke', navn_en: 'Drinks' },
+  snacks: { sym: 'Convenience Store', emoji: '\u{1F36B}', navn: 'Snacks', navn_en: 'Snacks' },
+  mat: { sym: 'Restaurant', emoji: '\u{1F374}', navn: 'Mat', navn_en: 'Food' },
+  varmmat: { sym: 'Restaurant', emoji: '\u{1F372}', navn: 'Varm mat', navn_en: 'Hot food' },
+  toalett: { sym: 'Restroom', emoji: '\u{1F6BB}', navn: 'Toalett', navn_en: 'Toilet' },
+  dusj: { sym: 'Shower', emoji: '\u{1F6BF}', navn: 'Dusj', navn_en: 'Shower' },
+  dropbag: { sym: 'Bag', emoji: '\u{1F392}', navn: 'Drop bag', navn_en: 'Drop bag' },
+  husly: { sym: 'Lodging', emoji: '\u{1F3E0}', navn: 'Husly', navn_en: 'Shelter' },
+  tidtaking: { sym: 'Stopwatch', emoji: '⏱', navn: 'Tidtaking', navn_en: 'Timing' },
+  informasjon: { sym: 'Information', emoji: 'ℹ', navn: 'Informasjon', navn_en: 'Information' },
+  annet: { sym: 'Waypoint', emoji: '\u{1F4CD}', navn: 'Annet', navn_en: 'Other' },
 };
 
 /** Fast visningsrekkefølge for symbolene (rekkefølgen i WPT_SYMBOLER). */

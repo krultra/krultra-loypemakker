@@ -56,7 +56,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 20
+BACKEND_VERSJON = 21
 
 
 @router.get("/health")
@@ -261,7 +261,7 @@ def publiser_løype(req: PublishRequest):
     if len(req.points) < 2:
         raise HTTPException(status_code=400, detail="Løypa må ha minst to punkter")
     meta = {"navn": _trim(req.name), "beskrivelse": _trim(req.description),
-            "link": _trim(req.link)}
+            "link": _trim(req.link), "standard_sprak": req.standard_sprak}
     course = publisering.bygg_course_json(req.points, req.waypoints, meta, req.stil)
     try:
         resultat = publisering.publiser(req.target, req.slug.strip().lower(), course)
@@ -451,7 +451,7 @@ def publiser_arena(req: ArenaPublishRequest):
     try:
         resultat = arena_publisering.publiser_arena(
             req.target, req.event_slug.strip().lower(),
-            req.arena_slug.strip().lower(), arena, req.bilde_ids)
+            req.arena_slug.strip().lower(), arena, req.bilde_ids, req.standard_sprak)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     # Lagre slugs + bilde-utvalg + eventuell tittelendring for neste gang
