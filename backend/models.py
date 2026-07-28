@@ -388,6 +388,11 @@ class ArenaFeature(BaseModel):
     bilde_ids: Optional[List[str]] = None
     # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
     oversettelser: Optional[Dict[str, Dict[str, str]]] = None
+    # Valgfri lenke til et ANNET arenakart. Klikk på stedet i visningen hopper
+    # da til det arenakartet (oversikt → detalj). Former:
+    #   «arena»        = et annet arenakart under samme løype/event (../<arena>/)
+    #   «løype/arena»  = et arenakart under en bestemt løype (../../<løype>/<arena>/)
+    arena: Optional[str] = None
 
 
 class ArenaSummary(BaseModel):

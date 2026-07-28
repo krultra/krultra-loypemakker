@@ -17,6 +17,16 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.7.0 — 28. juli 2026
+
+- **Lenke fra arenakart til arenakart:** et område eller punkt kan nå gjøres om
+  til en **lenke til et annet arenakart**. Klikker sluttbrukeren på stedet,
+  hopper visningen til det andre kartet (med språket bevart) — nyttig for å la
+  et oversiktskart ramme inn et mindre område som fører til et **detaljkart**.
+  - I sted-dialogen: nytt felt **«Lenke til annet arenakart»** (bruk «‹arena›»
+    for et kart under samme løype, eller «‹løype›/‹arena›»).
+  - Lenkede steder vises med en **stiplet kant** og en **→** i lista.
+
 ## 2.6.2 — 28. juli 2026
 
 - **Rettet:** punkter ligger nå alltid **over** områder i arenakart (eget

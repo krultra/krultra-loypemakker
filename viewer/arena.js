@@ -171,6 +171,28 @@ function fargeFor(feature) {
   return (t && t.farge) || NØYTRAL;
 }
 
+/** Bygg en trygg relativ lenke fra en features arena-felt til et annet
+ *  arenakart. Arenaen ligger på <event>/<arena>/, så fra dette kartet:
+ *    «arena»        → ../arena/        (annet kart under samme løype/event)
+ *    «løype/arena»  → ../../løype/arena/ (kart under en bestemt løype)
+ *  Returnerer null for tomt/ugyldig felt. */
+function arenaHref(felt) {
+  const s = String(felt || '');
+  const slug = '[a-z0-9][a-z0-9-]*';
+  if (new RegExp('^' + slug + '$').test(s)) return '../' + s + '/';
+  if (new RegExp('^' + slug + '/' + slug + '$').test(s)) return '../../' + s + '/';
+  return null;
+}
+
+/** Naviger til et annet arenakart, med gjeldende språk (?lang) bevart. */
+function gaaTilArena(felt) {
+  const href = arenaHref(felt);
+  if (!href) return;
+  const url = new URL(href, location.href);
+  url.searchParams.set('lang', lang);
+  location.href = url.href;
+}
+
 function byggKart() {
   map = L.map('arena-map', {
     crs: L.CRS.Simple,
@@ -311,8 +333,13 @@ function tegnFeature(f) {
     return; // ugyldig geometri — hopp over
   }
   lag.addTo(map);
-  lag.bindTooltip(lok(f, 'navn') || '', { direction: 'top', sticky: f.form === 'polygon' });
-  lag.on('click', (e) => { L.DomEvent.stop(e); velg(f.id, true); });
+  // Lenket sted (fører til et annet arenakart): stiplet kant + «→» i tooltip,
+  // og klikk navigerer i stedet for å velge.
+  const lenke = arenaHref(f.arena);
+  if (lenke && lag.setStyle) lag.setStyle({ dashArray: '6,4' });
+  lag.bindTooltip((lok(f, 'navn') || '') + (lenke ? ' →' : ''),
+    { direction: 'top', sticky: f.form === 'polygon' });
+  lag.on('click', (e) => { L.DomEvent.stop(e); if (lenke) gaaTilArena(f.arena); else velg(f.id, true); });
   lag.on('mouseover', () => framhev(f.id, true));
   lag.on('mouseout', () => { if (valgtId !== f.id) framhev(f.id, false); });
   lagFor[f.id] = lag;
@@ -419,9 +446,11 @@ function byggListe() {
       el.className = 'arena-liste-el';
       el.style.setProperty('--farge', g.farge);
       const fBeskr = lok(f, 'beskrivelse');
-      el.innerHTML = '<span class="arena-liste-navn">' + escHtml(lok(f, 'navn') || '') + '</span>' +
+      const fLenke = arenaHref(f.arena);
+      el.innerHTML = '<span class="arena-liste-navn">' + escHtml(lok(f, 'navn') || '') +
+        (fLenke ? ' <span class="arena-liste-lenke" title="Fører til et annet arenakart">→</span>' : '') + '</span>' +
         (fBeskr ? '<span class="arena-liste-beskr">' + escHtml(fBeskr) + '</span>' : '');
-      el.addEventListener('click', () => velg(f.id, true));
+      el.addEventListener('click', () => { if (fLenke) gaaTilArena(f.arena); else velg(f.id, true); });
       el.addEventListener('mouseenter', () => { if (valgtId !== f.id) framhev(f.id, true); });
       el.addEventListener('mouseleave', () => { if (valgtId !== f.id) framhev(f.id, false); });
       bolk.appendChild(el);

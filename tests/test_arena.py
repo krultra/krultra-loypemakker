@@ -186,6 +186,18 @@ class TestArenaPublisering:
         aj2 = json.loads((mål / "ev2" / "ar" / "arena.json").read_text(encoding="utf-8"))
         assert aj2["standard_sprak"] == "no"
 
+    def test_feature_arena_lenke_publiseres(self, mål, arena_datamappe):
+        """En features lenke til et annet arenakart tas med i arena.json."""
+        req = _lag_request()
+        req.features[0].arena = "detalj"  # lenke til et annet arenakart
+        a = arena_lagring.opprett_arena(req)
+        arena_lagring.legg_til_bilde(a.id, b"x", "png", "Kart", 10, 10)
+        arena = arena_lagring.hent_arena(a.id)
+        arena_publisering.publiser_arena("test", "ev", "ar", arena)
+        aj = json.loads((mål / "ev" / "ar" / "arena.json").read_text(encoding="utf-8"))
+        f = next(f for f in aj["features"] if f["id"] == "f1")
+        assert f["arena"] == "detalj"
+
     def test_publiser_utvalg_av_bilder(self, mål, arena_datamappe):
         a = arena_lagring.opprett_arena(_lag_request())
         a = arena_lagring.legg_til_bilde(a.id, b"P1", "png", "Norgeskart", 800, 500)

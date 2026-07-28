@@ -183,6 +183,7 @@ body { display: flex; flex-direction: column; }
   border-color: var(--farge, #64748b);
 }
 .arena-liste-navn { display: block; font-size: 14px; font-weight: 500; color: #0f172a; }
+.arena-liste-lenke { color: #2563eb; font-weight: 700; }
 .arena-liste-beskr {
   display: block;
   font-size: 12px;
@@ -274,6 +275,7 @@ body { display: flex; flex-direction: column; }
   .arena-liste-el:hover { background: #273449; }
   .arena-liste-el.framhevet { background: #312e81; }
   .arena-liste-navn { color: #f1f5f9; }
+  .arena-liste-lenke { color: #93c5fd; }
   #arena-laster { color: #cbd5e1; background: #0f172a; }
   #arena-liste-panel { border-color: #334155; }
 }

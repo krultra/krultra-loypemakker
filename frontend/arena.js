@@ -242,7 +242,7 @@ window.arenaEditor = (function () {
     const feature = {
       id: nyId('f'), navn: '', beskrivelse: null,
       type_id: arena.typer.length ? arena.typer[0].id : null,
-      form, geometri, kontakt_ids: [], bilde_ids: null,
+      form, geometri, kontakt_ids: [], bilde_ids: null, arena: null,
     };
     const svar = await visFeatureDialog(feature, true);
     if (!svar) return; // avbrutt → forkast
@@ -346,6 +346,7 @@ window.arenaEditor = (function () {
     document.getElementById('arena-feature-beskr-en').value = fEn.beskrivelse || '';
     document.getElementById('arena-feature-delete').classList.toggle('hidden', erNy);
     fyllTypeVelger(document.getElementById('arena-feature-type'), feature.type_id);
+    document.getElementById('arena-feature-arena').value = feature.arena || '';
     byggBildeKryss(feature.bilde_ids);
     byggKontaktKryss(feature.kontakt_ids || []);
 
@@ -369,6 +370,8 @@ window.arenaEditor = (function () {
       type_id: document.getElementById('arena-feature-type').value || null,
       kontakt_ids,
       bilde_ids,
+      arena: document.getElementById('arena-feature-arena').value.trim().toLowerCase()
+        .replace(/\s+/g, '') || null,
       oversettelser: byggOversettelser({
         navn: document.getElementById('arena-feature-navn-en').value,
         beskrivelse: document.getElementById('arena-feature-beskr-en').value,
