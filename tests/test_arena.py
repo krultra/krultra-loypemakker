@@ -41,6 +41,29 @@ class TestArenaLagring:
         assert hentet.typer[0].farge == "#22c55e"
         assert hentet.har_bilde is False
 
+    def test_oversettelser_round_trip_og_publisering(self, arena_datamappe, tmp_path, monkeypatch):
+        # Lagring bevarer oversettelser på arena + objekter
+        req = _lag_request()
+        req.oversettelser = {"en": {"navn": "Arena EN"}}
+        req.features[0].oversettelser = {"en": {"navn": "Finish"}}
+        req.typer[0].oversettelser = {"en": {"navn": "Catering"}}
+        a = arena_lagring.opprett_arena(req)
+        arena_lagring.legg_til_bilde(a.id, b"x", "png", "Kart", 10, 10)
+        hentet = arena_lagring.hent_arena(a.id)
+        assert hentet.oversettelser["en"]["navn"] == "Arena EN"
+        assert hentet.features[0].oversettelser["en"]["navn"] == "Finish"
+        assert hentet.typer[0].oversettelser["en"]["navn"] == "Catering"
+        # Publisering tar med alt i arena.json
+        konfig = {"mål": [{"navn": "t", "type": "mappe",
+                           "mappe": str(tmp_path / "ut"), "baseUrl": "https://x.no"}]}
+        kfil = tmp_path / "pub.json"; kfil.write_text(json.dumps(konfig), encoding="utf-8")
+        monkeypatch.setattr(publisering, "KONFIG_FIL", kfil)
+        arena_publisering.publiser_arena("t", "ev", "ar", hentet)
+        aj = json.loads((tmp_path / "ut" / "ev" / "ar" / "arena.json").read_text(encoding="utf-8"))
+        assert aj["oversettelser"]["en"]["navn"] == "Arena EN"
+        assert aj["features"][0]["oversettelser"]["en"]["navn"] == "Finish"
+        assert aj["typer"][0]["oversettelser"]["en"]["navn"] == "Catering"
+
     def test_kontakter_round_trip(self, arena_datamappe):
         """Kontakter og kobling til steder (kontakt_ids) bevares."""
         opprettet = arena_lagring.opprett_arena(_lag_request())

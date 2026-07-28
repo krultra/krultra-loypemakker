@@ -65,6 +65,10 @@ class Waypoint(BaseModel):
     # Er den satt, blir løypepunktet klikkbart i den publiserte visningen og
     # åpner arenakartet på ./<arena>/ (samme event-mappe — se arena_publisering).
     arena: Optional[str] = None
+    # Oversettelser av tekstfeltene til andre språk: {språk: {felt: tekst}},
+    # f.eks. {"en": {"name": "Finish", "desc": "..."}}. De vanlige feltene er
+    # kildespråket (norsk). None/manglende → norsk (bakoverkompatibelt).
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class DeltPunkt(BaseModel):
@@ -85,6 +89,8 @@ class DeltPunkt(BaseModel):
     types: Optional[List[str]] = None
     # Delt arenakart-lenke (se Waypoint.arena) — følger med ved gjenbruk.
     arena: Optional[str] = None
+    # Delte oversettelser (se Waypoint.oversettelser) — følger med ved gjenbruk.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class SegmentSummary(BaseModel):
@@ -268,6 +274,8 @@ class PublishRequest(BaseModel):
     # Standardspråk for innbygging (no/en). Lagres i course.json og settes som
     # ?lang= i iframe-snutten. None = norsk (bakoverkompatibelt).
     standard_sprak: Optional[str] = None
+    # Oversettelser av løypas navn/beskrivelse — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class PublishResponse(BaseModel):
@@ -309,6 +317,8 @@ class ArenaType(BaseModel):
     id: str
     navn: str
     farge: str = "#2563eb"
+    # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaImage(BaseModel):
@@ -326,6 +336,8 @@ class ArenaImage(BaseModel):
     fil: str
     bredde: int
     høyde: int
+    # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaContact(BaseModel):
@@ -345,6 +357,8 @@ class ArenaContact(BaseModel):
     beskrivelse: Optional[str] = None
     gyldig_fra: Optional[str] = None
     gyldig_til: Optional[str] = None
+    # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaFeature(BaseModel):
@@ -372,6 +386,8 @@ class ArenaFeature(BaseModel):
     #   []        = ingen (skjult på alle bakgrunner)
     #   [id, ...] = kun de utvalgte
     bilde_ids: Optional[List[str]] = None
+    # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaSummary(BaseModel):
@@ -405,6 +421,8 @@ class ArenaDetail(ArenaSummary):
     arena_slug: Optional[str] = None
     # Sist valgte bilder ved publisering (ArenaImage.id) — foreslås på nytt.
     publiser_bilde_ids: Optional[List[str]] = None
+    # Oversettelser av arenaens navn/beskrivelse — se Waypoint.oversettelser.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaSaveRequest(BaseModel):
@@ -423,6 +441,7 @@ class ArenaSaveRequest(BaseModel):
     event_slug: Optional[str] = None
     arena_slug: Optional[str] = None
     publiser_bilde_ids: Optional[List[str]] = None
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaListResponse(BaseModel):
@@ -451,6 +470,8 @@ class ArenaPublishRequest(BaseModel):
     # Standardspråk for innbygging (no/en). Lagres i arena.json og settes som
     # ?lang= i iframe-snutten. None = norsk (bakoverkompatibelt).
     standard_sprak: Optional[str] = None
+    # Oversettelser av arenaens navn/beskrivelse (toppnivå), om noen.
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
 
 
 class ArenaPublishResponse(BaseModel):

@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.6.0 — 28. juli 2026
+
+- **Flerspråklig innhold i publiserte visninger:** i tillegg til fast GUI-tekst
+  (2.5.0) kan nå også ditt eget innhold vises på engelsk — løype-/arenanavn og
+  -beskrivelser, punktnavn og -beskrivelser, områder/punkter, typer, kontakter
+  og bakgrunnskart-navn.
+  - I KUL-verktøyet (fortsatt norsk GUI) er det lagt til **«(engelsk)»-felt**
+    ved siden av tekstfeltene i punkt-, sted-, type-, kontakt- og bilde-
+    dialogene, samt i publiseringsdialogene (tittel/beskrivelse).
+  - Sluttbrukeren bytter språk med språkvelgeren; utfyller du ikke engelsk for
+    et felt, vises den norske teksten (bakoverkompatibelt).
+  - Engelsk innhold følger med **delte punkter** på tvers av løyper.
+  - Arkitekturen lagrer oversettelser språk-agnostisk, så flere språk kan
+    støttes senere.
+
 ## 2.5.0 — 28. juli 2026
 
 - **Flerspråklige publiserte visninger (norsk + engelsk):** de publiserte

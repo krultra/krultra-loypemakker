@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.5.0';
+const APP_VERSJON = '2.6.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1634,6 +1634,9 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
   document.getElementById('wpt-delete-btn').classList.toggle('hidden', !wpt);
   navnFelt.value = (wpt && wpt.name) || '';
   beskrFelt.value = (wpt && wpt.desc) || '';
+  const enO = (wpt && wpt.oversettelser && wpt.oversettelser.en) || {};
+  document.getElementById('wpt-name-en').value = enO.name || '';
+  document.getElementById('wpt-desc-en').value = enO.desc || '';
   document.getElementById('wpt-vis-ikon').checked = !wpt || wpt.vis_ikon !== false;
   document.getElementById('wpt-del-bib').checked = !!(wpt && wpt.bib_id);
   document.getElementById('wpt-shared-note').classList
@@ -1725,8 +1728,39 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
       // (også rundt skråstreken) og små bokstaver — matcher slug-formatet.
       arena: document.getElementById('wpt-arena').value.trim().toLowerCase()
         .replace(/\s+/g, '') || null,
+      // Engelske oversettelser (name/desc) for den publiserte visningen
+      oversettelser: byggOversettelser({
+        name: document.getElementById('wpt-name-en').value,
+        desc: document.getElementById('wpt-desc-en').value,
+      }),
     },
   };
+}
+
+/** Bygg et oversettelser-objekt {en:{felt:tekst}} fra engelske felt (trimmet).
+ *  Returnerer null hvis ingen engelske verdier er fylt ut. */
+function byggOversettelser(enFelter) {
+  const en = {};
+  for (const [felt, verdi] of Object.entries(enFelter)) {
+    const v = (verdi || '').trim();
+    if (v) en[felt] = v;
+  }
+  return Object.keys(en).length ? { en } : null;
+}
+
+/** Sett/fjern én engelsk oversettelse på et objekt in-place (for felt som
+ *  redigeres direkte i lister, som typer og bilder). Rydder tomme strukturer. */
+function settEnFelt(obj, felt, verdi) {
+  const v = (verdi || '').trim();
+  if (v) {
+    obj.oversettelser = obj.oversettelser || {};
+    obj.oversettelser.en = obj.oversettelser.en || {};
+    obj.oversettelser.en[felt] = v;
+  } else if (obj.oversettelser && obj.oversettelser.en) {
+    delete obj.oversettelser.en[felt];
+    if (!Object.keys(obj.oversettelser.en).length) delete obj.oversettelser.en;
+    if (obj.oversettelser && !Object.keys(obj.oversettelser).length) obj.oversettelser = null;
+  }
 }
 
 /** Nytt veipunkt der markøren står. */
@@ -1743,6 +1777,7 @@ async function leggTilWpt() {
       bib_id: d.id, lat: d.lat, lon: d.lon, ele: d.ele,
       name: d.name, desc: d.desc, sym: d.sym, type: d.type, types: d.types,
       arena: d.arena || null, // arenakart-lenken følger med det delte punktet
+      oversettelser: d.oversettelser || null, // oversettelsene følger med
       vis_ikon: true,
     });
     tegnVeipunkter();
@@ -1803,6 +1838,7 @@ async function redigerWpt(indeks) {
     wpt.type = svar.verdier.type;
     wpt.vis_ikon = svar.verdier.vis_ikon;
     wpt.arena = svar.verdier.arena;
+    wpt.oversettelser = svar.verdier.oversettelser;
     if (svar.verdier.snap !== undefined) wpt.snap = svar.verdier.snap;
     if (svar.handling === 'move') {
       const p = s.punkter[s.valgtIdx];
@@ -1956,6 +1992,7 @@ async function velgDeltePunkter() {
       bib_id: d.id, lat: d.lat, lon: d.lon, ele: d.ele,
       name: d.name, desc: d.desc, sym: d.sym, type: d.type, types: d.types,
       arena: d.arena || null, // arenakart-lenken følger med det delte punktet
+      oversettelser: d.oversettelser || null, // oversettelsene følger med
       vis_ikon: true,
       snap: !!(snapValg && snapValg.value === 'snap'),
     });
@@ -2632,6 +2669,10 @@ async function utførPublisering() {
         link: editorState.link,
         stil: gjeldendeStil(),
         standard_sprak: document.getElementById('publish-sprak').value,
+        oversettelser: byggOversettelser({
+          navn: document.getElementById('publish-name-en').value,
+          beskrivelse: document.getElementById('publish-desc-en').value,
+        }),
         points: punkter,
         waypoints: aktuelleVeipunkter(punkter),
       }),
@@ -3516,7 +3557,7 @@ oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 21;
+const FORVENTET_BACKEND = 22;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 8
+ARENA_ASSET_VERSJON = 9
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -61,6 +61,9 @@ def bygg_arena_json(arena: ArenaDetail, bilde_ids=None, standard_sprak=None) -> 
         "beskrivelse": arena.beskrivelse,
         # Standardspråk for visningen (no/en). Viewer bruker ?lang= over dette.
         "standard_sprak": standard_sprak or "no",
+        # Oversettelser av arenaens navn/beskrivelse (toppnivå), om noen.
+        # Objektene (bilder/typer/features/kontakter) bærer sine egne via model_dump.
+        "oversettelser": arena.oversettelser or None,
         "bilder": [b.model_dump() for b in valgte],
         # Kanoniske mål (koordinatsystemet features er relative til)
         "bilde_bredde": arena.bilde_bredde,

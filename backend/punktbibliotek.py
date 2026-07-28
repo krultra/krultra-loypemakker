@@ -33,7 +33,8 @@ BIBLIOTEK_FIL = Path(__file__).resolve().parent.parent / "data" / "waypoints.jso
 # `arena` (lenke til arenakart) ER med: gjenbrukes punktet i en annen løype,
 # skal det beholde sin opprinnelige arenakart-lenke (typisk «‹løype›/‹arena›»,
 # som viewer-en løser absolutt, så den peker riktig uansett løype).
-_DELTE_FELT = ("lat", "lon", "ele", "name", "desc", "sym", "type", "types", "arena")
+_DELTE_FELT = ("lat", "lon", "ele", "name", "desc", "sym", "type", "types",
+               "arena", "oversettelser")
 
 
 def les_bibliotek() -> List[DeltPunkt]:

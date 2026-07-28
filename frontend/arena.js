@@ -36,7 +36,7 @@ window.arenaEditor = (function () {
       id: null, navn: '', beskrivelse: null,
       bilder: [], bilde_bredde: null, bilde_høyde: null,
       typer: [], features: [], kontakter: [],
-      event_slug: null, arena_slug: null, publiser_bilde_ids: null,
+      event_slug: null, arena_slug: null, publiser_bilde_ids: null, oversettelser: null,
     };
   }
 
@@ -333,6 +333,9 @@ window.arenaEditor = (function () {
       (erNy ? 'Nytt ' : 'Rediger ') + (feature.form === 'polygon' ? 'område' : 'punkt');
     document.getElementById('arena-feature-navn').value = feature.navn || '';
     document.getElementById('arena-feature-beskr').value = feature.beskrivelse || '';
+    const fEn = (feature.oversettelser && feature.oversettelser.en) || {};
+    document.getElementById('arena-feature-navn-en').value = fEn.navn || '';
+    document.getElementById('arena-feature-beskr-en').value = fEn.beskrivelse || '';
     document.getElementById('arena-feature-delete').classList.toggle('hidden', erNy);
     fyllTypeVelger(document.getElementById('arena-feature-type'), feature.type_id);
     byggBildeKryss(feature.bilde_ids);
@@ -358,6 +361,10 @@ window.arenaEditor = (function () {
       type_id: document.getElementById('arena-feature-type').value || null,
       kontakt_ids,
       bilde_ids,
+      oversettelser: byggOversettelser({
+        navn: document.getElementById('arena-feature-navn-en').value,
+        beskrivelse: document.getElementById('arena-feature-beskr-en').value,
+      }),
     };
   }
 
@@ -501,7 +508,13 @@ window.arenaEditor = (function () {
       farge.addEventListener('input', () => { t.farge = farge.value; merkEndret(); });
       const navn = document.createElement('input');
       navn.type = 'text'; navn.value = t.navn; navn.className = 'arena-type-navn';
+      navn.title = 'Navn (norsk)';
       navn.addEventListener('input', () => { t.navn = navn.value; merkEndret(); });
+      const navnEn = document.createElement('input');
+      navnEn.type = 'text'; navnEn.className = 'arena-type-navn';
+      navnEn.placeholder = 'engelsk'; navnEn.title = 'Navn (engelsk)';
+      navnEn.value = (t.oversettelser && t.oversettelser.en && t.oversettelser.en.navn) || '';
+      navnEn.addEventListener('input', () => { settEnFelt(t, 'navn', navnEn.value); merkEndret(); });
       const slett = document.createElement('button');
       slett.type = 'button'; slett.className = 'btn btn-small btn-danger-subtle';
       slett.textContent = 'Slett';
@@ -511,7 +524,7 @@ window.arenaEditor = (function () {
         merkEndret();
         tegnTypeliste();
       });
-      rad.appendChild(farge); rad.appendChild(navn); rad.appendChild(slett);
+      rad.appendChild(farge); rad.appendChild(navn); rad.appendChild(navnEn); rad.appendChild(slett);
       boks.appendChild(rad);
     }
   }
@@ -594,6 +607,10 @@ window.arenaEditor = (function () {
     g('beskr').value = (k && k.beskrivelse) || '';
     g('fra').value = (k && k.gyldig_fra) || '';
     g('til').value = (k && k.gyldig_til) || '';
+    const kEn = (k && k.oversettelser && k.oversettelser.en) || {};
+    g('tittel-en').value = kEn.tittel || '';
+    g('navn-en').value = kEn.navn || '';
+    g('beskr-en').value = kEn.beskrivelse || '';
 
     const dialog = document.getElementById('arena-kontakt-dialog');
     const løfte = ventPåDialog(dialog);
@@ -610,6 +627,11 @@ window.arenaEditor = (function () {
       beskrivelse: g('beskr').value.trim() || null,
       gyldig_fra: g('fra').value || null,
       gyldig_til: g('til').value || null,
+      oversettelser: byggOversettelser({
+        tittel: g('tittel-en').value,
+        navn: g('navn-en').value,
+        beskrivelse: g('beskr-en').value,
+      }),
     };
     if (k) {
       Object.assign(k, verdier);
@@ -634,6 +656,7 @@ window.arenaEditor = (function () {
       event_slug: arena.event_slug,
       arena_slug: arena.arena_slug,
       publiser_bilde_ids: arena.publiser_bilde_ids,
+      oversettelser: arena.oversettelser,
     };
   }
 
@@ -725,6 +748,7 @@ window.arenaEditor = (function () {
         typer: data.typer || [], features: data.features || [], kontakter: data.kontakter || [],
         event_slug: data.event_slug, arena_slug: data.arena_slug,
         publiser_bilde_ids: data.publiser_bilde_ids,
+        oversettelser: data.oversettelser || null,
       };
       valgtId = null; endret = false; visBildeId = null;
       document.getElementById('arena-name').value = arena.navn || '';
@@ -781,6 +805,9 @@ window.arenaEditor = (function () {
     arenaFelt.value = arena.arena_slug || lagSlug(arena.navn || '');
     tittelFelt.value = arena.navn || '';
     beskrFelt.value = arena.beskrivelse || '';
+    const aEn = (arena.oversettelser && arena.oversettelser.en) || {};
+    document.getElementById('arena-publish-title-en').value = aEn.navn || '';
+    document.getElementById('arena-publish-desc-en').value = aEn.beskrivelse || '';
     document.getElementById('arena-publish-sprak').value = arena.standard_sprak || 'no';
     byggPubliserBilder();
     oppdaterSlughint();
@@ -798,6 +825,10 @@ window.arenaEditor = (function () {
     const valgte = [...document.querySelectorAll('#arena-publish-bilder input:checked')].map((b) => b.value);
     const bilde_ids = (valgte.length === alle.length) ? null : valgte;
     const standard_sprak = document.getElementById('arena-publish-sprak').value;
+    const oversettelser = byggOversettelser({
+      navn: document.getElementById('arena-publish-title-en').value,
+      beskrivelse: document.getElementById('arena-publish-desc-en').value,
+    });
 
     try {
       const res = await api('/api/arenas/publish', {
@@ -807,12 +838,13 @@ window.arenaEditor = (function () {
           event_slug, arena_slug,
           navn: tittelFelt.value.trim() || arena.navn || arena_slug,
           beskrivelse: beskrFelt.value.trim() || null,
-          bilde_ids, standard_sprak,
+          bilde_ids, standard_sprak, oversettelser,
         }),
       });
       const svar = await res.json();
       arena.publiser_bilde_ids = bilde_ids;
       arena.standard_sprak = standard_sprak; // husk til neste publisering (samme økt)
+      arena.oversettelser = oversettelser;
       // Husk tittel/beskrivelse/slugs i minnet også, så en ny publisering i
       // samme økt (uten å åpne på nytt) foreslår de samme verdiene. Serveren
       // har allerede lagret dem, så gjenåpning senere foreslår dem også.
@@ -876,7 +908,13 @@ window.arenaEditor = (function () {
       rad.className = 'arena-bilde-rad';
       const navn = document.createElement('input');
       navn.type = 'text'; navn.value = b.navn; navn.className = 'arena-type-navn';
+      navn.title = 'Navn (norsk)';
       navn.addEventListener('input', () => { b.navn = navn.value; merkEndret(); });
+      const navnEn = document.createElement('input');
+      navnEn.type = 'text'; navnEn.className = 'arena-type-navn';
+      navnEn.placeholder = 'engelsk'; navnEn.title = 'Navn (engelsk)';
+      navnEn.value = (b.oversettelser && b.oversettelser.en && b.oversettelser.en.navn) || '';
+      navnEn.addEventListener('input', () => { settEnFelt(b, 'navn', navnEn.value); merkEndret(); });
       const vis = document.createElement('button');
       vis.type = 'button'; vis.className = 'btn btn-small';
       vis.textContent = i === 0 ? 'Vis (referanse)' : 'Vis';
@@ -886,7 +924,7 @@ window.arenaEditor = (function () {
       slett.type = 'button'; slett.className = 'btn btn-small btn-danger-subtle';
       slett.textContent = 'Slett';
       slett.addEventListener('click', () => slettBilde(b.id));
-      rad.appendChild(navn); rad.appendChild(vis); rad.appendChild(slett);
+      rad.appendChild(navn); rad.appendChild(navnEn); rad.appendChild(vis); rad.appendChild(slett);
       boks.appendChild(rad);
     });
   }

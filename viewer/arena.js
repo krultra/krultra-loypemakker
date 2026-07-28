@@ -67,6 +67,12 @@ function velgSprak(standardSprak) {
 }
 /** Oversett en fast GUI-streng (faller tilbake til norsk). */
 function t(nokkel) { return (TEKST[lang] && TEKST[lang][nokkel]) || TEKST.no[nokkel]; }
+/** Lokaliser et INNHOLDSfelt på et objekt: obj.oversettelser[lang][felt],
+ *  ellers det vanlige feltet (kildespråket, norsk). Bakoverkompatibelt. */
+function lok(obj, felt) {
+  const o = obj && obj.oversettelser && obj.oversettelser[lang];
+  return (o && o[felt] != null && o[felt] !== '') ? o[felt] : (obj ? obj[felt] : undefined);
+}
 /** Locale for tall/dato etter valgt språk. */
 function locale() { return lang === 'en' ? 'en-GB' : 'nb-NO'; }
 /** Om innbyggingen har låst språket via ?lang= (skjuler velgeren da ikke). */
@@ -109,10 +115,12 @@ function startVisning() {
   bildeH = (arena.bilder[0] && arena.bilder[0].høyde) || arena.bilde_høyde || 1000;
   aktivtBildeId = arena.bilder[0] ? arena.bilder[0].id : null;
 
-  document.title = t('arenakartTittel') + ' – ' + (arena.navn || '');
-  document.getElementById('arena-tittel').textContent = arena.navn || t('arenakartTittel');
+  const arenaNavn = lok(arena, 'navn');
+  const arenaBeskr = lok(arena, 'beskrivelse');
+  document.title = t('arenakartTittel') + ' – ' + (arenaNavn || '');
+  document.getElementById('arena-tittel').textContent = arenaNavn || t('arenakartTittel');
   const beskr = document.getElementById('arena-beskrivelse');
-  if (arena.beskrivelse) beskr.textContent = arena.beskrivelse; else beskr.remove();
+  if (arenaBeskr) beskr.textContent = arenaBeskr; else beskr.remove();
 
   // Faste GUI-etiketter etter valgt språk
   const settTekst = (id, tekst) => { const el = document.getElementById(id); if (el) el.textContent = tekst; };
@@ -229,7 +237,7 @@ function byggLagvelger() {
       const img = L.DomUtil.create('img', 'arena-lagvelger-mini', el);
       img.src = './' + b.fil; img.alt = '';
       const navn = L.DomUtil.create('span', 'arena-lagvelger-navn', el);
-      navn.textContent = b.navn;
+      navn.textContent = lok(b, 'navn');
       el.addEventListener('click', () => { settAktivtBilde(b.id); lukkListe(); });
     }
 
@@ -256,7 +264,7 @@ function oppdaterLagvelger() {
   const aktiv = arena.bilder.find((b) => b.id === aktivtBildeId);
   if (aktiv) {
     lagvelgerEl.knappImg.src = './' + aktiv.fil;
-    lagvelgerEl.knappNavn.textContent = aktiv.navn;
+    lagvelgerEl.knappNavn.textContent = lok(aktiv, 'navn');
   }
   lagvelgerEl.liste.querySelectorAll('.arena-lagvelger-el').forEach((el) => {
     el.classList.toggle('aktiv', el.dataset.id === aktivtBildeId);
@@ -294,7 +302,7 @@ function tegnFeature(f) {
     return; // ugyldig geometri — hopp over
   }
   lag.addTo(map);
-  lag.bindTooltip(f.navn, { direction: 'top', sticky: f.form === 'polygon' });
+  lag.bindTooltip(lok(f, 'navn') || '', { direction: 'top', sticky: f.form === 'polygon' });
   lag.on('click', (e) => { L.DomEvent.stop(e); velg(f.id, true); });
   lag.on('mouseover', () => framhev(f.id, true));
   lag.on('mouseout', () => { if (valgtId !== f.id) framhev(f.id, false); });
@@ -352,12 +360,12 @@ function byggListe() {
 
   // Grupper etter type; typene i definert rekkefølge, «uten type» til slutt
   const typer = (arena.typer || []).slice();
-  const grupper = typer.map((t) => ({
-    tittel: t.navn, farge: t.farge,
-    features: features.filter((f) => f.type_id === t.id),
+  const grupper = typer.map((typ) => ({
+    tittel: lok(typ, 'navn'), farge: typ.farge,
+    features: features.filter((f) => f.type_id === typ.id),
   })).filter((g) => g.features.length);
   const utenType = features.filter(
-    (f) => !typer.some((t) => t.id === f.type_id));
+    (f) => !typer.some((typ) => typ.id === f.type_id));
   if (utenType.length) grupper.push({ tittel: t('annet'), farge: NØYTRAL, features: utenType });
 
   // Verktøylinje: kollaps/ekspander alle gruppene på én gang (vises når det
@@ -401,8 +409,9 @@ function byggListe() {
       el.type = 'button';
       el.className = 'arena-liste-el';
       el.style.setProperty('--farge', g.farge);
-      el.innerHTML = '<span class="arena-liste-navn">' + escHtml(f.navn) + '</span>' +
-        (f.beskrivelse ? '<span class="arena-liste-beskr">' + escHtml(f.beskrivelse) + '</span>' : '');
+      const fBeskr = lok(f, 'beskrivelse');
+      el.innerHTML = '<span class="arena-liste-navn">' + escHtml(lok(f, 'navn') || '') + '</span>' +
+        (fBeskr ? '<span class="arena-liste-beskr">' + escHtml(fBeskr) + '</span>' : '');
       el.addEventListener('click', () => velg(f.id, true));
       el.addEventListener('mouseenter', () => { if (valgtId !== f.id) framhev(f.id, true); });
       el.addEventListener('mouseleave', () => { if (valgtId !== f.id) framhev(f.id, false); });
@@ -432,8 +441,9 @@ function lagKontaktSjip(k) {
   b.className = 'arena-kontakt-sjip';
   b.innerHTML = '<span class="arena-kontakt-sjip-tittel"></span>' +
     '<span class="arena-kontakt-sjip-mer">…</span>';
+  const kNavn = lok(k, 'navn');
   b.querySelector('.arena-kontakt-sjip-tittel').textContent =
-    k.tittel + (k.navn ? ' — ' + k.navn : '');
+    lok(k, 'tittel') + (kNavn ? ' — ' + kNavn : '');
   b.addEventListener('click', (e) => { e.stopPropagation(); visKontaktKort(k); });
   return b;
 }
@@ -532,7 +542,7 @@ function byggKontaktliste() {
   const boks = document.getElementById('arena-kontaktliste');
   boks.innerHTML = '';
   const gyldige = (arena.kontakter || []).filter(kontaktGyldigNaa)
-    .slice().sort((a, b) => a.tittel.localeCompare(b.tittel, locale()));
+    .slice().sort((a, b) => lok(a, 'tittel').localeCompare(lok(b, 'tittel'), locale()));
   if (!gyldige.length) {
     boks.innerHTML = '<p class="arena-liste-tom">' + escHtml(t('ingenKontakter')) + '</p>';
     return;
@@ -578,12 +588,14 @@ function visKontaktKort(k) {
   };
   const telHref = k.telefon ? 'tel:' + k.telefon.replace(/\s+/g, '') : null;
   const epostHref = k.epost ? 'mailto:' + k.epost : null;
+  const kNavn = lok(k, 'navn');
+  const kBeskr = lok(k, 'beskrivelse');
   innhold.innerHTML =
-    '<h3 class="arena-kort-tittel">' + escHtml(k.tittel) + '</h3>' +
-    (k.navn ? '<p class="arena-kort-navn">' + escHtml(k.navn) + '</p>' : '') +
+    '<h3 class="arena-kort-tittel">' + escHtml(lok(k, 'tittel')) + '</h3>' +
+    (kNavn ? '<p class="arena-kort-navn">' + escHtml(kNavn) + '</p>' : '') +
     rad(t('telefon'), k.telefon, telHref) +
     rad(t('epost'), k.epost, epostHref) +
-    (k.beskrivelse ? '<p class="arena-kort-beskr">' + escHtml(k.beskrivelse) + '</p>' : '');
+    (kBeskr ? '<p class="arena-kort-beskr">' + escHtml(kBeskr) + '</p>' : '');
   document.getElementById('arena-kontakt-overlay').classList.remove('skjult');
 }
 

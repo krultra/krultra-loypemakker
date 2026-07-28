@@ -101,6 +101,7 @@ def opprett_arena(req: ArenaSaveRequest) -> ArenaDetail:
         event_slug=req.event_slug,
         arena_slug=req.arena_slug,
         publiser_bilde_ids=req.publiser_bilde_ids,
+        oversettelser=req.oversettelser,
     )
     _skriv(detail)
     return _ferdig(detail)
@@ -119,6 +120,7 @@ def oppdater_arena(arena_id: str, req: ArenaSaveRequest) -> ArenaDetail:
     detail.typer = req.typer
     detail.features = req.features
     detail.kontakter = req.kontakter
+    detail.oversettelser = req.oversettelser
     if req.event_slug is not None:
         detail.event_slug = req.event_slug
     if req.arena_slug is not None:

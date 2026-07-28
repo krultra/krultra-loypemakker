@@ -157,6 +157,18 @@ class TestPubliser:
         # Mangler standard_sprak → norsk (bakoverkompatibelt)
         assert lagret["standard_sprak"] == "no"
 
+    def test_oversettelser_i_course_json(self, mappemål):
+        punkter = _spor(20)
+        wpt = Waypoint(lat=63.0, lon=11.0, name="Mål", types=["maal"],
+                       oversettelser={"en": {"name": "Finish"}})
+        meta = {"navn": "T", "oversettelser": {"en": {"navn": "The Course"}}}
+        course = publisering.bygg_course_json(punkter, [wpt], meta, {})
+        publisering.publiser("test", "oversatt", course)
+        lagret = json.loads(
+            (mappemål / "oversatt" / "course.json").read_text(encoding="utf-8"))
+        assert lagret["oversettelser"]["en"]["navn"] == "The Course"
+        assert lagret["veipunkter"][0]["oversettelser"]["en"]["name"] == "Finish"
+
     def test_standardsprak_i_json_og_iframe(self, mappemål):
         punkter = _spor(20)
         course = publisering.bygg_course_json(

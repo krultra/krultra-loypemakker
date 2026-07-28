@@ -68,6 +68,11 @@ function velgSprak(standardSprak) {
 }
 /** Oversett en fast GUI-streng (faller tilbake til norsk). */
 function t(nokkel) { return (TEKST[lang] && TEKST[lang][nokkel]) || TEKST.no[nokkel]; }
+/** Lokaliser et INNHOLDSfelt: obj.oversettelser[lang][felt], ellers kildefeltet. */
+function lok(obj, felt) {
+  const o = obj && obj.oversettelser && obj.oversettelser[lang];
+  return (o && o[felt] != null && o[felt] !== '') ? o[felt] : (obj ? obj[felt] : undefined);
+}
 /** Locale for tall/dato etter valgt språk. */
 function locale() { return lang === 'en' ? 'en-GB' : 'nb-NO'; }
 /** Km formatert i riktig locale for valgt språk. */
@@ -143,10 +148,12 @@ function startVisning() {
   byggSpraakvelger();
 
   // Topptekst og nøkkeltall
-  document.title = t('loypekartTittel') + ' – ' + (løype.navn || '');
-  document.getElementById('tittel').textContent = løype.navn || t('loype');
+  const loypeNavn = lok(løype, 'navn');
+  const loypeBeskr = lok(løype, 'beskrivelse');
+  document.title = t('loypekartTittel') + ' – ' + (loypeNavn || '');
+  document.getElementById('tittel').textContent = loypeNavn || t('loype');
   const beskr = document.getElementById('beskrivelse');
-  if (løype.beskrivelse) beskr.textContent = løype.beskrivelse; else beskr.remove();
+  if (loypeBeskr) beskr.textContent = loypeBeskr; else beskr.remove();
   document.getElementById('nokkeltall').textContent =
     kmT(avstander[avstander.length - 1]) +
     ' · ↑ ' + Math.round(oppAkk[oppAkk.length - 1]) + ' m' +
@@ -373,7 +380,7 @@ function statistikkFor(idx) {
     nedStart: Math.round(nedAkk[idx]),
     oppForrige: Math.round(oppAkk[idx] - oppAkk[fIdx]),
     nedForrige: Math.round(nedAkk[idx] - nedAkk[fIdx]),
-    forrigeNavn: forrige ? forrige.name : t('start'),
+    forrigeNavn: forrige ? (lok(forrige, 'name') || forrige.name) : t('start'),
   };
 }
 
@@ -400,9 +407,10 @@ function åpnePopup(w) {
   const arenaLenke = arenaHref(w.arena)
     ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaHref(w.arena)) +
       '" target="_blank" rel="noopener">' + escHtml(t('seArenakart')) + '</a></p>' : '';
-  const html = '<div class="wpt-popup"><h3>' + escHtml(w.name) + '</h3>' +
+  const wDesc = lok(w, 'desc');
+  const html = '<div class="wpt-popup"><h3>' + escHtml(lok(w, 'name') || '') + '</h3>' +
     '<div class="wpt-popup-typer">' + typer + '</div>' +
-    (w.desc ? '<p>' + escHtml(w.desc) + '</p>' : '') +
+    (wDesc ? '<p>' + escHtml(wDesc) + '</p>' : '') +
     arenaLenke +
     '<table>' +
     rad(t('distanseFraStart'), kmT(st.dist)) +

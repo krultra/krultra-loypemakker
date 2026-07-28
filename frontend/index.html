@@ -7,7 +7,7 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=26">
+  <link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 
@@ -438,8 +438,12 @@
       <input type="text" id="publish-slug" placeholder="f.eks. mmc-70k" autocomplete="off">
       <label class="field-label" for="publish-name">Tittel</label>
       <input type="text" id="publish-name" autocomplete="off">
+      <label class="field-label" for="publish-name-en">Tittel (engelsk) <span class="muted">(valgfri)</span></label>
+      <input type="text" id="publish-name-en" autocomplete="off">
       <label class="field-label" for="publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="publish-desc" rows="2"></textarea>
+      <label class="field-label" for="publish-desc-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="publish-desc-en" rows="2"></textarea>
       <label class="field-label" for="publish-sprak">
         Standardspråk for innbygging <span class="muted">(språket iframe-snutten starter med; leseren kan bytte i visningen)</span>
       </label>
@@ -490,8 +494,12 @@
       </p>
       <label class="field-label" for="wpt-name">Navn</label>
       <input type="text" id="wpt-name" placeholder="F.eks. «Drikkestasjon Sulsjøan»" autocomplete="off">
+      <label class="field-label" for="wpt-name-en">Navn (engelsk) <span class="muted">(valgfri — for den publiserte visningen)</span></label>
+      <input type="text" id="wpt-name-en" placeholder="e.g. «Water station Sulsjøan»" autocomplete="off">
       <label class="field-label" for="wpt-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="wpt-desc" rows="2" placeholder="F.eks. «Vann og saft. Betjent fra kl. 10.»"></textarea>
+      <label class="field-label" for="wpt-desc-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="wpt-desc-en" rows="2" placeholder="e.g. «Water and juice. Staffed from 10 am.»"></textarea>
       <label class="field-label">Symboler <span class="muted">(velg ett eller flere)</span></label>
       <div id="wpt-symbols" class="wpt-symbols"></div>
       <label class="wpt-vis-rad">
@@ -611,8 +619,12 @@
       <h3 id="arena-feature-title">Sted på arenakartet</h3>
       <label class="field-label" for="arena-feature-navn">Navn</label>
       <input type="text" id="arena-feature-navn" placeholder="F.eks. «Sekretariat»" autocomplete="off">
+      <label class="field-label" for="arena-feature-navn-en">Navn (engelsk) <span class="muted">(valgfri)</span></label>
+      <input type="text" id="arena-feature-navn-en" placeholder="e.g. «Race office»" autocomplete="off">
       <label class="field-label" for="arena-feature-beskr">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="arena-feature-beskr" rows="2" placeholder="F.eks. «Åpent fra kl. 08. Utlevering av startnummer.»"></textarea>
+      <label class="field-label" for="arena-feature-beskr-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-feature-beskr-en" rows="2" placeholder="e.g. «Open from 8 am. Bib pickup.»"></textarea>
       <label class="field-label" for="arena-feature-type">Type</label>
       <select id="arena-feature-type"></select>
       <div id="arena-feature-bilder-rad" class="hidden">
@@ -673,6 +685,8 @@
       <h3 id="arena-kontakt-title">Kontakt</h3>
       <label class="field-label" for="arena-kontakt-tittel">Tittel</label>
       <input type="text" id="arena-kontakt-tittel" placeholder="F.eks. «Løpsleder»" autocomplete="off">
+      <label class="field-label" for="arena-kontakt-tittel-en">Tittel (engelsk) <span class="muted">(valgfri)</span></label>
+      <input type="text" id="arena-kontakt-tittel-en" placeholder="e.g. «Race director»" autocomplete="off">
       <label class="field-label" for="arena-kontakt-navn">Navn <span class="muted">(valgfri)</span></label>
       <input type="text" id="arena-kontakt-navn" placeholder="F.eks. «Torgeir Kruke»" autocomplete="off">
       <div class="field-pair">
@@ -687,6 +701,8 @@
       </div>
       <label class="field-label" for="arena-kontakt-beskr">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="arena-kontakt-beskr" rows="2" placeholder="F.eks. «Kontakt primært sekretariatet.»"></textarea>
+      <label class="field-label" for="arena-kontakt-beskr-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-kontakt-beskr-en" rows="2" placeholder="e.g. «Contact the race office first.»"></textarea>
       <div class="field-pair">
         <div>
           <label class="field-label" for="arena-kontakt-fra">Gyldig fra <span class="muted">(valgfri)</span></label>
@@ -748,8 +764,12 @@
       <input type="text" id="arena-publish-arena" placeholder="f.eks. teveltunet" autocomplete="off">
       <label class="field-label" for="arena-publish-title">Tittel</label>
       <input type="text" id="arena-publish-title" autocomplete="off">
+      <label class="field-label" for="arena-publish-title-en">Tittel (engelsk) <span class="muted">(valgfri)</span></label>
+      <input type="text" id="arena-publish-title-en" autocomplete="off">
       <label class="field-label" for="arena-publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
       <textarea id="arena-publish-desc" rows="2"></textarea>
+      <label class="field-label" for="arena-publish-desc-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-publish-desc-en" rows="2"></textarea>
       <div id="arena-publish-bilder-rad" class="hidden">
         <label class="field-label">Bakgrunnsbilder som skal publiseres <span class="muted">(kryss av — flere gir en lagvelger for sluttbrukeren)</span></label>
         <div id="arena-publish-bilder" class="arena-kontakt-kryss"></div>
@@ -780,8 +800,8 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=26"></script>
-  <script src="app.js?v=26"></script>
-  <script src="arena.js?v=26"></script>
+  <script src="felles.js?v=27"></script>
+  <script src="app.js?v=27"></script>
+  <script src="arena.js?v=27"></script>
 </body>
 </html>

@@ -27,7 +27,7 @@ from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
 # at nye publiseringer laster opp friske assets uten å røre gamle løyper.
-ASSET_VERSJON = 10
+ASSET_VERSJON = 11
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -214,6 +214,8 @@ def bygg_course_json(
             # Valgfri arena-slug: gjør punktet klikkbart i visningen (lenker
             # til arenakartet på ./<arena>/). Utelates når den ikke er satt.
             "arena": w.arena or None,
+            # Oversettelser (name/desc) til andre språk, om noen.
+            "oversettelser": w.oversettelser or None,
         })
 
     return {
@@ -224,6 +226,8 @@ def bygg_course_json(
         "link": meta.get("link"),
         # Standardspråk for visningen (no/en). Viewer bruker ?lang= over dette.
         "standard_sprak": meta.get("standard_sprak") or "no",
+        # Oversettelser av løypas navn/beskrivelse (toppnivå), om noen.
+        "oversettelser": meta.get("oversettelser") or None,
         "stil": stil,
         "punkter": [
             [round(p.lat, 6), round(p.lon, 6), None if p.ele is None else round(p.ele, 1)]
