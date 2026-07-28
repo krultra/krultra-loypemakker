@@ -17,6 +17,13 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.6.1 — 28. juli 2026
+
+- **Rettet:** bakgrunnsbildet forsvant ved publisering av arenakart med bare
+  **ett** bilde (publiseringen sendte «ingen bilder» i stedet for «alle»).
+- **Rettet:** «Endre» på en kontakt i kontaktlista gjorde ingenting (en
+  manglende felt-referanse stoppet dialogen fra å åpne).
+
 ## 2.6.0 — 28. juli 2026
 
 - **Flerspråklig innhold i publiserte visninger:** i tillegg til fast GUI-tekst

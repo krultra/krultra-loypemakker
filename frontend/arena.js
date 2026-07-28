@@ -609,7 +609,6 @@ window.arenaEditor = (function () {
     g('til').value = (k && k.gyldig_til) || '';
     const kEn = (k && k.oversettelser && k.oversettelser.en) || {};
     g('tittel-en').value = kEn.tittel || '';
-    g('navn-en').value = kEn.navn || '';
     g('beskr-en').value = kEn.beskrivelse || '';
 
     const dialog = document.getElementById('arena-kontakt-dialog');
@@ -629,7 +628,6 @@ window.arenaEditor = (function () {
       gyldig_til: g('til').value || null,
       oversettelser: byggOversettelser({
         tittel: g('tittel-en').value,
-        navn: g('navn-en').value,
         beskrivelse: g('beskr-en').value,
       }),
     };
@@ -820,10 +818,13 @@ window.arenaEditor = (function () {
     const arena_slug = lagSlug(arenaFelt.value.trim());
     if (!event_slug || !arena_slug) { toast('Fyll inn både løype- og arena-navn', 'error'); return; }
 
-    // Valgte bakgrunnsbilder: alle avkrysset → null (=alle); ellers lista
+    // Valgte bakgrunnsbilder: alle avkrysset → null (=alle); ellers lista.
+    // Med færre enn to bilder vises ingen avkryssing — da publiseres alle (null).
+    // (Uten dette ble bilde_ids en tom liste = INGEN bilder for enkeltbilde-
+    // arenaer, så bakgrunnsbildet forsvant ved publisering.)
     const alle = arena.bilder.map((b) => b.id);
     const valgte = [...document.querySelectorAll('#arena-publish-bilder input:checked')].map((b) => b.value);
-    const bilde_ids = (valgte.length === alle.length) ? null : valgte;
+    const bilde_ids = (arena.bilder.length < 2 || valgte.length === alle.length) ? null : valgte;
     const standard_sprak = document.getElementById('arena-publish-sprak').value;
     const oversettelser = byggOversettelser({
       navn: document.getElementById('arena-publish-title-en').value,
