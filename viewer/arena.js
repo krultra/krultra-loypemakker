@@ -18,6 +18,8 @@ let bildeB = 1, bildeH = 1; // kanoniske mål (fra første bilde) — koordinats
 let aktivtBildeId = null;  // hvilket bakgrunnsbilde som vises nå
 const overlayFor = {};     // bilde-id -> L.imageOverlay
 let lagvelgerEl = null;    // referanser til lagvelgerens DOM (knapp/liste)
+let punktRenderer = null;  // egen SVG-renderer i et høyere pane, så PUNKTER
+                           // alltid ligger over OMRÅDER og kan klikkes
 const lagFor = {};         // feature-id -> Leaflet-lag (polygon/circleMarker)
 const listeElFor = {};     // feature-id -> DOM-listeelement
 const kontaktBoksFor = {}; // feature-id -> DOM-boks med stedets kontakter
@@ -178,6 +180,12 @@ function byggKart() {
     attributionControl: false,
   });
 
+  // Eget pane for punkter, med høyere z-indeks enn områdene (overlayPane=400),
+  // så et punkt som ligger oppå/inni et område alltid kan klikkes.
+  map.createPane('arenaPunkter');
+  map.getPane('arenaPunkter').style.zIndex = 450;
+  punktRenderer = L.svg({ pane: 'arenaPunkter' });
+
   const bounds = [[0, 0], [bildeH, bildeB]];
   map.fitBounds(bounds);
   map.setMaxBounds(L.latLngBounds(bounds).pad(0.5));
@@ -297,6 +305,7 @@ function tegnFeature(f) {
     lag = L.circleMarker(tilLatLng(f.geometri[0]), {
       radius: 8, color: '#ffffff', weight: 2,
       fillColor: farge, fillOpacity: 1,
+      renderer: punktRenderer, // punkter i eget, høyere pane (klikkbare)
     });
   } else {
     return; // ugyldig geometri — hopp over

@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 9
+ARENA_ASSET_VERSJON = 10
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"

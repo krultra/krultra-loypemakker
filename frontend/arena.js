@@ -19,6 +19,8 @@ window.arenaEditor = (function () {
   let bildeLag = null;        // L.imageOverlay
   let bildeB = 1, bildeH = 1; // kanoniske mål (fra første bilde) — koordinatsystem
   let visBildeId = null;      // hvilket bakgrunnsbilde som vises i editoren
+  let punktRenderer = null;   // egen SVG-renderer i høyere pane, så PUNKTER
+                              // alltid ligger over OMRÅDER og kan klikkes
   const lagFor = {};          // feature-id -> Leaflet-lag
   let valgtId = null;
   let endret = false;         // ulagrede endringer?
@@ -71,6 +73,11 @@ window.arenaEditor = (function () {
       crs: L.CRS.Simple, minZoom: -6, maxZoom: 6,
       zoomSnap: 0.25, attributionControl: false,
     });
+    // Eget pane for punkter, med høyere z-indeks enn områdene, så punkter
+    // som ligger oppå/inni et område alltid kan klikkes/redigeres.
+    map.createPane('arenaPunkter');
+    map.getPane('arenaPunkter').style.zIndex = 450;
+    punktRenderer = L.svg({ pane: 'arenaPunkter' });
     map.setView([500, 500], 0);
     map.on('click', (e) => {
       if (tegnModus === 'polygon') leggTilHjørne(e.latlng);
@@ -272,6 +279,7 @@ window.arenaEditor = (function () {
     } else if (f.geometri.length >= 1) {
       lag = L.circleMarker(tilLatLng(f.geometri[0]), {
         radius: 8, color: '#fff', weight: 2, fillColor: farge, fillOpacity: 1,
+        renderer: punktRenderer, // punkter i eget, høyere pane (klikkbare)
       });
     } else return;
     lag.addTo(map);

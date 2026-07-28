@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.6.1';
+const APP_VERSJON = '2.6.2';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor

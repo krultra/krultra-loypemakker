@@ -17,6 +17,12 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.6.2 — 28. juli 2026
+
+- **Rettet:** punkter ligger nå alltid **over** områder i arenakart (eget
+  kartlag med høyere z-indeks), så et punkt som ligger oppå eller inni et
+  område kan klikkes/redigeres — før «stjal» området klikket.
+
 ## 2.6.1 — 28. juli 2026
 
 - **Rettet:** bakgrunnsbildet forsvant ved publisering av arenakart med bare
