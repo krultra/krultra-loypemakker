@@ -830,6 +830,10 @@ dialog input[type="datetime-local"] {
 .arena-kontakt-kryss-rad { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .arena-kontakt-kryss-rad input { width: auto; }
 
+/* Arenakart: områdestil (fyll/kontur) i feature-dialogen */
+.arena-feature-omraade { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.arena-feature-omraade input[type="color"] { width: 40px; height: 24px; padding: 0; }
+
 .arena-kontakter-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; max-height: 50vh; overflow-y: auto; }
 .arena-kontakt-rad {
   display: flex;

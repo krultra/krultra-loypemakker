@@ -171,6 +171,25 @@ function fargeFor(feature) {
   return (t && t.farge) || NØYTRAL;
 }
 
+/** Basis fyll-gjennomsiktighet for et område: 0 når fyllet er slått av
+ *  («ingen farge»), ellers 0.35. Delt av tegning og framheving. */
+function fyllOpacityFor(f) { return f.fyll === false ? 0 : 0.35; }
+
+/** Leaflet-stil for et område (polygon) med per-område fyll/kontur —
+ *  se ArenaFeature i backend. Fyllet holdes «på» (0-opacity når av) så
+ *  gjennomsiktige områder fortsatt kan klikkes. */
+function polygonStil(f, farge) {
+  const visKontur = f.kontur !== false;
+  return {
+    stroke: visKontur,
+    color: (visKontur && f.kontur_farge) ? f.kontur_farge : farge,
+    weight: 2,
+    fill: true,
+    fillColor: farge,
+    fillOpacity: fyllOpacityFor(f),
+  };
+}
+
 /** Bygg en trygg relativ lenke fra en features arena-felt til et annet
  *  arenakart. Arenaen ligger på <event>/<arena>/, så fra dette kartet:
  *    «arena»        → ../arena/        (annet kart under samme løype/event)
@@ -320,9 +339,7 @@ function tegnFeature(f) {
   const farge = fargeFor(f);
   let lag;
   if (f.form === 'polygon' && f.geometri && f.geometri.length >= 3) {
-    lag = L.polygon(f.geometri.map(tilLatLng), {
-      color: farge, weight: 2, fillColor: farge, fillOpacity: 0.35,
-    });
+    lag = L.polygon(f.geometri.map(tilLatLng), polygonStil(f, farge));
   } else if (f.geometri && f.geometri.length >= 1) {
     lag = L.circleMarker(tilLatLng(f.geometri[0]), {
       radius: 8, color: '#ffffff', weight: 2,
@@ -499,14 +516,23 @@ function settAlleGrupper(kollaps) {
 // Highlighting (begge veier)
 // ============================================================
 
-/** Midlertidig framheving (hover) uten å endre selve valget. */
+/** Midlertidig framheving (hover) uten å endre selve valget. Respekterer
+ *  områdets fyll/kontur-valg: et fyll som er slått av forblir gjennomsiktig,
+ *  og en kontur som er slått av får ingen linje ved framheving. */
 function framhev(id, på) {
   const lag = lagFor[id];
   if (!lag) return;
   if (lag.setStyle) {
-    lag.setStyle(på
-      ? { weight: 4, fillOpacity: lag instanceof L.Polygon ? 0.55 : 1 }
-      : { weight: 2, fillOpacity: lag instanceof L.Polygon ? 0.35 : 1 });
+    if (lag instanceof L.Polygon) {
+      const f = (arena.features || []).find((x) => x.id === id) || {};
+      const basis = fyllOpacityFor(f);
+      lag.setStyle({
+        weight: på ? 4 : 2, // ignoreres når konturen er av (stroke:false)
+        fillOpacity: på ? (basis ? 0.55 : 0) : basis,
+      });
+    } else {
+      lag.setStyle({ weight: på ? 4 : 2, fillOpacity: 1 });
+    }
   }
   const el = listeElFor[id];
   if (el) el.classList.toggle('framhevet', på || valgtId === id);

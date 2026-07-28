@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.7.0';
+const APP_VERSJON = '2.8.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1394,6 +1394,8 @@ const editorState = {
   nøkkelord: null,   // nøkkelord (arves)
   starttid: null,    // starttidspunkt for første punkt (arves)
   adressenavn: null, // ønsket publiseringsadresse (slug) — arves/importeres
+  oversettelser: null, // engelsk tittel/beskrivelse for visningen {en:{navn,beskrivelse}} — huskes/importeres
+  standard_sprak: null, // standardspråk for den publiserte visningen (no/en) — huskes/importeres
   importertStil: null, // stil fra en importert .loype-fil (overstyrer lokal UI ved publisering)
   punkter: null,     // hele punktlista
   veipunkter: [],    // interessepunkter (PoI) — {lat, lon, ele, name, desc, types}
@@ -1436,6 +1438,8 @@ function lastSporIRedigering(navn, beskrivelse, punkter, creator, link, meta) {
   editorState.nøkkelord = meta.nøkkelord || null;
   editorState.starttid = meta.starttid || null;
   editorState.adressenavn = meta.adressenavn || null;
+  editorState.oversettelser = meta.oversettelser || null;
+  editorState.standard_sprak = meta.standard_sprak || null;
   editorState.importertStil = meta.importertStil || null;
   editorState.veipunkter = meta.veipunkter || [];
   editorState.kilde = meta.kilde || null;
@@ -2648,6 +2652,13 @@ async function åpnePubliseringsdialog() {
     editorState.adressenavn || lagSlug(editorState.navn);
   document.getElementById('publish-name').value = editorState.navn || '';
   document.getElementById('publish-desc').value = editorState.beskrivelse || '';
+  // Engelsk tittel/beskrivelse + standardspråk huskes på sporet, så en ny
+  // publisering (eller gjenåpning) foreslår det som ble skrevet sist. Feltene
+  // settes ALLTID (også til tomt), så en annen løype ikke arver stale verdier.
+  const enO = (editorState.oversettelser && editorState.oversettelser.en) || {};
+  document.getElementById('publish-name-en').value = enO.navn || '';
+  document.getElementById('publish-desc-en').value = enO.beskrivelse || '';
+  document.getElementById('publish-sprak').value = editorState.standard_sprak || 'no';
   document.getElementById('publish-result').classList.add('hidden');
   dialog.showModal();
 }
@@ -2657,6 +2668,11 @@ async function utførPublisering() {
   const punkter = valgtePunkter();
   knapp.disabled = true;
   knapp.textContent = 'Publiserer …';
+  const standard_sprak = document.getElementById('publish-sprak').value;
+  const oversettelser = byggOversettelser({
+    navn: document.getElementById('publish-name-en').value,
+    beskrivelse: document.getElementById('publish-desc-en').value,
+  });
   try {
     const res = await api('/api/publish', {
       method: 'POST',
@@ -2668,11 +2684,8 @@ async function utførPublisering() {
         description: document.getElementById('publish-desc').value.trim() || null,
         link: editorState.link,
         stil: gjeldendeStil(),
-        standard_sprak: document.getElementById('publish-sprak').value,
-        oversettelser: byggOversettelser({
-          navn: document.getElementById('publish-name-en').value,
-          beskrivelse: document.getElementById('publish-desc-en').value,
-        }),
+        standard_sprak,
+        oversettelser,
         points: punkter,
         waypoints: aktuelleVeipunkter(punkter),
       }),
@@ -2683,6 +2696,10 @@ async function utførPublisering() {
     lenke.href = data.url;
     document.getElementById('publish-embed').value = data.iframe;
     document.getElementById('publish-result').classList.remove('hidden');
+    // Husk språkvalget på sporet, så en ny publisering (eller .loype-eksport)
+    // i samme økt beholder den engelske tittelen/beskrivelsen og standardspråket.
+    editorState.oversettelser = oversettelser;
+    editorState.standard_sprak = standard_sprak;
     // Ved gruppepublisering kan noen av målene ha feilet (delvis suksess)
     if (data.advarsel) toast(data.advarsel, 'error');
     else toast('Løypevisningen er publisert');
@@ -2738,6 +2755,10 @@ function byggLoypeBunt(meta) {
     copyright: meta.copyright,
     nøkkelord: meta.nøkkelord,
     starttid: meta.starttid,
+    // Engelsk tittel/beskrivelse + standardspråk for visningen huskes på
+    // sporet (fylles i publiseringsdialogen), så de følger med til KrUltra.
+    oversettelser: editorState.oversettelser || null,
+    standard_sprak: editorState.standard_sprak || null,
     stil: gjeldendeStil(),
     punkter: punkter.map((p) => (
       { lat: p.lat, lon: p.lon, ele: p.ele == null ? null : p.ele })),
@@ -2821,6 +2842,7 @@ async function importerLoype(fil) {
     bunt.laget_av, bunt.lenke, {
       copyright: bunt.copyright, nøkkelord: bunt.nøkkelord, starttid: bunt.starttid,
       adressenavn: bunt.adressenavn, importertStil: bunt.stil || null,
+      oversettelser: bunt.oversettelser || null, standard_sprak: bunt.standard_sprak || null,
       veipunkter: bunt.veipunkter || [],
       beholdHøyder: true, // bruk opphavspersonens høyder som de er
       kilde: { type: 'ulagret' }, // importert — publiser, eller lagre som segment
@@ -3557,7 +3579,7 @@ oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 23;
+const FORVENTET_BACKEND = 24;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

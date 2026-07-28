@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.8.0 — 28. juli 2026
+
+- **Områdestil i arenakart:** hvert område kan nå styres individuelt.
+  - **Fyllfarge av/på:** slå av fyllet for et helt **gjennomsiktig** område
+    (bakgrunnskartet vises gjennom) — området kan fortsatt klikkes.
+  - **Konturlinje av/på**, med valgfri **egen konturfarge**. Uten egen farge
+    brukes områdefargen (uten gjennomsiktighet), som før.
+- **Rettet:** åpner du et arenakart fra et løypepunkt, bevares nå **språkvalget**
+  — en visning åpnet med `?lang=en` åpner arenakartet på engelsk (før falt det
+  tilbake til arenaens standardspråk).
+- **Rettet:** de **engelske oversettelsene** av løypas tittel og beskrivelse
+  huskes nå på sporet, så en ny publisering (og `.loype`-fila til KrUltra)
+  beholder dem — publiseringsdialogen fylte dem ikke ut på nytt før, og kunne
+  vise en annen løypes engelske tekst.
+
 ## 2.7.0 — 28. juli 2026
 
 - **Lenke fra arenakart til arenakart:** et område eller punkt kan nå gjøres om

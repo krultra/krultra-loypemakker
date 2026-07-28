@@ -263,6 +263,24 @@ window.arenaEditor = (function () {
     return (t && t.farge) || NØYTRAL;
   }
 
+  /** Leaflet-stil for et område (polygon), med per-område fyll/kontur:
+   *  fyll=false → helt gjennomsiktig fyll; kontur=false → ingen linje;
+   *  kontur_farge=null → samme farge som området (uten gjennomsiktighet).
+   *  Fyllet holdes «på» (fillOpacity 0) også når det er gjennomsiktig, så
+   *  området fortsatt kan klikkes. */
+  function polygonStil(f, farge) {
+    const visKontur = f.kontur !== false;
+    const visFyll = f.fyll !== false;
+    return {
+      stroke: visKontur,
+      color: (visKontur && f.kontur_farge) ? f.kontur_farge : farge,
+      weight: 2,
+      fill: true,
+      fillColor: farge,
+      fillOpacity: visFyll ? 0.35 : 0,
+    };
+  }
+
   function tegnAlle() {
     for (const id of Object.keys(lagFor)) { lagFor[id].remove(); delete lagFor[id]; }
     for (const f of arena.features) tegnFeature(f);
@@ -273,9 +291,7 @@ window.arenaEditor = (function () {
     const farge = fargeForFeature(f);
     let lag;
     if (f.form === 'polygon' && f.geometri.length >= 3) {
-      lag = L.polygon(f.geometri.map(tilLatLng), {
-        color: farge, weight: 2, fillColor: farge, fillOpacity: 0.35,
-      });
+      lag = L.polygon(f.geometri.map(tilLatLng), polygonStil(f, farge));
     } else if (f.geometri.length >= 1) {
       lag = L.circleMarker(tilLatLng(f.geometri[0]), {
         radius: 8, color: '#fff', weight: 2, fillColor: farge, fillOpacity: 1,
@@ -347,6 +363,26 @@ window.arenaEditor = (function () {
     document.getElementById('arena-feature-delete').classList.toggle('hidden', erNy);
     fyllTypeVelger(document.getElementById('arena-feature-type'), feature.type_id);
     document.getElementById('arena-feature-arena').value = feature.arena || '';
+
+    // Områdestil (fyll/kontur) — bare relevant for polygoner.
+    const erPolygon = feature.form === 'polygon';
+    document.getElementById('arena-feature-omraade').classList.toggle('hidden', !erPolygon);
+    if (erPolygon) {
+      const fyllBoks = document.getElementById('arena-feature-fyll');
+      const konturBoks = document.getElementById('arena-feature-kontur');
+      const egenBoks = document.getElementById('arena-feature-kontur-egen');
+      const fargeFelt = document.getElementById('arena-feature-kontur-farge');
+      fyllBoks.checked = feature.fyll !== false;
+      konturBoks.checked = feature.kontur !== false;
+      egenBoks.checked = !!feature.kontur_farge;
+      // Fargevelgeren viser enten egen konturfarge eller områdefargen (referanse).
+      fargeFelt.value = feature.kontur_farge || fargeForFeature(feature);
+      const oppdaterFargeFelt = () => {
+        fargeFelt.disabled = !(konturBoks.checked && egenBoks.checked);
+      };
+      egenBoks.onchange = konturBoks.onchange = oppdaterFargeFelt;
+      oppdaterFargeFelt();
+    }
     byggBildeKryss(feature.bilde_ids);
     byggKontaktKryss(feature.kontakt_ids || []);
 
@@ -364,7 +400,7 @@ window.arenaEditor = (function () {
       const valgte = [...document.querySelectorAll('#arena-feature-bilder input:checked')].map((b) => b.value);
       bilde_ids = (valgte.length === arena.bilder.length) ? null : valgte;
     }
-    return {
+    const svar = {
       navn: document.getElementById('arena-feature-navn').value.trim() || 'Uten navn',
       beskrivelse: document.getElementById('arena-feature-beskr').value.trim() || null,
       type_id: document.getElementById('arena-feature-type').value || null,
@@ -377,6 +413,16 @@ window.arenaEditor = (function () {
         beskrivelse: document.getElementById('arena-feature-beskr-en').value,
       }),
     };
+    // Områdestil lagres bare for polygoner (punkter bruker ikke fyll/kontur).
+    if (feature.form === 'polygon') {
+      const konturPa = document.getElementById('arena-feature-kontur').checked;
+      const egen = document.getElementById('arena-feature-kontur-egen').checked;
+      svar.fyll = document.getElementById('arena-feature-fyll').checked;
+      svar.kontur = konturPa;
+      svar.kontur_farge = (konturPa && egen)
+        ? document.getElementById('arena-feature-kontur-farge').value : null;
+    }
+    return svar;
   }
 
   /** Bygg avkryssingslista for hvilke bakgrunnsbilder stedet vises på. */

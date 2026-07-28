@@ -393,6 +393,13 @@ class ArenaFeature(BaseModel):
     #   «arena»        = et annet arenakart under samme løype/event (../<arena>/)
     #   «løype/arena»  = et arenakart under en bestemt løype (../../<løype>/<arena>/)
     arena: Optional[str] = None
+    # Områdestil (kun polygoner; punkter ignorerer disse):
+    #   fyll=False        → helt gjennomsiktig fyll («ingen farge»)
+    #   kontur=False      → ingen konturlinje
+    #   kontur_farge=None → konturen bruker områdefargen (uten gjennomsiktighet)
+    fyll: bool = True
+    kontur: bool = True
+    kontur_farge: Optional[str] = None
 
 
 class ArenaSummary(BaseModel):

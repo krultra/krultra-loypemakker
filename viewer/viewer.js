@@ -404,8 +404,9 @@ function åpnePopup(w) {
   //                       til arenaen uansett hvilken løype punktet vises i —
   //                       viktig for delte punkter gjenbrukt på flere løyper)
   // Slugene valideres til trygge tegn før de settes i href.
-  const arenaLenke = arenaHref(w.arena)
-    ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaHref(w.arena)) +
+  const arenaMål = medSprak(arenaHref(w.arena));
+  const arenaLenke = arenaMål
+    ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaMål) +
       '" target="_blank" rel="noopener">' + escHtml(t('seArenakart')) + '</a></p>' : '';
   const wDesc = lok(w, 'desc');
   const html = '<div class="wpt-popup"><h3>' + escHtml(lok(w, 'name') || '') + '</h3>' +
@@ -439,6 +440,17 @@ function arenaHref(felt) {
   if (new RegExp('^' + slug + '$').test(s)) return './' + s + '/';
   if (new RegExp('^' + slug + '/' + slug + '$').test(s)) return '../' + s + '/';
   return null;
+}
+
+/**
+ * Legg til ?lang= på en arenalenke slik at arenakartet åpnes i samme språk som
+ * denne visningen — men bare når språket er eksplisitt valgt i URL-en. Uten
+ * eksplisitt valg lar vi arenaen bruke sitt eget standardspråk. null → null.
+ */
+function medSprak(href) {
+  if (!href) return href;
+  const eksplisitt = new URLSearchParams(location.search).get('lang');
+  return eksplisitt ? href + '?lang=' + encodeURIComponent(lang) : href;
 }
 
 /** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */

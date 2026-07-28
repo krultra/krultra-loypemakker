@@ -632,6 +632,23 @@
         Lenke til annet arenakart <span class="muted">(valgfri — f.eks. «detalj» eller «mmc/detalj»)</span>
       </label>
       <input type="text" id="arena-feature-arena" placeholder="f.eks. detalj" autocomplete="off">
+      <div id="arena-feature-omraade" class="arena-feature-omraade hidden">
+        <label class="field-label">Områdestil</label>
+        <label class="arena-kontakt-kryss-rad">
+          <input type="checkbox" id="arena-feature-fyll" checked>
+          Vis fyllfarge <span class="muted">(av = helt gjennomsiktig)</span>
+        </label>
+        <label class="arena-kontakt-kryss-rad">
+          <input type="checkbox" id="arena-feature-kontur" checked>
+          Vis konturlinje
+        </label>
+        <div class="arena-kontakt-kryss-rad">
+          <input type="checkbox" id="arena-feature-kontur-egen">
+          <label for="arena-feature-kontur-egen">Egen konturfarge</label>
+          <input type="color" id="arena-feature-kontur-farge" disabled>
+          <span class="muted">(av = samme som områdefargen)</span>
+        </div>
+      </div>
       <div id="arena-feature-bilder-rad" class="hidden">
         <label class="field-label">Vis på bakgrunnsbilder <span class="muted">(kryss av — alle avkrysset = vises på alle, også nye)</span></label>
         <div id="arena-feature-bilder" class="arena-kontakt-kryss"></div>
