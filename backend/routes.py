@@ -17,6 +17,7 @@ from . import (
     arena_publisering,
     elevation,
     gpx_io,
+    kontaktbibliotek,
     publisering,
     punktbibliotek,
     segment_ops,
@@ -24,12 +25,15 @@ from . import (
     timestamps,
 )
 from .models import (
+    ArenaContact,
     ArenaDetail,
     ArenaListResponse,
     ArenaPublishRequest,
     ArenaPublishResponse,
     ArenaSaveRequest,
+    DelteKontakterResponse,
     DeltePunkterResponse,
+    DeltKontakt,
     DeltPunkt,
     ElevationRequest,
     ElevationResponse,
@@ -56,7 +60,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 25
+BACKEND_VERSJON = 26
 
 
 @router.get("/health")
@@ -263,6 +267,43 @@ def slett_delt_punkt(bib_id: str):
         punktbibliotek.slett_punkt(bib_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke det delte punktet")
+
+
+# ---- Kontaktbiblioteket: delte kontakter på tvers av arenakart ----
+
+
+@router.get("/contacts", response_model=DelteKontakterResponse)
+def delte_kontakter(bruk: bool = False):
+    """Alle delte kontakter. Med ?bruk=1 følger det med hvilke arenakart
+    som bruker hver kontakt (litt tregere — leser alle arenafilene)."""
+    return DelteKontakterResponse(
+        kontakter=kontaktbibliotek.les_bibliotek(),
+        bruk=kontaktbibliotek.bruk_oversikt() if bruk else None,
+    )
+
+
+@router.post("/contacts", response_model=DeltKontakt, status_code=201)
+def opprett_delt_kontakt(kontakt: ArenaContact):
+    """Legg en kontakt i kontaktbiblioteket, så den kan gjenbrukes."""
+    return kontaktbibliotek.opprett_kontakt(kontakt)
+
+
+@router.put("/contacts/{bib_id}", response_model=DeltKontakt)
+def oppdater_delt_kontakt(bib_id: str, kontakt: ArenaContact):
+    """Endre en delt kontakt. Slår inn i arenakartene ved neste åpning."""
+    try:
+        return kontaktbibliotek.oppdater_kontakt(bib_id, kontakt)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke den delte kontakten")
+
+
+@router.delete("/contacts/{bib_id}", status_code=204)
+def slett_delt_kontakt(bib_id: str):
+    """Fjern en delt kontakt. Arenakartene beholder lokale kopier."""
+    try:
+        kontaktbibliotek.slett_kontakt(bib_id)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke den delte kontakten")
 
 
 @router.get("/publish/targets", response_model=PublishTargetsResponse)

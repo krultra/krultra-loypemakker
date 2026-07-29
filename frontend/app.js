@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.10.0';
+const APP_VERSJON = '2.11.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1326,24 +1326,45 @@ document.getElementById('btn-new-arena-group').addEventListener('click', () => n
 // Sammenleggbare bibliotek-seksjoner. Alle starter kollapset (satt i HTML);
 // modusbytte ekspanderer det relevante biblioteket (se byttFane). Manuell
 // klikking på overskriften veksler også.
+// De delte bibliotekene hentes ferskt hver gang de åpnes (bruk og grupper kan
+// ha endret seg mens seksjonen var lukket).
+const BIB_LASTERE = {
+  'library-punkt': () => oppdaterPunktbibliotek(),
+  'library-kontakt': () => oppdaterKontaktbibliotek(),
+};
+
 for (const knapp of document.querySelectorAll('.library-toggle')) {
   const seksjon = document.getElementById(knapp.dataset.lib);
   knapp.addEventListener('click', () => {
     const skjult = seksjon.classList.toggle('kollapset');
-    // Punktbiblioteket hentes ferskt hver gang det åpnes (bruk/grupper kan
-    // ha endret seg mens seksjonen var lukket).
-    if (!skjult && knapp.dataset.lib === 'library-punkt') oppdaterPunktbibliotek();
+    const laster = BIB_LASTERE[knapp.dataset.lib];
+    if (!skjult && laster) laster();
   });
 }
 
-/** Ekspander ett bibliotek og kollaps de andre (kalt ved modusbytte). Gruppenes
- *  utvidet-tilstand ligger i hvert biblioteks eget minne, så den restaureres. */
+/**
+ * Ekspander bibliotekene som hører til modusen, og kollaps de andre:
+ *   Rediger segment      → segment + punkt   (punktene hører til løypene)
+ *   Slå sammen segmenter → kun segment
+ *   Rediger arenakart    → arenakart + kontakt (kontaktene hører til arenaene)
+ * Gruppenes utvidet-tilstand ligger i hvert biblioteks eget minne og
+ * restaureres automatisk når seksjonen åpnes igjen.
+ */
 function visBibliotekFor(modus) {
-  const segÅpen = (modus === 'editor' || modus === 'merge');
-  const seg = document.getElementById('library-segment');
-  const arena = document.getElementById('library-arena');
-  if (seg) seg.classList.toggle('kollapset', !segÅpen);
-  if (arena) arena.classList.toggle('kollapset', segÅpen);
+  const åpne = {
+    editor: ['library-segment', 'library-punkt'],
+    merge: ['library-segment'],
+    arena: ['library-arena', 'library-kontakt'],
+  }[modus] || [];
+  for (const id of ['library-segment', 'library-arena', 'library-punkt', 'library-kontakt']) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const skalÅpnes = åpne.includes(id);
+    const varKollapset = el.classList.contains('kollapset');
+    el.classList.toggle('kollapset', !skalÅpnes);
+    // Frisk data når et delt bibliotek går fra lukket til åpent
+    if (skalÅpnes && varKollapset && BIB_LASTERE[id]) BIB_LASTERE[id]();
+  }
 }
 
 // --- Dra og slipp: fritt endre rekkefølge og gruppetilhørighet ---
@@ -1928,10 +1949,11 @@ function byggSymbolValg(valgteTyper) {
 }
 
 /** Rediger et delt punkt direkte i punktbiblioteket. Gjenbruker wpt-dialogen,
- *  men skjuler alt som bare gir mening i løypekontekst (statistikk, snap,
- *  vis-ikon, del-bib, gjenbruk, flytt). Returnerer et Waypoint-formet objekt
- *  til PUT /api/waypoints/{id}, eller null ved avbryt. */
-async function redigerDeltPunkt(p) {
+ *  men skjuler alt som bare gir mening i løypekontekst (snap, vis-ikon,
+ *  del-bib, gjenbruk, flytt) og viser i stedet hvilke segmenter som bruker
+ *  punktet, nederst. Returnerer et Waypoint-formet objekt til
+ *  PUT /api/waypoints/{id}, eller null ved avbryt. */
+async function redigerDeltPunkt(p, bruktI) {
   const dialog = document.getElementById('wpt-dialog');
   const visIkonRad = document.getElementById('wpt-vis-ikon').closest('.wpt-vis-rad');
   const delBibRad = document.getElementById('wpt-del-bib').closest('.wpt-vis-rad');
@@ -1941,7 +1963,8 @@ async function redigerDeltPunkt(p) {
   }
   visIkonRad.classList.add('hidden');
   delBibRad.classList.add('hidden');
-  document.getElementById('wpt-stats').innerHTML = '';
+  // Nederst: hvilke segmenter bruker dette delte punktet
+  fyllBrukListe('wpt-stats', bruktI || [], (n) => (n === 1 ? 'segment' : 'segmenter'));
 
   document.getElementById('wpt-name').value = p.name || '';
   document.getElementById('wpt-desc').value = p.desc || '';
@@ -2249,144 +2272,320 @@ async function velgDeltePunkter() {
 
 document.getElementById('btn-pick-shared').addEventListener('click', velgDeltePunkter);
 
-// ---- Punktbibliotek i venstre stolpe: delte punkter med filter på bruk ----
+// ============================================================
+// Delte bibliotek i venstre stolpe (punkter og kontakter)
+// ============================================================
+// Punkt- og kontaktbiblioteket oppfører seg likt: en liste med delte elementer
+// som viser HVOR MANGE kart de brukes i, og to avkryssingsfiltre — «Grupper»
+// (gruppene i segment-/arenakartbiblioteket) og enkeltkartene selv.
+// lagDeltBibliotek() lager én slik kontroller; cfg sier hvor den bor og hva
+// den henter. Filtrene er sett med valgte navn; null = «alle» (ingen filtrering).
 
-let punktbibData = { punkter: [], bruk: {} };
-const punktFilter = { gruppe: '', loype: '' };
+function lagDeltBibliotek(cfg) {
+  const ktrl = {
+    cfg,
+    elementer: [],
+    bruk: {},          // {id: [kartnavn]}
+    valgte: { gruppe: null, enhet: null }, // null = alle
 
-/** Hent delte punkter (med bruksoversikt), oppdater filtervalgene og tegn
- *  den filtrerte lista. Kalles ved oppstart, når seksjonen åpnes, og etter
- *  at et delt punkt er opprettet/endret/slettet. */
-async function oppdaterPunktbibliotek() {
-  try {
-    punktbibData = await (await api('/api/waypoints?bruk=1')).json();
-  } catch (feil) {
-    toast(feil.message, 'error');
-    return;
-  }
-  byggPunktFilterValg();
-  tegnPunktbibliotek();
-}
-window.oppdaterPunktbibliotek = oppdaterPunktbibliotek;
+    async oppdater() {
+      try {
+        const svar = await (await api(cfg.endepunkt + '?bruk=1')).json();
+        ktrl.elementer = svar[cfg.dataNøkkel] || [];
+        ktrl.bruk = svar.bruk || {};
+      } catch (feil) {
+        toast(feil.message, 'error');
+        return;
+      }
+      ktrl.byggFiltre();
+      ktrl.tegn();
+    },
 
-/** Map fra segmentnavn → gruppenavn (for gruppefilteret). Segmenter uten
- *  gruppe får ingen oppføring. */
-function segmentGruppeForNavn() {
-  const kart = {};
-  for (const [gruppe, ids] of Object.entries(segmentBib.data.groups || {})) {
-    for (const id of ids) {
-      const navn = segmentBib.info[id] && segmentBib.info[id].name;
-      if (navn) kart[navn] = gruppe;
-    }
-  }
-  return kart;
-}
+    /** {kartnavn: gruppenavn} fra det tilhørende kart-biblioteket. */
+    gruppeForKart() {
+      const kilde = cfg.kartBibliotek();
+      const kart = {};
+      for (const [gruppe, ids] of Object.entries(kilde.data.groups || {})) {
+        for (const id of ids) {
+          const navn = kilde.info[id] && cfg.kartNavn(kilde.info[id]);
+          if (navn) kart[navn] = gruppe;
+        }
+      }
+      return kart;
+    },
 
-function fyllFilterSelect(sel, verdier, valgt) {
-  sel.innerHTML = '';
-  const alle = document.createElement('option');
-  alle.value = ''; alle.textContent = 'Alle';
-  sel.appendChild(alle);
-  for (const v of verdier) {
-    const o = document.createElement('option');
-    o.value = v; o.textContent = v;
-    sel.appendChild(o);
-  }
-  sel.value = verdier.includes(valgt) ? valgt : '';
-}
+    byggFiltre() {
+      const grupper = Object.keys(cfg.kartBibliotek().data.groups || {})
+        .sort((a, b) => a.localeCompare(b, 'no'));
+      const enheter = [...new Set(Object.values(ktrl.bruk).flat())]
+        .sort((a, b) => a.localeCompare(b, 'no'));
+      byggFilterListe(cfg.gruppeFilterId, grupper, ktrl.valgte.gruppe,
+        cfg.gruppeEtikett, (valgt) => { ktrl.valgte.gruppe = valgt; ktrl.tegn(); });
+      byggFilterListe(cfg.enhetFilterId, enheter, ktrl.valgte.enhet,
+        cfg.enhetEtikett, (valgt) => { ktrl.valgte.enhet = valgt; ktrl.tegn(); });
+    },
 
-/** Fyll gruppe- og løype-filtrene: gruppene fra segmentbiblioteket, løypene
- *  fra segmentene som faktisk bruker et delt punkt. */
-function byggPunktFilterValg() {
-  const gruppeSel = document.getElementById('wpt-filter-gruppe');
-  const loypeSel = document.getElementById('wpt-filter-loype');
-  if (!gruppeSel || !loypeSel) return;
-  const grupper = Object.keys(segmentBib.data.groups || {})
-    .sort((a, b) => a.localeCompare(b, 'no'));
-  const løyper = [...new Set(Object.values(punktbibData.bruk || {}).flat())]
-    .sort((a, b) => a.localeCompare(b, 'no'));
-  fyllFilterSelect(gruppeSel, grupper, punktFilter.gruppe);
-  fyllFilterSelect(loypeSel, løyper, punktFilter.loype);
-  // Filteret kan ha blitt ugyldig (gruppa/løypa finnes ikke lenger)
-  punktFilter.gruppe = gruppeSel.value;
-  punktFilter.loype = loypeSel.value;
-}
+    /** Passerer elementet begge filtrene? «Alle valgt» = ingen filtrering, så
+     *  elementer som ikke er i bruk noe sted vises da også. */
+    passerer(el) {
+      const bruktI = ktrl.bruk[el.id] || [];
+      const g = ktrl.valgte.gruppe;
+      const e = ktrl.valgte.enhet;
+      if (e && !bruktI.some((navn) => e.has(navn))) return false;
+      if (g) {
+        const gruppeFor = ktrl.gruppeForKart();
+        if (!bruktI.some((navn) => g.has(gruppeFor[navn]))) return false;
+      }
+      return true;
+    },
 
-/** Tegn de delte punktene som passer gjeldende filter. */
-function tegnPunktbibliotek() {
-  const liste = document.getElementById('wpt-sidebar-list');
-  const tom = document.getElementById('wpt-lib-empty');
-  if (!liste) return;
-  liste.innerHTML = '';
-  const bruk = punktbibData.bruk || {};
-  const gruppeForNavn = segmentGruppeForNavn();
-  const passererFilter = (p) => {
-    const bruktI = bruk[p.id] || [];
-    if (punktFilter.loype && !bruktI.includes(punktFilter.loype)) return false;
-    if (punktFilter.gruppe &&
-        !bruktI.some((navn) => gruppeForNavn[navn] === punktFilter.gruppe)) return false;
-    return true;
-  };
-  if (punktbibData.punkter.length === 0) {
-    tom.textContent = 'Ingen delte punkter ennå. Kryss av «Delt punkt» når du lager et interessepunkt.';
-    tom.classList.remove('hidden');
-    return;
-  }
-  const synlige = punktbibData.punkter.filter(passererFilter);
-  if (synlige.length === 0) {
-    tom.textContent = 'Ingen delte punkter passer filteret.';
-    tom.classList.remove('hidden');
-    return;
-  }
-  tom.classList.add('hidden');
-  for (const p of synlige) liste.appendChild(lagPunktRad(p, bruk[p.id] || []));
-}
+    tegn() {
+      const liste = document.getElementById(cfg.listeId);
+      const tom = document.getElementById(cfg.tomId);
+      if (!liste) return;
+      liste.innerHTML = '';
+      if (ktrl.elementer.length === 0) {
+        tom.textContent = cfg.tomTekst;
+        tom.classList.remove('hidden');
+        return;
+      }
+      const synlige = ktrl.elementer.filter((el) => ktrl.passerer(el));
+      if (synlige.length === 0) {
+        tom.textContent = 'Ingen treff med dette filteret.';
+        tom.classList.remove('hidden');
+        return;
+      }
+      tom.classList.add('hidden');
+      for (const el of synlige) liste.appendChild(ktrl.lagRad(el));
+    },
 
-/** Én rad i punktbiblioteket: symboler, navn, bruksoversikt og Endre/Slett. */
-function lagPunktRad(p, bruktI) {
-  const rad = document.createElement('div');
-  rad.className = 'wpt-lib-rad';
-  const symboler = wptTyper(p).map((t) => symbolGlyphHtml(t, 14)).join(' ');
-  rad.innerHTML =
-    '<span class="wpt-reuse-sym">' + symboler + '</span>' +
-    '<span class="wpt-lib-info"><span class="wpt-lib-navn"></span>' +
-    '<span class="muted wpt-lib-bruk"></span></span>';
-  rad.querySelector('.wpt-lib-navn').textContent = p.name;
-  rad.querySelector('.wpt-lib-bruk').textContent = bruktI.length
-    ? 'Brukes i: ' + bruktI.join(', ')
-    : 'Ikke i bruk i noen lagrede segmenter';
-  rad.append(
-    lagKnapp('Endre', 'btn btn-small', async () => {
-      const verdier = await redigerDeltPunkt(p);
+    lagRad(el) {
+      const bruktI = ktrl.bruk[el.id] || [];
+      const rad = document.createElement('div');
+      rad.className = 'wpt-lib-rad';
+      const info = document.createElement('span');
+      info.className = 'wpt-lib-info';
+      const navn = document.createElement('span');
+      navn.className = 'wpt-lib-navn';
+      navn.textContent = cfg.navnFor(el);
+      const bruk = document.createElement('span');
+      bruk.className = 'muted wpt-lib-bruk';
+      bruk.textContent = bruktI.length
+        ? 'Brukes i ' + bruktI.length + ' ' + cfg.enhetOrd(bruktI.length)
+        : 'Ikke i bruk';
+      bruk.title = bruktI.length ? bruktI.join(', ') : '';
+      info.append(navn, bruk);
+      const symboler = cfg.symbolerFor ? cfg.symbolerFor(el) : null;
+      if (symboler) {
+        const s = document.createElement('span');
+        s.className = 'wpt-reuse-sym';
+        s.innerHTML = symboler;
+        rad.appendChild(s);
+      }
+      rad.appendChild(info);
+      rad.append(
+        lagKnapp('Vis/Endre', 'btn btn-small', () => ktrl.visEndre(el, bruktI)),
+        lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => ktrl.slett(el)),
+      );
+      return rad;
+    },
+
+    async visEndre(el, bruktI) {
+      const verdier = await cfg.rediger(el, bruktI);
       if (!verdier) return;
       try {
-        await api('/api/waypoints/' + p.id, {
+        await api(cfg.endepunkt + '/' + el.id, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(verdier),
         });
-        toast('«' + verdier.name + '» er oppdatert (slår inn i løypene ved neste åpning)');
-        oppdaterPunktbibliotek();
+        toast(cfg.lagretTekst(verdier));
+        ktrl.oppdater();
       } catch (feil) { toast(feil.message, 'error'); }
-    }),
-    lagKnapp('Slett', 'btn btn-small btn-danger-subtle', async () => {
-      if (!confirm('Slette det delte punktet «' + p.name + '»? Løypene som ' +
-        'bruker det beholder egne, frittstående kopier.')) return;
+    },
+
+    async slett(el) {
+      if (!confirm(cfg.slettSpørsmål(el))) return;
       try {
-        await api('/api/waypoints/' + p.id, { method: 'DELETE' });
-        toast('«' + p.name + '» er fjernet fra punktbiblioteket');
-        oppdaterPunktbibliotek();
+        await api(cfg.endepunkt + '/' + el.id, { method: 'DELETE' });
+        toast('«' + cfg.navnFor(el) + '» er fjernet');
+        ktrl.oppdater();
       } catch (feil) { toast(feil.message, 'error'); }
-    }),
-  );
-  return rad;
+    },
+  };
+  return ktrl;
 }
 
-document.getElementById('wpt-filter-gruppe').addEventListener('change', (e) => {
-  punktFilter.gruppe = e.target.value; tegnPunktbibliotek();
+/**
+ * Bygg en avkryssingsliste for et filter: «Velg/fjern alle» øverst, så én
+ * rad per verdi. `valgt` er et Set (eller null = alle). Kaller `onEndret` med
+ * nytt Set — eller null når ALT er avkrysset (da filtreres det ikke).
+ */
+function byggFilterListe(beholderId, verdier, valgt, etikett, onEndret) {
+  const boks = document.getElementById(beholderId);
+  if (!boks) return;
+  boks.innerHTML = '';
+  // Behold bare valg som fortsatt finnes (grupper/kart kan ha blitt slettet)
+  const gyldige = valgt ? new Set([...valgt].filter((v) => verdier.includes(v))) : null;
+  const alleValgt = !gyldige || gyldige.size === verdier.length;
+  const erValgt = (v) => alleValgt || gyldige.has(v);
+
+  const sammendrag = document.createElement('summary');
+  sammendrag.textContent = etikett + ': ' +
+    (alleValgt ? 'alle' : gyldige.size + ' av ' + verdier.length);
+  boks.appendChild(sammendrag);
+
+  if (verdier.length === 0) {
+    const p = document.createElement('p');
+    p.className = 'muted';
+    p.textContent = 'Ingen å filtrere på ennå.';
+    boks.appendChild(p);
+    return;
+  }
+
+  const meld = () => {
+    const nye = new Set([...boks.querySelectorAll('.filter-verdi:checked')]
+      .map((b) => b.value));
+    const alle = nye.size === verdier.length;
+    // Hold sammendraget i overskrifta i takt med avkryssingene
+    sammendrag.textContent = etikett + ': ' +
+      (alle ? 'alle' : nye.size + ' av ' + verdier.length);
+    // «Velg alle»-boksen speiler om alt er krysset av
+    alleBoks.checked = alle;
+    onEndret(alle ? null : nye); // alle = ingen filtrering
+  };
+
+  const alleRad = document.createElement('label');
+  alleRad.className = 'filter-rad filter-alle';
+  const alleBoks = document.createElement('input');
+  alleBoks.type = 'checkbox';
+  alleBoks.checked = alleValgt;
+  alleBoks.addEventListener('change', () => {
+    for (const b of boks.querySelectorAll('.filter-verdi')) b.checked = alleBoks.checked;
+    meld();
+  });
+  alleRad.append(alleBoks, document.createTextNode('Velg / fjern alle'));
+  boks.appendChild(alleRad);
+
+  for (const v of verdier) {
+    const rad = document.createElement('label');
+    rad.className = 'filter-rad';
+    const b = document.createElement('input');
+    b.type = 'checkbox';
+    b.className = 'filter-verdi';
+    b.value = v;
+    b.checked = erValgt(v);
+    b.addEventListener('change', meld);
+    rad.append(b, document.createTextNode(v));
+    boks.appendChild(rad);
+  }
+}
+
+/** Fyll en «brukes i»-liste i en redigeringsdialog (nederst). */
+function fyllBrukListe(beholderId, bruktI, enhetOrd) {
+  const boks = document.getElementById(beholderId);
+  if (!boks) return;
+  boks.innerHTML = '';
+  const tittel = document.createElement('span');
+  tittel.className = 'field-label';
+  tittel.textContent = bruktI.length
+    ? 'Brukes i ' + bruktI.length + ' ' + enhetOrd(bruktI.length)
+    : 'Ikke i bruk';
+  boks.appendChild(tittel);
+  if (!bruktI.length) return;
+  const ul = document.createElement('ul');
+  ul.className = 'bruk-liste';
+  for (const navn of bruktI) {
+    const li = document.createElement('li');
+    li.textContent = navn;
+    ul.appendChild(li);
+  }
+  boks.appendChild(ul);
+}
+
+const punktBib = lagDeltBibliotek({
+  endepunkt: '/api/waypoints', dataNøkkel: 'punkter',
+  listeId: 'wpt-sidebar-list', tomId: 'wpt-lib-empty',
+  gruppeFilterId: 'wpt-filter-grupper', enhetFilterId: 'wpt-filter-loyper',
+  gruppeEtikett: 'Grupper', enhetEtikett: 'Løyper',
+  tomTekst: 'Ingen delte punkter ennå. Kryss av «Delt punkt» når du lager et interessepunkt.',
+  kartBibliotek: () => segmentBib,
+  kartNavn: (seg) => seg.name,
+  navnFor: (p) => p.name,
+  symbolerFor: (p) => wptTyper(p).map((t) => symbolGlyphHtml(t, 14)).join(' '),
+  enhetOrd: (n) => (n === 1 ? 'segment' : 'segmenter'),
+  rediger: (p, bruktI) => redigerDeltPunkt(p, bruktI),
+  lagretTekst: (v) => '«' + v.name + '» er oppdatert (slår inn i løypene ved neste åpning)',
+  slettSpørsmål: (p) => 'Slette det delte punktet «' + p.name + '»? Løypene som ' +
+    'bruker det beholder egne, frittstående kopier.',
 });
-document.getElementById('wpt-filter-loype').addEventListener('change', (e) => {
-  punktFilter.loype = e.target.value; tegnPunktbibliotek();
+
+async function oppdaterPunktbibliotek() { await punktBib.oppdater(); }
+window.oppdaterPunktbibliotek = oppdaterPunktbibliotek;
+
+/**
+ * Rediger en delt kontakt fra kontaktbiblioteket. Gjenbruker arena-kontakt-
+ * dialogen (samme DOM som arena-editoren bruker), men skjuler «Delt kontakt»-
+ * avkryssingen (den ER delt) og viser hvilke arenakart som bruker den.
+ * Returnerer et ArenaContact-formet objekt, eller null ved avbryt.
+ */
+async function redigerDeltKontakt(k, bruktI) {
+  const g = (felt) => document.getElementById('arena-kontakt-' + felt);
+  document.getElementById('arena-kontakt-title').textContent = 'Rediger delt kontakt';
+  g('tittel').value = k.tittel || '';
+  g('navn').value = k.navn || '';
+  g('telefon').value = k.telefon || '';
+  g('epost').value = k.epost || '';
+  g('beskr').value = k.beskrivelse || '';
+  g('fra').value = k.gyldig_fra || '';
+  g('til').value = k.gyldig_til || '';
+  const kEn = (k.oversettelser && k.oversettelser.en) || {};
+  g('tittel-en').value = kEn.tittel || '';
+  g('beskr-en').value = kEn.beskrivelse || '';
+  document.getElementById('arena-kontakt-del-bib-rad').classList.add('hidden');
+  fyllBrukListe('arena-kontakt-bruk', bruktI || [],
+    (n) => (n === 1 ? 'arenakart' : 'arenakart'));
+
+  const dialog = document.getElementById('arena-kontakt-dialog');
+  const løfte = ventPåDialog(dialog);
+  g('tittel').select();
+  const handling = await løfte;
+  document.getElementById('arena-kontakt-del-bib-rad').classList.remove('hidden');
+  document.getElementById('arena-kontakt-bruk').innerHTML = '';
+  if (handling !== 'ok' || !g('tittel').value.trim()) return null;
+  return {
+    id: k.id,
+    tittel: g('tittel').value.trim(),
+    navn: g('navn').value.trim() || null,
+    telefon: g('telefon').value.trim() || null,
+    epost: g('epost').value.trim() || null,
+    beskrivelse: g('beskr').value.trim() || null,
+    gyldig_fra: g('fra').value || null,
+    gyldig_til: g('til').value || null,
+    oversettelser: byggOversettelser({
+      tittel: g('tittel-en').value,
+      beskrivelse: g('beskr-en').value,
+    }),
+  };
+}
+
+const kontaktBib = lagDeltBibliotek({
+  endepunkt: '/api/contacts', dataNøkkel: 'kontakter',
+  listeId: 'kontakt-sidebar-list', tomId: 'kontakt-lib-empty',
+  gruppeFilterId: 'kontakt-filter-grupper', enhetFilterId: 'kontakt-filter-arenaer',
+  gruppeEtikett: 'Grupper', enhetEtikett: 'Arenakart',
+  tomTekst: 'Ingen delte kontakter ennå. Kryss av «Delt kontakt» når du lager en kontakt i et arenakart.',
+  kartBibliotek: () => arenaBib,
+  kartNavn: (a) => a.navn,
+  navnFor: (k) => k.tittel + (k.navn ? ' — ' + k.navn : ''),
+  enhetOrd: () => 'arenakart',
+  rediger: (k, bruktI) => redigerDeltKontakt(k, bruktI),
+  lagretTekst: (v) => '«' + v.tittel + '» er oppdatert (slår inn i arenakartene ved neste åpning)',
+  slettSpørsmål: (k) => 'Slette den delte kontakten «' + k.tittel + '»? Arenakartene ' +
+    'som bruker den beholder egne, frittstående kopier.',
 });
+
+async function oppdaterKontaktbibliotek() { await kontaktBib.oppdater(); }
+window.oppdaterKontaktbibliotek = oppdaterKontaktbibliotek;
 
 /** Aktiver/deaktiver punktknappene ut fra om løypa er lagret. */
 function oppdaterWptKnapp() {
@@ -3986,10 +4185,11 @@ oppdaterWptKnapp(); // deaktivert til en løype er lastet
 oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterArenabibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterPunktbibliotek().catch((feil) => toast(feil.message, 'error'));
+oppdaterKontaktbibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 25;
+const FORVENTET_BACKEND = 26;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

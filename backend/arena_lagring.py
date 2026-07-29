@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List
 
+from . import kontaktbibliotek
 from .models import ArenaDetail, ArenaImage, ArenaSaveRequest, ArenaSummary
 
 # Rotmappa arenaene lagres i: <prosjektrot>/data/arenaer
@@ -104,6 +105,8 @@ def opprett_arena(req: ArenaSaveRequest) -> ArenaDetail:
         oversettelser=req.oversettelser,
     )
     _skriv(detail)
+    # Delte kontakter: spre eventuelle endringer til kontaktbiblioteket
+    kontaktbibliotek.oppdater_fra_arena(detail.kontakter)
     return _ferdig(detail)
 
 
@@ -127,6 +130,8 @@ def oppdater_arena(arena_id: str, req: ArenaSaveRequest) -> ArenaDetail:
         detail.arena_slug = req.arena_slug
     detail.publiser_bilde_ids = req.publiser_bilde_ids
     _skriv(detail)
+    # Delte kontakter: spre endringer tilbake til kontaktbiblioteket
+    kontaktbibliotek.oppdater_fra_arena(detail.kontakter)
     return _ferdig(detail)
 
 
@@ -138,11 +143,17 @@ def _skriv(detail: ArenaDetail) -> None:
 
 
 def hent_arena(arena_id: str) -> ArenaDetail:
-    """Hent ett arenakart. FileNotFoundError hvis det ikke finnes."""
+    """Hent ett arenakart. FileNotFoundError hvis det ikke finnes.
+
+    Kontakter med `bib_id` får ferske verdier fra kontaktbiblioteket, så
+    endringer gjort via et annet arenakart slår inn ved åpning.
+    """
     fil = _fil_for(arena_id)
     if not fil.exists():
         raise FileNotFoundError("Fant ikke arena med id {}".format(arena_id))
-    return _ferdig(ArenaDetail.model_validate_json(fil.read_text(encoding="utf-8")))
+    detail = ArenaDetail.model_validate_json(fil.read_text(encoding="utf-8"))
+    kontaktbibliotek.flett_inn(detail.kontakter)
+    return _ferdig(detail)
 
 
 def list_arenaer() -> List[ArenaSummary]:

@@ -604,15 +604,72 @@ window.arenaEditor = (function () {
   async function åpneKontakter() {
     tegnKontaktliste();
     const dialog = document.getElementById('arena-kontakter-dialog');
-    // «+ Ny kontakt» åpner enkeltkontakt-dialogen og kommer tilbake hit
+    // «+ Ny kontakt» og «Hent delt kontakt» åpner hver sin dialog og kommer
+    // tilbake hit, så lista kan oppdateres og brukeren fortsette.
     let handling;
     do {
       handling = await ventPåDialog(dialog);
-      if (handling === 'ny') {
-        await redigerKontakt(null);
-        tegnKontaktliste();
-      }
-    } while (handling === 'ny');
+      if (handling === 'ny') await redigerKontakt(null);
+      else if (handling === 'hent') await hentDeltKontakt();
+      if (handling === 'ny' || handling === 'hent') tegnKontaktliste();
+    } while (handling === 'ny' || handling === 'hent');
+  }
+
+  /** Velg en kontakt fra kontaktbiblioteket og legg den inn i dette
+   *  arenakartet som en delt kontakt (med bib_id). */
+  async function hentDeltKontakt() {
+    const dialog = document.getElementById('arena-kontakt-pick-dialog');
+    const liste = document.getElementById('arena-kontakt-pick-list');
+    liste.innerHTML = '<p class="muted">Laster …</p>';
+    const løfte = ventPåDialog(dialog);
+    let delte = [];
+    try {
+      delte = (await (await api('/api/contacts')).json()).kontakter || [];
+    } catch (feil) {
+      toast('Kunne ikke hente kontaktbiblioteket: ' + feil.message, 'error');
+    }
+    // De som alt er i bruk i dette arenakartet skal ikke kunne legges til igjen
+    const alt = new Set(arena.kontakter.map((k) => k.bib_id).filter(Boolean));
+    const ledige = delte.filter((k) => !alt.has(k.id));
+    liste.innerHTML = '';
+    if (!ledige.length) {
+      liste.innerHTML = '<p class="muted">' + (delte.length
+        ? 'Alle de delte kontaktene er allerede i bruk i dette arenakartet.'
+        : 'Kontaktbiblioteket er tomt. Kryss av «Delt kontakt» på en kontakt for å dele den.')
+        + '</p>';
+    }
+    for (const k of ledige) {
+      const rad = document.createElement('div');
+      rad.className = 'arena-kontakt-rad';
+      const info = document.createElement('div');
+      info.className = 'arena-kontakt-info';
+      info.innerHTML = '<strong></strong><span class="muted"></span>';
+      info.querySelector('strong').textContent = k.tittel;
+      info.querySelector('.muted').textContent =
+        [k.navn, k.telefon, k.epost].filter(Boolean).join(' · ');
+      // Submit-knapp med id i value — ventPåDialog leser submitter.value
+      const velg = document.createElement('button');
+      velg.value = 'pick-' + k.id;
+      velg.className = 'btn btn-small btn-primary';
+      velg.textContent = 'Legg til';
+      rad.append(info, velg);
+      liste.appendChild(rad);
+    }
+
+    const handling = await løfte;
+    if (typeof handling !== 'string' || !handling.startsWith('pick-')) return;
+    const valgt = ledige.find((k) => 'pick-' + k.id === handling);
+    if (!valgt) return;
+    // Lokal kopi av verdiene + referanse til biblioteket (som delte punkter)
+    arena.kontakter.push({
+      id: nyId('k'), bib_id: valgt.id,
+      tittel: valgt.tittel, navn: valgt.navn, telefon: valgt.telefon,
+      epost: valgt.epost, beskrivelse: valgt.beskrivelse,
+      gyldig_fra: valgt.gyldig_fra, gyldig_til: valgt.gyldig_til,
+      oversettelser: valgt.oversettelser,
+    });
+    merkEndret();
+    toast('Den delte kontakten «' + valgt.tittel + '» er lagt til');
   }
 
   function tegnKontaktliste() {
@@ -628,7 +685,8 @@ window.arenaEditor = (function () {
       const info = document.createElement('div');
       info.className = 'arena-kontakt-info';
       info.innerHTML = '<strong></strong><span class="muted"></span>';
-      info.querySelector('strong').textContent = k.tittel;
+      // 🔗 markerer at kontakten er delt (ligger i kontaktbiblioteket)
+      info.querySelector('strong').textContent = (k.bib_id ? '🔗 ' : '') + k.tittel;
       info.querySelector('.muted').textContent =
         [k.navn, k.telefon, k.epost].filter(Boolean).join(' · ');
       const rediger = document.createElement('button');
@@ -667,6 +725,8 @@ window.arenaEditor = (function () {
     const kEn = (k && k.oversettelser && k.oversettelser.en) || {};
     g('tittel-en').value = kEn.tittel || '';
     g('beskr-en').value = kEn.beskrivelse || '';
+    g('del-bib').checked = !!(k && k.bib_id);
+    document.getElementById('arena-kontakt-bruk').innerHTML = '';
 
     const dialog = document.getElementById('arena-kontakt-dialog');
     const løfte = ventPåDialog(dialog);
@@ -688,12 +748,32 @@ window.arenaEditor = (function () {
         beskrivelse: g('beskr-en').value,
       }),
     };
-    if (k) {
-      Object.assign(k, verdier);
-    } else {
-      arena.kontakter.push(Object.assign({ id: nyId('k') }, verdier));
-    }
+    const mål = k || Object.assign({ id: nyId('k'), bib_id: null }, verdier);
+    if (k) Object.assign(k, verdier); else arena.kontakter.push(mål);
+    await synkDeltKontakt(mål, g('del-bib').checked);
     merkEndret();
+  }
+
+  /** Håndter «Delt kontakt»-avkryssingen: legg kontakten i kontaktbiblioteket,
+   *  eller koble den fra (arenakartet beholder sin lokale kopi). Speiler
+   *  hvordan delte punkter håndteres i app.js. */
+  async function synkDeltKontakt(kontakt, skalDeles) {
+    if (kontakt.bib_id && !skalDeles) {
+      kontakt.bib_id = null;
+      toast('Kontakten er koblet fra kontaktbiblioteket — endringer her gjelder nå bare dette arenakartet');
+    } else if (!kontakt.bib_id && skalDeles) {
+      try {
+        const res = await api('/api/contacts', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(kontakt),
+        });
+        kontakt.bib_id = (await res.json()).id;
+        toast('Kontakten «' + kontakt.tittel + '» er delt og kan gjenbrukes i andre arenakart');
+      } catch (feil) {
+        toast('Kunne ikke dele kontakten: ' + feil.message, 'error');
+      }
+    }
+    if (window.oppdaterKontaktbibliotek) window.oppdaterKontaktbibliotek();
   }
 
   // ============================================================
@@ -738,8 +818,10 @@ window.arenaEditor = (function () {
       endret = false;
       settStatus();
       // Oppdater arenakart-biblioteket i venstre stolpe (nytt kart / endret
-      // antall steder / marker det aktive kartet).
+      // antall steder / marker det aktive kartet). Delte kontakter kan ha blitt
+      // endret her, og synkroniseres til biblioteket av serveren ved lagring.
       if (window.oppdaterArenabibliotek) window.oppdaterArenabibliotek();
+      if (window.oppdaterKontaktbibliotek) window.oppdaterKontaktbibliotek();
       if (!stille) toast('Arenakartet er lagret');
       return true;
     } catch (feil) {

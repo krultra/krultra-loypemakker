@@ -17,6 +17,31 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.11.0 — 29. juli 2026
+
+**Delte kontakter** (fase 2) og videre opprydding i venstre stolpe.
+
+- **Kontaktbibliotek:** kontakter kan nå **deles på tvers av arenakart**, slik
+  delte punkter deles på tvers av løyper. Samme arrangement har gjerne flere
+  arenakart med de samme kontaktene (løpsleder, sekretariat, sikkerhetsvakt) —
+  nå legges de inn én gang.
+  - Kryss av **«Delt kontakt»** i kontaktdialogen for å legge den i biblioteket.
+  - **«🔗 Hent delt kontakt…»** i kontaktlista henter inn en kontakt fra
+    biblioteket. Delte kontakter er merket med 🔗.
+  - Endrer du en delt kontakt i ett arenakart, slår endringen inn i de andre
+    ved neste åpning. Sletter du den fra biblioteket, beholder arenakartene
+    egne, frittstående kopier.
+  - Nytt **Kontaktbibliotek** i venstre stolpe med samme filtrering som
+    punktbiblioteket.
+- **Bedre filtrering i punkt- og kontaktbiblioteket:** «Grupper» og «Løyper»
+  (henholdsvis «Arenakart») er nå **avkryssingslister** der du kan velge flere
+  samtidig, med «Velg / fjern alle» øverst.
+- **Ryddigere lister:** hver rad viser nå **«Brukes i N segmenter»** (antall) i
+  stedet for hele lista. Full liste vises i **«Vis/Endre»**-dialogen, nederst.
+- **Bibliotekene følger modusen:** «Rediger segment» åpner segment- og
+  punktbiblioteket, «Slå sammen segmenter» kun segmentbiblioteket, og «Rediger
+  arenakart» åpner arenakart- og kontaktbiblioteket. Resten slås sammen.
+
 ## 2.10.0 — 29. juli 2026
 
 Videre GUI-opprydding (fase 1, del 2) — tydeligere modusknapper, ryddigere

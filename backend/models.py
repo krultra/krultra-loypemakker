@@ -359,6 +359,36 @@ class ArenaContact(BaseModel):
     gyldig_til: Optional[str] = None
     # Oversettelser: {språk: {felt: tekst}} — se Waypoint.oversettelser.
     oversettelser: Optional[Dict[str, Dict[str, str]]] = None
+    # Referanse til en delt kontakt i kontaktbiblioteket (data/contacts.json).
+    # None = vanlig lokal kontakt. Med referanse hentes ferske verdier fra
+    # biblioteket ved åpning, og endringer synkroniseres tilbake ved lagring
+    # — samme mønster som Waypoint.bib_id mot punktbiblioteket.
+    bib_id: Optional[str] = None
+
+
+class DeltKontakt(BaseModel):
+    """En delt kontakt i kontaktbiblioteket — gjenbrukes på tvers av arenakart.
+
+    Samme arrangement har gjerne flere arenakart med de samme kontaktene
+    (løpsleder, sekretariat, sikkerhetsvakt). Identiteten er `id`, ikke navnet.
+    """
+
+    id: str
+    tittel: str
+    navn: Optional[str] = None
+    telefon: Optional[str] = None
+    epost: Optional[str] = None
+    beskrivelse: Optional[str] = None
+    gyldig_fra: Optional[str] = None
+    gyldig_til: Optional[str] = None
+    oversettelser: Optional[Dict[str, Dict[str, str]]] = None
+
+
+class DelteKontakterResponse(BaseModel):
+    """Svar fra GET /api/contacts. `bruk` = {bib_id: [arenanavn]} med ?bruk=1."""
+
+    kontakter: List[DeltKontakt]
+    bruk: Optional[Dict[str, List[str]]] = None
 
 
 class ArenaFeature(BaseModel):
