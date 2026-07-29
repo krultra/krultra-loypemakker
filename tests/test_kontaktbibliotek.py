@@ -110,6 +110,31 @@ class TestFlettOgSynk:
 
         assert arena_lagring.hent_arena(b.id).kontakter[0].telefon == "555 55 555"
 
+    def test_slett_med_fjern_bruk_fjerner_fra_alle_arenakart(self, miljø):
+        delt = kontaktbibliotek.opprett_kontakt(_kontakt("Løpsleder"))
+        a = _arena("Oversikt", [_kontakt("Løpsleder", bib_id=delt.id),
+                                _kontakt("Lokal vakt")])
+        b = _arena("Detalj", [_kontakt("Løpsleder", bib_id=delt.id)])
+
+        kontaktbibliotek.slett_kontakt(delt.id, fjern_bruk=True)
+
+        assert kontaktbibliotek.les_bibliotek() == []
+        a_k = arena_lagring.hent_arena(a.id).kontakter
+        assert [k.tittel for k in a_k] == ["Lokal vakt"]  # lokal kontakt består
+        assert arena_lagring.hent_arena(b.id).kontakter == []
+
+    def test_fjern_bruk_rydder_referanser_fra_steder(self, miljø):
+        from backend.models import ArenaFeature
+        delt = kontaktbibliotek.opprett_kontakt(_kontakt("Løpsleder"))
+        arena = arena_lagring.opprett_arena(ArenaSaveRequest(
+            navn="Teveltunet",
+            kontakter=[_kontakt("Løpsleder", bib_id=delt.id)],
+            features=[ArenaFeature(id="f1", navn="Sekretariat", form="punkt",
+                                   geometri=[[0.5, 0.5]], kontakt_ids=["k1"])]))
+        kontaktbibliotek.slett_kontakt(delt.id, fjern_bruk=True)
+        f = arena_lagring.hent_arena(arena.id).features[0]
+        assert f.kontakt_ids == []  # referansen til den delte kontakten er borte
+
     def test_slettet_bibliotekkontakt_gir_lokal_kopi(self, miljø):
         delt = kontaktbibliotek.opprett_kontakt(_kontakt("Midlertidig"))
         a = _arena("Teveltunet", [_kontakt("Midlertidig", bib_id=delt.id)])

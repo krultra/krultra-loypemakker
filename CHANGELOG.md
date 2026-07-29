@@ -17,6 +17,22 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.14.0 — 29. juli 2026
+
+- **Rettet en alvorlig feil:** interessepunkter kunne ikke lagres i det hele
+  tatt (verken endringer eller nye punkter) — en programmeringsfeil stoppet
+  lagringen stille. Nå lagres de igjen.
+- **Slette delt punkt/kontakt — to måter:** når du sletter et delt punkt eller
+  en delt kontakt som er i bruk, blir du nå spurt om du vil **kun fjerne den
+  som delt** (kartene beholder egne kopier) eller **slette den overalt** (også
+  fra alle segmenter/arenakart som bruker den).
+- **Dra grensen mellom kart og høydeprofil:** i delt visning kan du nå dra
+  delelinja mellom kartet og høydeprofilen for å bestemme hvor mye plass hver
+  får. Fordelingen huskes. «Høydeskala»-slideren er dermed fjernet — profilen
+  fyller den plassen du gir den.
+- **Slett-knapp i kontaktredigeringen** i arenakart-editoren også (samme dialog
+  som kontaktbiblioteket bruker).
+
 ## 2.13.0 — 29. juli 2026
 
 Ryddigere verktøylinjer (fase 3) og enklere redigering fra bibliotekene.

@@ -151,6 +151,27 @@ class TestFlettOgSynk:
         lastet = storage.load_segment(seg.id)
         assert lastet.waypoints[0].arena == "mmc/nytt-omraade"
 
+    def test_slett_uten_fjern_bruk_beholder_lokal_kopi(self, miljø):
+        delt = punktbibliotek.opprett_punkt(_wpt("Drikkestasjon"))
+        seg = _segment("MMC 20K", [_wpt("Drikkestasjon", bib_id=delt.id)])
+        punktbibliotek.slett_punkt(delt.id)  # standard: behold i segmentet
+        lastet = storage.load_segment(seg.id)
+        assert len(lastet.waypoints) == 1
+        assert lastet.waypoints[0].bib_id is None  # frakoblet, men beholdt
+
+    def test_slett_med_fjern_bruk_fjerner_fra_alle_segmenter(self, miljø):
+        delt = punktbibliotek.opprett_punkt(_wpt("Drikkestasjon"))
+        a = _segment("MMC 20K", [_wpt("Drikkestasjon", bib_id=delt.id), _wpt("Lokalt")])
+        b = _segment("MMC 70K", [_wpt("Drikkestasjon", bib_id=delt.id)])
+
+        punktbibliotek.slett_punkt(delt.id, fjern_bruk=True)
+
+        assert punktbibliotek.les_bibliotek() == []
+        # Det delte punktet er borte fra begge, men lokale punkter består
+        a_wpts = storage.load_segment(a.id).waypoints
+        assert [w.name for w in a_wpts] == ["Lokalt"]
+        assert storage.load_segment(b.id).waypoints == []
+
     def test_slettet_bibliotekpunkt_gir_lokal_kopi(self, miljø):
         delt = punktbibliotek.opprett_punkt(_wpt("Midlertidig"))
         seg = _segment("Løype A", [_wpt("Midlertidig", bib_id=delt.id)])

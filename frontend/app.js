@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.13.0';
+const APP_VERSJON = '2.14.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -670,11 +670,11 @@ function tegnProfil() {
   const pxPerM = plotB / (totalM || 1);
   let plotH = klem(spennH * pxPerM * profilState.overdrivelse, 30, 340);
 
-  // I «bare profil»-modus skal profilen fylle hele den tilgjengelige høyden
-  // (ikke bare det høydeskalaen tilsier), så flaten utnyttes.
-  if (visModus === 'profil') {
+  // I «delt» og «bare profil» fyller profilen den tilgjengelige høyden i panelet
+  // (som brukeren styrer ved å dra delelinja), ikke bare det en fast skala tilsier.
+  if (visModus === 'profil' || visModus === 'split') {
     const tilgjengelig = canvas.parentElement.clientHeight - 16 - marg.topp - marg.bunn - wptBunn;
-    plotH = Math.max(plotH, Math.max(120, tilgjengelig));
+    plotH = Math.max(120, tilgjengelig);
   }
 
   // Litt luft under laveste punkt når veipunkter vises, så indikatorlinjene
@@ -852,20 +852,63 @@ function settVisModus(m) {
   }
   // Profilen tegnes i «delt» og «bare profil», skjules i «bare kart»
   settProfilSynlig(m !== 'kart');
+  if (m === 'split') settProfilhøyde(lagretProfilhøyde());
+  else document.getElementById('profile-section').style.height = '';
   // La flexbox legge om, be så kartet måle på nytt og profilen tegnes
   setTimeout(() => { map.invalidateSize(); tegnProfil(); }, 60);
 }
+
+// --- Dragbar delelinje kart/høydeprofil (delt visning). Profilens panelhøyde
+//     huskes lokalt; kartet får resten av flaten. ---
+const PROFILHØYDE_NØKKEL = 'gps-tool.profilhoyde';
+
+function lagretProfilhøyde() {
+  return Number(localStorage.getItem(PROFILHØYDE_NØKKEL)) || 260;
+}
+
+/** Sett profilpanelets høyde, klemt så både kart og profil beholder plass. */
+function settProfilhøyde(px) {
+  const innhold = document.querySelector('.content');
+  const maks = innhold.clientHeight - 200; // la kartet + verktøylinjene beholde plass
+  const h = Math.max(90, Math.min(px, Math.max(90, maks)));
+  document.getElementById('profile-section').style.height = h + 'px';
+  return h;
+}
+
+(function koblProfilGutter() {
+  const gutter = document.getElementById('profil-gutter');
+  let startY = 0, startH = 0, drar = false;
+  gutter.addEventListener('mousedown', (e) => {
+    drar = true;
+    startY = e.clientY;
+    startH = document.getElementById('profile-section').getBoundingClientRect().height;
+    gutter.classList.add('drar');
+    document.body.style.cursor = 'row-resize';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!drar) return;
+    // Dra opp = større profil (mer høyde), dra ned = mindre
+    settProfilhøyde(startH + (startY - e.clientY));
+    tegnProfil();
+  });
+  document.addEventListener('mouseup', () => {
+    if (!drar) return;
+    drar = false;
+    gutter.classList.remove('drar');
+    document.body.style.cursor = '';
+    const h = Math.round(document.getElementById('profile-section').getBoundingClientRect().height);
+    localStorage.setItem(PROFILHØYDE_NØKKEL, String(h));
+    setTimeout(() => { map.invalidateSize(); tegnProfil(); }, 20);
+  });
+})();
 
 document.getElementById('view-kart').addEventListener('click', () => settVisModus('kart'));
 document.getElementById('view-split').addEventListener('click', () => settVisModus('split'));
 document.getElementById('view-profil').addEventListener('click', () => settVisModus('profil'));
 
-document.getElementById('profile-exagg').addEventListener('input', (e) => {
-  profilState.overdrivelse = Number(e.target.value);
-  document.getElementById('profile-exagg-val').textContent = profilState.overdrivelse + '×';
-  lagreProfilValg();
-  tegnProfil();
-});
+// (Høydeskala-slideren er fjernet — i delt og «bare profil» fyller profilen nå
+// den tilgjengelige høyden, som brukeren justerer ved å dra delelinja.)
 
 document.getElementById('profile-axes').addEventListener('change', (e) => {
   profilState.akser = e.target.checked;
@@ -1901,7 +1944,8 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
   if (handling === 'cancel' || (handling === 'ok' && !navnFelt.value.trim())) {
     return { handling: null };
   }
-  let typer = [...beholder.querySelectorAll('input:checked')].map((b) => b.value);
+  let typer = [...document.getElementById('wpt-symbols').querySelectorAll('input:checked')]
+    .map((b) => b.value);
   if (typer.length === 0) typer.push('annet');
   typer = sorterTyper(typer); // fast visningsrekkefølge
   const primær = WPT_SYMBOLER[typer[0]];
@@ -2423,11 +2467,16 @@ function lagDeltBibliotek(cfg) {
     },
 
     async slett(el) {
-      if (!confirm(cfg.slettSpørsmål(el))) return;
+      const bruktI = ktrl.bruk[el.id] || [];
+      const valg = await spørSlettDelt(cfg, el, bruktI.length);
+      if (!valg) return; // avbrutt
+      const url = cfg.endepunkt + '/' + el.id + (valg === 'alle' ? '?fjern_bruk=1' : '');
       try {
-        await api(cfg.endepunkt + '/' + el.id, { method: 'DELETE' });
-        toast('«' + cfg.navnFor(el) + '» er fjernet');
+        await api(url, { method: 'DELETE' });
+        toast('«' + cfg.navnFor(el) + '» er fjernet' +
+          (valg === 'alle' && bruktI.length ? ' fra biblioteket og alle ' + bruktI.length + ' ' + cfg.enhetFlertall : ''));
         ktrl.oppdater();
+        if (cfg.etterSlett) cfg.etterSlett();
       } catch (feil) { toast(feil.message, 'error'); }
     },
   };
@@ -2472,6 +2521,41 @@ function lukkRadMenyer() {
 }
 document.addEventListener('click', lukkRadMenyer);
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lukkRadMenyer(); });
+
+/**
+ * Spør hvordan et delt punkt/en delt kontakt skal slettes: bare fjernes som
+ * delt (kartene beholder egne kopier) eller slettes fra alle kartene også.
+ * Er elementet ikke i bruk noen steder, holder det med en enkel bekreftelse.
+ * Returnerer 'bare' | 'alle' | null (avbrutt).
+ */
+async function spørSlettDelt(cfg, el, antallBruk) {
+  const dialog = document.getElementById('slett-delt-dialog');
+  document.getElementById('slett-delt-tittel').textContent =
+    'Slette «' + cfg.navnFor(el) + '»';
+  const bare = document.getElementById('slett-delt-bare');
+  const alle = document.getElementById('slett-delt-alle');
+  if (antallBruk === 0) {
+    // Ikke i bruk noe sted — da er «bare fjerne» og «slette overalt» det samme
+    document.getElementById('slett-delt-tekst').textContent =
+      cfg.deltEnhet + ' er ikke i bruk i noen ' + cfg.enhetFlertall + '. Slette den?';
+    bare.textContent = 'Slett';
+    alle.classList.add('hidden');
+  } else {
+    document.getElementById('slett-delt-tekst').textContent =
+      cfg.deltEnhet + ' brukes i ' + antallBruk + ' ' +
+      (antallBruk === 1 ? cfg.enhetEntall : cfg.enhetFlertall) + '. Hva vil du gjøre?';
+    bare.textContent = 'Kun fjern som delt';
+    bare.title = 'Fjern fra biblioteket, men behold en frittstående kopi i hvert ' +
+      cfg.enhetEntall;
+    alle.textContent = 'Slett overalt';
+    alle.title = 'Slett fra biblioteket OG fra alle ' + cfg.enhetFlertall + ' som bruker den';
+    alle.classList.remove('hidden');
+  }
+  const handling = await ventPåDialog(dialog);
+  alle.classList.remove('hidden'); // rydd tilbake til utgangstilstand
+  if (handling === 'bare' || handling === 'alle') return handling;
+  return null;
+}
 
 /**
  * Bygg den samlede filtermenyen: «Velg / fjern alle» øverst, så én bolk per
@@ -2575,6 +2659,7 @@ const punktBib = lagDeltBibliotek({
   endepunkt: '/api/waypoints', dataNøkkel: 'punkter',
   listeId: 'wpt-sidebar-list', tomId: 'wpt-lib-empty',
   filterId: 'wpt-filter', enhetEtikett: 'Løyper',
+  deltEnhet: 'Punktet', enhetEntall: 'segment', enhetFlertall: 'segmenter',
   tomTekst: 'Ingen delte punkter ennå. Kryss av «Delt punkt» når du lager et interessepunkt.',
   kartBibliotek: () => segmentBib,
   kartNavn: (seg) => seg.name,
@@ -2649,6 +2734,7 @@ const kontaktBib = lagDeltBibliotek({
   endepunkt: '/api/contacts', dataNøkkel: 'kontakter',
   listeId: 'kontakt-sidebar-list', tomId: 'kontakt-lib-empty',
   filterId: 'kontakt-filter', enhetEtikett: 'Arenakart',
+  deltEnhet: 'Kontakten', enhetEntall: 'arenakart', enhetFlertall: 'arenakart',
   tomTekst: 'Ingen delte kontakter ennå. Lag en med «+ Ny», eller kryss av «Delt kontakt» på en kontakt i et arenakart.',
   kartBibliotek: () => arenaBib,
   kartNavn: (a) => a.navn,
@@ -4328,8 +4414,6 @@ document.getElementById('wpt-line-width').value = kartEksport.strekTykkelse;
 document.getElementById('wpt-line-width-val').textContent = kartEksport.strekTykkelse;
 document.getElementById('wpt-size').value = Math.round(kartEksport.ikonSkala * 100);
 document.getElementById('wpt-size-val').textContent = Math.round(kartEksport.ikonSkala * 100) + '%';
-document.getElementById('profile-exagg').value = profilState.overdrivelse;
-document.getElementById('profile-exagg-val').textContent = profilState.overdrivelse + '×';
 document.getElementById('profile-axes').checked = profilState.akser;
 document.getElementById('profile-grid').checked = profilState.rutenett;
 document.getElementById('profile-line-color').value = profilState.linje;
@@ -4363,7 +4447,7 @@ oppdaterKontaktbibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 26;
+const FORVENTET_BACKEND = 27;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

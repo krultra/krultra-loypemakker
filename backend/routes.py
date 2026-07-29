@@ -60,7 +60,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 26
+BACKEND_VERSJON = 27
 
 
 @router.get("/health")
@@ -261,10 +261,11 @@ def oppdater_delt_punkt(bib_id: str, punkt: Waypoint):
 
 
 @router.delete("/waypoints/{bib_id}", status_code=204)
-def slett_delt_punkt(bib_id: str):
-    """Fjern et delt punkt. Løypene som brukte det beholder lokale kopier."""
+def slett_delt_punkt(bib_id: str, fjern_bruk: bool = False):
+    """Fjern et delt punkt. Løypene beholder lokale kopier — med ?fjern_bruk=1
+    fjernes punktet også fra alle segmenter som bruker det."""
     try:
-        punktbibliotek.slett_punkt(bib_id)
+        punktbibliotek.slett_punkt(bib_id, fjern_bruk=fjern_bruk)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke det delte punktet")
 
@@ -298,10 +299,11 @@ def oppdater_delt_kontakt(bib_id: str, kontakt: ArenaContact):
 
 
 @router.delete("/contacts/{bib_id}", status_code=204)
-def slett_delt_kontakt(bib_id: str):
-    """Fjern en delt kontakt. Arenakartene beholder lokale kopier."""
+def slett_delt_kontakt(bib_id: str, fjern_bruk: bool = False):
+    """Fjern en delt kontakt. Arenakartene beholder lokale kopier — med
+    ?fjern_bruk=1 fjernes kontakten også fra alle arenakart som bruker den."""
     try:
-        kontaktbibliotek.slett_kontakt(bib_id)
+        kontaktbibliotek.slett_kontakt(bib_id, fjern_bruk=fjern_bruk)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke den delte kontakten")
 

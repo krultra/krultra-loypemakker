@@ -727,11 +727,25 @@ window.arenaEditor = (function () {
     g('beskr-en').value = kEn.beskrivelse || '';
     g('del-bib').checked = !!(k && k.bib_id);
     document.getElementById('arena-kontakt-bruk').innerHTML = '';
+    // Slett-knappen gjelder bare en eksisterende kontakt (fjerner den fra dette
+    // arenakartet — er den delt, ligger den fortsatt i kontaktbiblioteket).
+    document.getElementById('arena-kontakt-delete').classList.toggle('hidden', !k);
 
     const dialog = document.getElementById('arena-kontakt-dialog');
     const løfte = ventPåDialog(dialog);
     g('tittel').select();
     const handling = await løfte;
+    document.getElementById('arena-kontakt-delete').classList.add('hidden');
+    if (handling === 'delete' && k) {
+      arena.kontakter = arena.kontakter.filter((x) => x.id !== k.id);
+      for (const f of arena.features) {
+        f.kontakt_ids = (f.kontakt_ids || []).filter((cid) => cid !== k.id);
+      }
+      merkEndret();
+      toast('Kontakten «' + k.tittel + '» er fjernet fra arenakartet' +
+        (k.bib_id ? ' (ligger fortsatt i kontaktbiblioteket)' : ''));
+      return;
+    }
     if (handling !== 'ok') return;
     const tittel = g('tittel').value.trim();
     if (!tittel) { toast('Kontakten må ha en tittel', 'error'); return; }

@@ -724,6 +724,33 @@ dialog .button-row > .btn-danger-subtle:last-child { margin-left: auto; }
   flex-shrink: 0;
 }
 
+/* Dragbar delelinje mellom kart og høydeprofil — kun synlig i delt visning */
+.profil-gutter { display: none; }
+.content.modus-split .profil-gutter {
+  display: block;
+  height: 8px;
+  flex-shrink: 0;
+  cursor: row-resize;
+  background: var(--kant);
+}
+.content.modus-split .profil-gutter:hover,
+.profil-gutter.drar { background: var(--farge-primær); }
+
+/* I delt visning fyller profilen sitt panel (høyden settes via JS ved draing),
+   akkurat som i «bare profil». */
+.content.modus-split .profile-section {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 90px;
+  overflow: hidden;
+}
+.content.modus-split .profile-canvas-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
 /* Visningsmodus «Bare profil»: skjul kartet og la profilen fylle flaten.
    Kartverktøylinja beholdes som en tynn stripe med KUN visningsmodus-vekseren,
    så man fortsatt kan bytte tilbake til kart/delt. */

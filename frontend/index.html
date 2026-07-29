@@ -192,6 +192,9 @@
         </div>
       </div>
 
+      <!-- Dragbar delelinje mellom kart og høydeprofil (kun i delt visning) -->
+      <div id="profil-gutter" class="profil-gutter" title="Dra for å endre hvor mye plass kartet og høydeprofilen får"></div>
+
       <!-- Høydeprofil (kan slås av/på fra topplinja) -->
       <section id="profile-section" class="profile-section hidden">
         <div class="profile-toolbar">
@@ -204,11 +207,6 @@
               <button id="btn-elevation-source" class="btn btn-small"
                       title="Bytt mellom GPX-filas egne høyder og terrenghøyder fra Kartverkets terrengmodell (krever internett)">
                 &#9968; Høyder: GPX-fila</button>
-              <label class="profile-control" title="Hvor mye høyden overdrives i forhold til distansen (1× = naturtro)">
-                Høydeskala
-                <input type="range" id="profile-exagg" min="1" max="20" value="5">
-                <span id="profile-exagg-val" class="pos-label-short">5×</span>
-              </label>
               <label class="profile-control" title="Utjevning av høydeprofilen — påvirker også beregnede høydemeter. Anbefalt: 5.">
                 Utjevning
                 <input type="range" id="profile-smooth" min="0" max="50" value="5">
@@ -543,6 +541,19 @@
       <div class="button-row">
         <button value="ok" id="publish-go" class="btn btn-primary">Publiser</button>
         <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog: slette et delt punkt / en delt kontakt (to måter) -->
+  <dialog id="slett-delt-dialog">
+    <form method="dialog">
+      <h3 id="slett-delt-tittel">Slette</h3>
+      <p id="slett-delt-tekst" class="muted"></p>
+      <div class="button-row slett-delt-valg">
+        <button value="bare" id="slett-delt-bare" class="btn btn-primary"></button>
+        <button value="alle" id="slett-delt-alle" class="btn btn-danger-subtle"></button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
       </div>
     </form>
   </dialog>

@@ -80,13 +80,38 @@ def oppdater_kontakt(bib_id: str, kontakt: ArenaContact) -> DeltKontakt:
     return delt
 
 
-def slett_kontakt(bib_id: str) -> None:
-    """Fjern en delt kontakt. Arenakartene beholder sine lokale kopier."""
+def slett_kontakt(bib_id: str, fjern_bruk: bool = False) -> None:
+    """Fjern en delt kontakt fra biblioteket.
+
+    Som standard beholder arenakartene sine lokale kopier (bare `bib_id`
+    fjernes ved neste åpning). Med `fjern_bruk=True` fjernes kontakten også
+    fra alle arenakart som bruker den.
+    """
     kontakter = les_bibliotek()
     gjenstår = [k for k in kontakter if k.id != bib_id]
     if len(gjenstår) == len(kontakter):
         raise FileNotFoundError("Fant ikke delt kontakt med id {}".format(bib_id))
+    if fjern_bruk:
+        _fjern_fra_alle_arenakart(bib_id)
     _skriv_bibliotek(gjenstår)
+
+
+def _fjern_fra_alle_arenakart(bib_id: str) -> None:
+    """Fjern kontakten (og referanser til den) fra hvert arenakart som bruker den."""
+    from . import arena_lagring  # unngå sirkulær import på modulnivå
+
+    for sammendrag in arena_lagring.list_arenaer():
+        detail = arena_lagring.hent_arena(sammendrag.id)
+        treff = [k for k in detail.kontakter if k.bib_id == bib_id]
+        if not treff:
+            continue
+        fjernede = {k.id for k in treff}
+        detail.kontakter = [k for k in detail.kontakter if k.bib_id != bib_id]
+        # Rydd bort referanser fra stedene (ArenaFeature.kontakt_ids)
+        for f in detail.features:
+            if f.kontakt_ids:
+                f.kontakt_ids = [i for i in f.kontakt_ids if i not in fjernede]
+        arena_lagring._skriv(detail)
 
 
 def flett_inn(kontakter: List[ArenaContact]) -> List[ArenaContact]:

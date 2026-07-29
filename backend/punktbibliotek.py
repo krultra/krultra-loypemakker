@@ -86,13 +86,31 @@ def oppdater_punkt(bib_id: str, punkt: Waypoint) -> DeltPunkt:
     return delt
 
 
-def slett_punkt(bib_id: str) -> None:
-    """Fjern et delt punkt. Segmentene beholder sine lokale kopier."""
+def slett_punkt(bib_id: str, fjern_bruk: bool = False) -> None:
+    """Fjern et delt punkt fra biblioteket.
+
+    Som standard beholder segmentene sine lokale kopier (bare `bib_id`
+    fjernes ved neste åpning). Med `fjern_bruk=True` fjernes punktet også
+    fra alle segmenter som bruker det.
+    """
     punkter = les_bibliotek()
     gjenstår = [p for p in punkter if p.id != bib_id]
     if len(gjenstår) == len(punkter):
         raise FileNotFoundError("Fant ikke delt punkt med id {}".format(bib_id))
+    if fjern_bruk:
+        _fjern_fra_alle_segmenter(bib_id)
     _skriv_bibliotek(gjenstår)
+
+
+def _fjern_fra_alle_segmenter(bib_id: str) -> None:
+    """Fjern alle veipunkt med denne `bib_id` fra hvert segment som bruker det."""
+    from . import storage  # unngå sirkulær import på modulnivå
+
+    for sammendrag in storage.list_segments():
+        detail = storage.load_segment(sammendrag.id)
+        beholdt = [w for w in detail.waypoints if w.bib_id != bib_id]
+        if len(beholdt) != len(detail.waypoints):
+            storage.update_segment_waypoints(sammendrag.id, beholdt)
 
 
 def flett_inn(waypoints: List[Waypoint]) -> List[Waypoint]:
