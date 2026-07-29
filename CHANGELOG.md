@@ -17,6 +17,28 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.12.0 — 29. juli 2026
+
+Opprydding i punkt- og kontaktbiblioteket.
+
+- **Rettet filtreringen:** filteret er nå et **ELLER** — et punkt/en kontakt
+  vises hvis den brukes i minst ett av de avkryssede kartene, eller i et kart
+  som ligger i en av de avkryssede gruppene. Før måtte begge deler stemme, så
+  lista ble tom hvis du fjernet alle gruppene selv om alle løypene var med.
+- **Én samlet filtermeny** («Filtrering») i stedet for to: gruppene i én bolk
+  øverst, løypene/arenakartene i én bolk under.
+- **Ny delt kontakt** kan opprettes rett fra kontaktbiblioteket med **«+ Ny»**,
+  uten å knytte den til et arenakart først.
+- **Kompakte lister:** antallet står nå i parentes bak navnet — «Guddingsvika
+  (4)» — i stedet for en egen «Brukes i …»-linje (full liste i tooltip og i
+  «Endre»-dialogen). Knappen heter **«Endre»**, og punktikonene er tatt bort
+  for å spare plass.
+- **Kontaktkortene** viser tittel på første linje i full bredde, og navn med
+  knappene på neste. Ingen bindestrek mellom tittel og navn.
+- **Sortering:** punktlista er alltid alfabetisk; for kontaktlista velger du
+  selv mellom **tittel** (standard) og **navn**.
+- Punktbiblioteket og arenakartbiblioteket har byttet plass i venstre stolpe.
+
 ## 2.11.0 — 29. juli 2026
 
 **Delte kontakter** (fase 2) og videre opprydding i venstre stolpe.

@@ -66,6 +66,22 @@
         </div>
       </section>
 
+      <section class="library kollapset" id="library-punkt">
+        <div class="library-header">
+          <button class="library-toggle" data-lib="library-punkt" title="Vis/skjul">
+            <span class="lib-chevron">▼</span><h2>🔗 Punktbibliotek</h2>
+          </button>
+        </div>
+        <div class="library-body">
+          <p class="muted library-hint">Delte interessepunkter som gjenbrukes på tvers av løyper. Tallet i parentes er antall segmenter punktet brukes i.</p>
+          <div class="bib-filter">
+            <details class="filter-blokk" id="wpt-filter"></details>
+          </div>
+          <p id="wpt-lib-empty" class="muted hidden"></p>
+          <div id="wpt-sidebar-list" class="wpt-lib-list"></div>
+        </div>
+      </section>
+
       <section class="library kollapset" id="library-arena">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-arena" title="Vis/skjul">
@@ -82,34 +98,24 @@
         </div>
       </section>
 
-      <section class="library kollapset" id="library-punkt">
-        <div class="library-header">
-          <button class="library-toggle" data-lib="library-punkt" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>🔗 Punktbibliotek</h2>
-          </button>
-        </div>
-        <div class="library-body">
-          <p class="muted library-hint">Delte interessepunkter som gjenbrukes på tvers av løyper. Endringer slår inn i alle løyper ved neste åpning.</p>
-          <div class="bib-filter">
-            <details class="filter-blokk" id="wpt-filter-grupper"></details>
-            <details class="filter-blokk" id="wpt-filter-loyper"></details>
-          </div>
-          <p id="wpt-lib-empty" class="muted hidden"></p>
-          <div id="wpt-sidebar-list" class="wpt-lib-list"></div>
-        </div>
-      </section>
-
       <section class="library kollapset" id="library-kontakt">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-kontakt" title="Vis/skjul">
             <span class="lib-chevron">▼</span><h2>👤 Kontaktbibliotek</h2>
           </button>
+          <button id="btn-ny-kontakt" class="btn btn-small"
+                  title="Opprett en ny delt kontakt (kobles ikke til noe arenakart ennå)">+ Ny</button>
         </div>
         <div class="library-body">
-          <p class="muted library-hint">Delte kontakter som gjenbrukes på tvers av arenakart. Endringer slår inn i alle arenakart ved neste åpning.</p>
+          <p class="muted library-hint">Delte kontakter som gjenbrukes på tvers av arenakart. Tallet i parentes er antall arenakart kontakten brukes i.</p>
           <div class="bib-filter">
-            <details class="filter-blokk" id="kontakt-filter-grupper"></details>
-            <details class="filter-blokk" id="kontakt-filter-arenaer"></details>
+            <details class="filter-blokk" id="kontakt-filter"></details>
+            <label class="bib-sortering">Sorter etter
+              <select id="kontakt-sortering">
+                <option value="tittel">Tittel</option>
+                <option value="navn">Navn</option>
+              </select>
+            </label>
           </div>
           <p id="kontakt-lib-empty" class="muted hidden"></p>
           <div id="kontakt-sidebar-list" class="wpt-lib-list"></div>

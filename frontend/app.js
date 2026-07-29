@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.11.0';
+const APP_VERSJON = '2.12.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -2276,17 +2276,19 @@ document.getElementById('btn-pick-shared').addEventListener('click', velgDeltePu
 // Delte bibliotek i venstre stolpe (punkter og kontakter)
 // ============================================================
 // Punkt- og kontaktbiblioteket oppfører seg likt: en liste med delte elementer
-// som viser HVOR MANGE kart de brukes i, og to avkryssingsfiltre — «Grupper»
-// (gruppene i segment-/arenakartbiblioteket) og enkeltkartene selv.
-// lagDeltBibliotek() lager én slik kontroller; cfg sier hvor den bor og hva
-// den henter. Filtrene er sett med valgte navn; null = «alle» (ingen filtrering).
+// der antallet kart de brukes i står i parentes, og ÉN samlet filtermeny med
+// to bolker — gruppene (fra segment-/arenakartbiblioteket) øverst og de
+// enkelte kartene under. Filteret er et ELLER: et element vises hvis det
+// brukes i minst ett av de avkryssede kartene, eller i et kart som ligger i
+// en av de avkryssede gruppene. lagDeltBibliotek() lager én slik kontroller.
 
 function lagDeltBibliotek(cfg) {
   const ktrl = {
     cfg,
     elementer: [],
-    bruk: {},          // {id: [kartnavn]}
-    valgte: { gruppe: null, enhet: null }, // null = alle
+    bruk: {},            // {id: [kartnavn]}
+    valgtFilter: null,   // Set med «g:<gruppe>»/«e:<kart>», null = alt (ingen filtrering)
+    sortering: cfg.sorteringer ? cfg.sorteringer[0].verdi : null,
 
     async oppdater() {
       try {
@@ -2297,7 +2299,7 @@ function lagDeltBibliotek(cfg) {
         toast(feil.message, 'error');
         return;
       }
-      ktrl.byggFiltre();
+      ktrl.byggFilter();
       ktrl.tegn();
     },
 
@@ -2314,29 +2316,30 @@ function lagDeltBibliotek(cfg) {
       return kart;
     },
 
-    byggFiltre() {
+    byggFilter() {
       const grupper = Object.keys(cfg.kartBibliotek().data.groups || {})
         .sort((a, b) => a.localeCompare(b, 'no'));
       const enheter = [...new Set(Object.values(ktrl.bruk).flat())]
         .sort((a, b) => a.localeCompare(b, 'no'));
-      byggFilterListe(cfg.gruppeFilterId, grupper, ktrl.valgte.gruppe,
-        cfg.gruppeEtikett, (valgt) => { ktrl.valgte.gruppe = valgt; ktrl.tegn(); });
-      byggFilterListe(cfg.enhetFilterId, enheter, ktrl.valgte.enhet,
-        cfg.enhetEtikett, (valgt) => { ktrl.valgte.enhet = valgt; ktrl.tegn(); });
+      byggFiltermeny(cfg.filterId, [
+        { etikett: 'Grupper', prefiks: 'g', verdier: grupper },
+        { etikett: cfg.enhetEtikett, prefiks: 'e', verdier: enheter },
+      ], ktrl.valgtFilter, (valgt) => { ktrl.valgtFilter = valgt; ktrl.tegn(); });
     },
 
-    /** Passerer elementet begge filtrene? «Alle valgt» = ingen filtrering, så
-     *  elementer som ikke er i bruk noe sted vises da også. */
+    /**
+     * Passerer elementet filteret? Alt avkrysset (valgtFilter === null) betyr
+     * ingen filtrering — da vises også elementer som ikke er i bruk noe sted.
+     * Ellers holder det at elementet brukes i ETT avkrysset kart, eller i et
+     * kart som ligger i en avkrysset gruppe (ELLER, ikke OG).
+     */
     passerer(el) {
+      if (!ktrl.valgtFilter) return true;
       const bruktI = ktrl.bruk[el.id] || [];
-      const g = ktrl.valgte.gruppe;
-      const e = ktrl.valgte.enhet;
-      if (e && !bruktI.some((navn) => e.has(navn))) return false;
-      if (g) {
-        const gruppeFor = ktrl.gruppeForKart();
-        if (!bruktI.some((navn) => g.has(gruppeFor[navn]))) return false;
-      }
-      return true;
+      const gruppeFor = ktrl.gruppeForKart();
+      return bruktI.some((navn) =>
+        ktrl.valgtFilter.has('e:' + navn) ||
+        ktrl.valgtFilter.has('g:' + gruppeFor[navn]));
     },
 
     tegn() {
@@ -2355,38 +2358,40 @@ function lagDeltBibliotek(cfg) {
         tom.classList.remove('hidden');
         return;
       }
+      // Stigende alfabetisk på valgt sorteringsnøkkel
+      const nøkkel = cfg.sorteringsnøkkel(ktrl.sortering);
+      synlige.sort((a, b) => String(nøkkel(a) || '')
+        .localeCompare(String(nøkkel(b) || ''), 'no', { sensitivity: 'base' }));
       tom.classList.add('hidden');
       for (const el of synlige) liste.appendChild(ktrl.lagRad(el));
     },
 
+    /** Én rad: navn (med antall i parentes) på første linje, undertittel og
+     *  knappene på neste — kortet bruker full bredde. */
     lagRad(el) {
       const bruktI = ktrl.bruk[el.id] || [];
       const rad = document.createElement('div');
       rad.className = 'wpt-lib-rad';
-      const info = document.createElement('span');
-      info.className = 'wpt-lib-info';
-      const navn = document.createElement('span');
-      navn.className = 'wpt-lib-navn';
-      navn.textContent = cfg.navnFor(el);
-      const bruk = document.createElement('span');
-      bruk.className = 'muted wpt-lib-bruk';
-      bruk.textContent = bruktI.length
-        ? 'Brukes i ' + bruktI.length + ' ' + cfg.enhetOrd(bruktI.length)
-        : 'Ikke i bruk';
-      bruk.title = bruktI.length ? bruktI.join(', ') : '';
-      info.append(navn, bruk);
-      const symboler = cfg.symbolerFor ? cfg.symbolerFor(el) : null;
-      if (symboler) {
-        const s = document.createElement('span');
-        s.className = 'wpt-reuse-sym';
-        s.innerHTML = symboler;
-        rad.appendChild(s);
-      }
-      rad.appendChild(info);
-      rad.append(
-        lagKnapp('Vis/Endre', 'btn btn-small', () => ktrl.visEndre(el, bruktI)),
+
+      const topp = document.createElement('div');
+      topp.className = 'lib-rad-topp';
+      topp.textContent = cfg.navnFor(el) +
+        (bruktI.length ? ' (' + bruktI.length + ')' : '');
+      topp.title = bruktI.length
+        ? 'Brukes i: ' + bruktI.join(', ') : 'Ikke i bruk';
+
+      const bunn = document.createElement('div');
+      bunn.className = 'lib-rad-bunn';
+      const under = document.createElement('span');
+      under.className = 'muted lib-rad-under';
+      under.textContent = cfg.undertittelFor ? (cfg.undertittelFor(el) || '') : '';
+      bunn.append(
+        under,
+        lagKnapp('Endre', 'btn btn-small', () => ktrl.visEndre(el, bruktI)),
         lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => ktrl.slett(el)),
       );
+
+      rad.append(topp, bunn);
       return rad;
     },
 
@@ -2399,6 +2404,21 @@ function lagDeltBibliotek(cfg) {
           body: JSON.stringify(verdier),
         });
         toast(cfg.lagretTekst(verdier));
+        ktrl.oppdater();
+      } catch (feil) { toast(feil.message, 'error'); }
+    },
+
+    /** Opprett et nytt delt element rett i biblioteket (uten å koble det til
+     *  noe kart ennå). cfg.nytt() gir verdiene, eller null ved avbryt. */
+    async nytt() {
+      const verdier = await cfg.nytt();
+      if (!verdier) return;
+      try {
+        await api(cfg.endepunkt, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(verdier),
+        });
+        toast(cfg.opprettetTekst(verdier));
         ktrl.oppdater();
       } catch (feil) { toast(feil.message, 'error'); }
     },
@@ -2416,25 +2436,31 @@ function lagDeltBibliotek(cfg) {
 }
 
 /**
- * Bygg en avkryssingsliste for et filter: «Velg/fjern alle» øverst, så én
- * rad per verdi. `valgt` er et Set (eller null = alle). Kaller `onEndret` med
- * nytt Set — eller null når ALT er avkrysset (da filtreres det ikke).
+ * Bygg den samlede filtermenyen: «Velg / fjern alle» øverst, så én bolk per
+ * kategori (grupper, deretter kartene). Verdiene lagres med prefiks («g:»/«e:»)
+ * så et gruppenavn og et kartnavn kan være like uten å kollidere.
+ * `valgt` er et Set med prefiksede verdier, eller null = alt valgt.
+ * `onEndret` får nytt Set — eller null når ALT er avkrysset (ingen filtrering).
  */
-function byggFilterListe(beholderId, verdier, valgt, etikett, onEndret) {
+function byggFiltermeny(beholderId, bolker, valgt, onEndret) {
   const boks = document.getElementById(beholderId);
   if (!boks) return;
   boks.innerHTML = '';
+  const alleNøkler = [];
+  for (const b of bolker) for (const v of b.verdier) alleNøkler.push(b.prefiks + ':' + v);
   // Behold bare valg som fortsatt finnes (grupper/kart kan ha blitt slettet)
-  const gyldige = valgt ? new Set([...valgt].filter((v) => verdier.includes(v))) : null;
-  const alleValgt = !gyldige || gyldige.size === verdier.length;
-  const erValgt = (v) => alleValgt || gyldige.has(v);
+  const gyldige = valgt ? new Set([...valgt].filter((v) => alleNøkler.includes(v))) : null;
+  const alleValgt = !gyldige || gyldige.size === alleNøkler.length;
 
   const sammendrag = document.createElement('summary');
-  sammendrag.textContent = etikett + ': ' +
-    (alleValgt ? 'alle' : gyldige.size + ' av ' + verdier.length);
+  const settSammendrag = (antall) => {
+    sammendrag.textContent = 'Filtrering: ' +
+      (antall === alleNøkler.length ? 'alle' : antall + ' av ' + alleNøkler.length);
+  };
+  settSammendrag(alleValgt ? alleNøkler.length : gyldige.size);
   boks.appendChild(sammendrag);
 
-  if (verdier.length === 0) {
+  if (alleNøkler.length === 0) {
     const p = document.createElement('p');
     p.className = 'muted';
     p.textContent = 'Ingen å filtrere på ennå.';
@@ -2445,11 +2471,8 @@ function byggFilterListe(beholderId, verdier, valgt, etikett, onEndret) {
   const meld = () => {
     const nye = new Set([...boks.querySelectorAll('.filter-verdi:checked')]
       .map((b) => b.value));
-    const alle = nye.size === verdier.length;
-    // Hold sammendraget i overskrifta i takt med avkryssingene
-    sammendrag.textContent = etikett + ': ' +
-      (alle ? 'alle' : nye.size + ' av ' + verdier.length);
-    // «Velg alle»-boksen speiler om alt er krysset av
+    const alle = nye.size === alleNøkler.length;
+    settSammendrag(nye.size);
     alleBoks.checked = alle;
     onEndret(alle ? null : nye); // alle = ingen filtrering
   };
@@ -2466,17 +2489,25 @@ function byggFilterListe(beholderId, verdier, valgt, etikett, onEndret) {
   alleRad.append(alleBoks, document.createTextNode('Velg / fjern alle'));
   boks.appendChild(alleRad);
 
-  for (const v of verdier) {
-    const rad = document.createElement('label');
-    rad.className = 'filter-rad';
-    const b = document.createElement('input');
-    b.type = 'checkbox';
-    b.className = 'filter-verdi';
-    b.value = v;
-    b.checked = erValgt(v);
-    b.addEventListener('change', meld);
-    rad.append(b, document.createTextNode(v));
-    boks.appendChild(rad);
+  for (const bolk of bolker) {
+    if (!bolk.verdier.length) continue;
+    const tittel = document.createElement('div');
+    tittel.className = 'filter-bolk-tittel';
+    tittel.textContent = bolk.etikett;
+    boks.appendChild(tittel);
+    for (const v of bolk.verdier) {
+      const nøkkel = bolk.prefiks + ':' + v;
+      const rad = document.createElement('label');
+      rad.className = 'filter-rad';
+      const b = document.createElement('input');
+      b.type = 'checkbox';
+      b.className = 'filter-verdi';
+      b.value = nøkkel;
+      b.checked = alleValgt || gyldige.has(nøkkel);
+      b.addEventListener('change', meld);
+      rad.append(b, document.createTextNode(v));
+      boks.appendChild(rad);
+    }
   }
 }
 
@@ -2505,14 +2536,12 @@ function fyllBrukListe(beholderId, bruktI, enhetOrd) {
 const punktBib = lagDeltBibliotek({
   endepunkt: '/api/waypoints', dataNøkkel: 'punkter',
   listeId: 'wpt-sidebar-list', tomId: 'wpt-lib-empty',
-  gruppeFilterId: 'wpt-filter-grupper', enhetFilterId: 'wpt-filter-loyper',
-  gruppeEtikett: 'Grupper', enhetEtikett: 'Løyper',
+  filterId: 'wpt-filter', enhetEtikett: 'Løyper',
   tomTekst: 'Ingen delte punkter ennå. Kryss av «Delt punkt» når du lager et interessepunkt.',
   kartBibliotek: () => segmentBib,
   kartNavn: (seg) => seg.name,
   navnFor: (p) => p.name,
-  symbolerFor: (p) => wptTyper(p).map((t) => symbolGlyphHtml(t, 14)).join(' '),
-  enhetOrd: (n) => (n === 1 ? 'segment' : 'segmenter'),
+  sorteringsnøkkel: () => (p) => p.name, // alltid alfabetisk på navn
   rediger: (p, bruktI) => redigerDeltPunkt(p, bruktI),
   lagretTekst: (v) => '«' + v.name + '» er oppdatert (slår inn i løypene ved neste åpning)',
   slettSpørsmål: (p) => 'Slette det delte punktet «' + p.name + '»? Løypene som ' +
@@ -2528,9 +2557,10 @@ window.oppdaterPunktbibliotek = oppdaterPunktbibliotek;
  * avkryssingen (den ER delt) og viser hvilke arenakart som bruker den.
  * Returnerer et ArenaContact-formet objekt, eller null ved avbryt.
  */
-async function redigerDeltKontakt(k, bruktI) {
+async function redigerDeltKontakt(k, bruktI, erNy) {
   const g = (felt) => document.getElementById('arena-kontakt-' + felt);
-  document.getElementById('arena-kontakt-title').textContent = 'Rediger delt kontakt';
+  document.getElementById('arena-kontakt-title').textContent =
+    erNy ? 'Ny delt kontakt' : 'Rediger delt kontakt';
   g('tittel').value = k.tittel || '';
   g('navn').value = k.navn || '';
   g('telefon').value = k.telefon || '';
@@ -2542,8 +2572,9 @@ async function redigerDeltKontakt(k, bruktI) {
   g('tittel-en').value = kEn.tittel || '';
   g('beskr-en').value = kEn.beskrivelse || '';
   document.getElementById('arena-kontakt-del-bib-rad').classList.add('hidden');
-  fyllBrukListe('arena-kontakt-bruk', bruktI || [],
-    (n) => (n === 1 ? 'arenakart' : 'arenakart'));
+  // Ny kontakt er ikke i bruk noe sted ennå — da er brukslista bare støy
+  if (erNy) document.getElementById('arena-kontakt-bruk').innerHTML = '';
+  else fyllBrukListe('arena-kontakt-bruk', bruktI || [], () => 'arenakart');
 
   const dialog = document.getElementById('arena-kontakt-dialog');
   const løfte = ventPåDialog(dialog);
@@ -2553,7 +2584,8 @@ async function redigerDeltKontakt(k, bruktI) {
   document.getElementById('arena-kontakt-bruk').innerHTML = '';
   if (handling !== 'ok' || !g('tittel').value.trim()) return null;
   return {
-    id: k.id,
+    // Serveren tildeler ny id ved opprettelse; feltet er påkrevd i modellen
+    id: k.id || 'ny',
     tittel: g('tittel').value.trim(),
     navn: g('navn').value.trim() || null,
     telefon: g('telefon').value.trim() || null,
@@ -2571,14 +2603,21 @@ async function redigerDeltKontakt(k, bruktI) {
 const kontaktBib = lagDeltBibliotek({
   endepunkt: '/api/contacts', dataNøkkel: 'kontakter',
   listeId: 'kontakt-sidebar-list', tomId: 'kontakt-lib-empty',
-  gruppeFilterId: 'kontakt-filter-grupper', enhetFilterId: 'kontakt-filter-arenaer',
-  gruppeEtikett: 'Grupper', enhetEtikett: 'Arenakart',
-  tomTekst: 'Ingen delte kontakter ennå. Kryss av «Delt kontakt» når du lager en kontakt i et arenakart.',
+  filterId: 'kontakt-filter', enhetEtikett: 'Arenakart',
+  tomTekst: 'Ingen delte kontakter ennå. Lag en med «+ Ny», eller kryss av «Delt kontakt» på en kontakt i et arenakart.',
   kartBibliotek: () => arenaBib,
   kartNavn: (a) => a.navn,
-  navnFor: (k) => k.tittel + (k.navn ? ' — ' + k.navn : ''),
-  enhetOrd: () => 'arenakart',
+  navnFor: (k) => k.tittel,
+  undertittelFor: (k) => k.navn,
+  // Brukeren velger om lista sorteres på rolletittel (standard) eller navn
+  sorteringer: [
+    { verdi: 'tittel', tekst: 'Tittel' },
+    { verdi: 'navn', tekst: 'Navn' },
+  ],
+  sorteringsnøkkel: (valgt) => (k) => (valgt === 'navn' ? (k.navn || k.tittel) : k.tittel),
   rediger: (k, bruktI) => redigerDeltKontakt(k, bruktI),
+  nytt: () => redigerDeltKontakt({ id: null, tittel: '' }, [], true),
+  opprettetTekst: (v) => 'Den delte kontakten «' + v.tittel + '» er opprettet',
   lagretTekst: (v) => '«' + v.tittel + '» er oppdatert (slår inn i arenakartene ved neste åpning)',
   slettSpørsmål: (k) => 'Slette den delte kontakten «' + k.tittel + '»? Arenakartene ' +
     'som bruker den beholder egne, frittstående kopier.',
@@ -2586,6 +2625,12 @@ const kontaktBib = lagDeltBibliotek({
 
 async function oppdaterKontaktbibliotek() { await kontaktBib.oppdater(); }
 window.oppdaterKontaktbibliotek = oppdaterKontaktbibliotek;
+
+document.getElementById('btn-ny-kontakt').addEventListener('click', () => kontaktBib.nytt());
+document.getElementById('kontakt-sortering').addEventListener('change', (e) => {
+  kontaktBib.sortering = e.target.value;
+  kontaktBib.tegn();
+});
 
 /** Aktiver/deaktiver punktknappene ut fra om løypa er lagret. */
 function oppdaterWptKnapp() {

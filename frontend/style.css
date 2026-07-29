@@ -323,16 +323,21 @@ body { display: flex; flex-direction: column; }
   display: flex; flex-direction: column; gap: 6px;
   margin-bottom: 4px;
 }
+/* Rad i punkt-/kontaktbiblioteket: navn (med antall i parentes) på første
+   linje i full bredde, undertittel og knapper på neste. */
 .wpt-lib-rad {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex; flex-direction: column; gap: 4px;
   padding: 7px 10px;
   border: 1px solid var(--kant);
   border-radius: 8px;
   font-size: 13px;
 }
-.wpt-lib-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.wpt-lib-navn { font-weight: 600; }
-.wpt-lib-bruk { font-size: 12px; }
+.lib-rad-topp { font-weight: 600; word-break: break-word; }
+.lib-rad-bunn { display: flex; align-items: center; gap: 6px; }
+.lib-rad-under {
+  flex: 1; min-width: 0; font-size: 12px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 
 /* Mens man drar opp eksport-utsnitt på kartet */
 #map.velger-utsnitt { cursor: crosshair !important; }
@@ -429,6 +434,23 @@ dialog select {
   border-bottom: 1px solid var(--kant);
   margin-bottom: 3px; padding-bottom: 4px;
   font-weight: 600;
+}
+/* Bolkeoverskrift i filtermenyen («Grupper», «Løyper»/«Arenakart») */
+.filter-bolk-tittel {
+  margin: 6px 0 2px;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--tekst-dus);
+}
+
+/* Sorteringsvelger i kontaktbiblioteket */
+.bib-sortering {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--tekst-dus);
+}
+.bib-sortering select {
+  flex: 1; min-width: 0; font-size: 12px; padding: 3px 6px;
+  border: 1px solid var(--kant); border-radius: 6px;
 }
 
 /* «Brukes i …»-liste nederst i redigeringsdialogene */
