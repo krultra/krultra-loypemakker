@@ -162,15 +162,78 @@ body { display: flex; flex-direction: column; }
 
 .toolbar-divider { width: 1px; height: 20px; background: var(--kant); }
 
-/* Gruppering av innstillinger som hører sammen (f.eks. Utjevning+Vektform) */
-.profile-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 2px 8px;
+/* Flytende hjelpekort for «Slå sammen segmenter». Ligger oppå kartet, kan
+   dras dit det ikke er i veien, og lukkes helt («? Hjelp» henter det fram). */
+.merge-hjelp {
+  position: fixed;
+  z-index: 900;
+  width: 340px; max-width: 90vw;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: 10px;
+  box-shadow: 0 8px 26px rgba(15, 23, 42, 0.18);
+  font-size: 13px;
+}
+.merge-hjelp-topp {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--kant);
+  background: #f8fafc;
+  border-radius: 10px 10px 0 0;
+  cursor: move;
+  user-select: none;
+}
+.merge-hjelp-lukk {
+  border: none; background: none; cursor: pointer;
+  font-size: 18px; line-height: 1; padding: 0 4px;
+  color: var(--tekst-dus); border-radius: 4px;
+}
+.merge-hjelp-lukk:hover { background: #e2e8f0; color: var(--tekst); }
+.merge-hjelp-steg { margin: 0; padding: 10px 12px 12px 30px; }
+.merge-hjelp-steg li { margin-bottom: 7px; line-height: 1.4; }
+.merge-hjelp-steg li:last-child { margin-bottom: 0; }
+.merge-verktoy { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+
+/* Gruppering av beslektede kontroller i verktøylinjene (Kartvisning,
+   Utseende, Lagre bilde …). Tittelen står inne i ramma til venstre. */
+.tb-gruppe {
+  display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 3px 10px;
   border: 1px solid var(--kant);
   border-radius: 8px;
   background: #f8fafc;
+}
+.tb-tittel {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--tekst-dus);
+}
+/* Underoverskrift inne i en gruppe (f.eks. «Løype», «Punkter») */
+.tb-under {
+  font-size: 11px; font-weight: 600;
+  color: var(--tekst-dus);
+  padding-left: 6px;
+  border-left: 1px solid var(--kant);
+}
+
+/* Sammenleggbar gruppe i verktøylinja (f.eks. «Høydedata») */
+.tb-detaljer {
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.tb-detaljer > summary {
+  cursor: pointer;
+  padding: 4px 10px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  color: var(--tekst-dus);
+  list-style-position: inside;
+}
+.tb-detaljer[open] > summary { border-bottom: 1px solid var(--kant); }
+.tb-detaljer-innhold {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 6px 10px;
 }
 
 /* Liten rund (i)-knapp for forklaringer */
@@ -335,7 +398,9 @@ body { display: flex; flex-direction: column; }
 .lib-linje-navn {
   flex: 1; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  cursor: pointer;
 }
+.lib-linje-navn:hover { color: var(--farge-primær); }
 
 /* «…»-menyen på en listelinje */
 .rad-meny { position: relative; flex-shrink: 0; }
@@ -620,6 +685,8 @@ dialog select {
 
 .button-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .button-row.actions { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--kant); }
+/* Slett-knappen i dialoger skyves helt til høyre, adskilt fra Lagre/Avbryt */
+dialog .button-row > .btn-danger-subtle:last-child { margin-left: auto; }
 
 .selection-label { font-size: 13px; color: var(--farge-utsnitt); font-weight: 600; }
 

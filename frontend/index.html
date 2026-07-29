@@ -127,8 +127,8 @@
     <main class="content">
       <!-- Kartverktøylinje: visningstype og PNG-eksport av kartet -->
       <div class="map-toolbar">
-        <label class="profile-control" title="Hvilket kartunderlag som vises — eller «Skjul kart» for å jobbe uten kartlaget fra Kartverket (f.eks. uten internett)">
-          Kartvisning
+        <span class="tb-gruppe" title="Hvilket kartunderlag som vises — eller «Skjul kart» for å jobbe uten kartlaget fra Kartverket (f.eks. uten internett)">
+          <span class="tb-tittel">Kartvisning</span>
           <select id="map-layer-select">
             <option value="topo">Topografisk (Kartverket)</option>
             <option value="topograatone">Gråtone (Kartverket)</option>
@@ -137,38 +137,45 @@
             <option value="satellitt">Satellittbilde (Esri)</option>
             <option value="__skjul__">Skjul kart</option>
           </select>
-        </label>
-        <span class="toolbar-divider"></span>
-        <label class="profile-control" title="Fargen på rutestreken i PNG-eksporten">
-          Rutefarge <input type="color" id="map-track-color" value="#dc2626">
-        </label>
-        <label class="profile-control" title="Tykkelsen på rutestreken i PNG-eksporten">
-          Tykkelse
-          <input type="range" id="map-track-width" min="1" max="12" value="4">
-          <span id="map-track-width-val" class="pos-label-short">4</span>
-        </label>
-        <span class="toolbar-divider"></span>
-        <button id="btn-toggle-wpt" class="btn btn-small active"
-                title="Vis eller skjul interessepunktene på kartet">&#128205; Punkter</button>
-        <label class="profile-control" title="Fargen på streken fra ikon til løypepunkt på kartet (høydeprofilen har sin egen fargevelger)">
-          Punktstrek <input type="color" id="wpt-line-color" value="#334155">
-        </label>
-        <label class="profile-control" title="Tykkelsen på streken fra ikon til løypepunkt">
-          <input type="range" id="wpt-line-width" min="1" max="10" value="2">
-          <span id="wpt-line-width-val" class="pos-label-short">2</span>
-        </label>
-        <label class="profile-control" title="Skaler symbolene opp/ned (50–200 %) i forhold til standardstørrelsen">
-          Ikonstr.
-          <input type="range" id="wpt-size" min="50" max="200" step="10" value="100">
-          <span id="wpt-size-val" class="pos-label-short">100%</span>
-        </label>
-        <span class="toolbar-divider"></span>
-        <button id="btn-select-crop" class="btn btn-small"
-                title="Dra opp et rektangel på kartet — bare det området havner i PNG-fila">
-          &#9633; Velg utsnitt</button>
-        <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
-        <button id="btn-export-map" class="btn btn-small btn-primary"
-                title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
+        </span>
+
+        <span class="tb-gruppe">
+          <span class="tb-tittel">Utseende</span>
+          <span class="tb-under">Løype</span>
+          <label class="profile-control" title="Fargen på løypestreken på kartet og i PNG-eksporten">
+            <input type="color" id="map-track-color" value="#dc2626">
+          </label>
+          <label class="profile-control" title="Tykkelsen på løypestreken">
+            <input type="range" id="map-track-width" min="1" max="12" value="4">
+            <span id="map-track-width-val" class="pos-label-short">4</span>
+          </label>
+          <span class="tb-under">Punkter</span>
+          <button id="btn-toggle-wpt" class="btn btn-small active"
+                  title="Vis eller skjul interessepunktene på kartet">&#128205; Vis</button>
+          <label class="profile-control" title="Fargen på streken fra ikon til løypepunkt på kartet (høydeprofilen har sin egen fargevelger)">
+            Strek <input type="color" id="wpt-line-color" value="#334155">
+          </label>
+          <label class="profile-control" title="Tykkelsen på streken fra ikon til løypepunkt">
+            <input type="range" id="wpt-line-width" min="1" max="10" value="2">
+            <span id="wpt-line-width-val" class="pos-label-short">2</span>
+          </label>
+          <label class="profile-control" title="Skaler symbolene opp/ned (50–200 %) i forhold til standardstørrelsen">
+            Str.
+            <input type="range" id="wpt-size" min="50" max="200" step="10" value="100">
+            <span id="wpt-size-val" class="pos-label-short">100%</span>
+          </label>
+        </span>
+
+        <span class="tb-gruppe">
+          <span class="tb-tittel">Lagre bilde</span>
+          <button id="btn-select-crop" class="btn btn-small"
+                  title="Dra opp et rektangel på kartet — bare det området havner i PNG-fila">
+            &#9633; Velg utsnitt</button>
+          <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
+          <button id="btn-export-map" class="btn btn-small btn-primary"
+                  title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
+        </span>
+
         <span class="viewmode-wrap" title="Velg om flaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
           <span class="viewmode-label">Visning:</span>
           <span class="viewmode">
@@ -190,11 +197,34 @@
         <div class="profile-toolbar">
           <strong>Høydeprofil</strong>
           <span id="profile-source" class="muted"></span>
-          <label class="profile-control" title="Hvor mye høyden overdrives i forhold til distansen (1× = naturtro)">
-            Høydeskala
-            <input type="range" id="profile-exagg" min="1" max="20" value="5">
-            <span id="profile-exagg-val" class="pos-label-short">5×</span>
-          </label>
+
+          <details class="tb-detaljer" id="hoydedata-gruppe">
+            <summary title="Høydekilde og hvordan høydene skaleres og jevnes ut. Standardverdiene (5/5) er anbefalt.">Høydedata</summary>
+            <div class="tb-detaljer-innhold">
+              <button id="btn-elevation-source" class="btn btn-small"
+                      title="Bytt mellom GPX-filas egne høyder og terrenghøyder fra Kartverkets terrengmodell (krever internett)">
+                &#9968; Høyder: GPX-fila</button>
+              <label class="profile-control" title="Hvor mye høyden overdrives i forhold til distansen (1× = naturtro)">
+                Høydeskala
+                <input type="range" id="profile-exagg" min="1" max="20" value="5">
+                <span id="profile-exagg-val" class="pos-label-short">5×</span>
+              </label>
+              <label class="profile-control" title="Utjevning av høydeprofilen — påvirker også beregnede høydemeter. Anbefalt: 5.">
+                Utjevning
+                <input type="range" id="profile-smooth" min="0" max="50" value="5">
+                <span id="profile-smooth-val" class="pos-label-short">±5</span>
+              </label>
+              <label class="profile-control" title="Formen på utjevningsvekten. Anbefalt: 5.">
+                Vektform
+                <input type="range" id="profile-shape" min="1" max="10" value="5">
+                <span id="profile-shape-val" class="pos-label-short">5</span>
+              </label>
+              <button type="button" id="smooth-info-btn" class="info-btn"
+                      title="Hva gjør Utjevning og Vektform — og hvorfor 5/5 er anbefalt">i</button>
+            </div>
+          </details>
+
+          <span class="tb-tittel">Utseende</span>
           <label class="profile-control" title="Fargen på selve profillinja">
             Linje <input type="color" id="profile-line-color" value="#0f172a">
           </label>
@@ -226,20 +256,6 @@
             <input type="checkbox" id="profile-marker-on" checked> Markør
             <input type="color" id="profile-marker-color" value="#2563eb">
           </label>
-          <span class="profile-group" title="Utjevning av høydeprofilen — påvirker også beregnede høydemeter. Anbefalt: 5/5. Klikk (i) for forklaring.">
-            <label class="profile-control">
-              Utjevning
-              <input type="range" id="profile-smooth" min="0" max="50" value="5">
-              <span id="profile-smooth-val" class="pos-label-short">±5</span>
-            </label>
-            <label class="profile-control">
-              Vektform
-              <input type="range" id="profile-shape" min="1" max="10" value="5">
-              <span id="profile-shape-val" class="pos-label-short">5</span>
-            </label>
-            <button type="button" id="smooth-info-btn" class="info-btn"
-                    title="Hva gjør Utjevning og Vektform — og hvorfor 5/5 er anbefalt">i</button>
-          </span>
           <label class="profile-control"
                  title="Vis interessepunktenes navn under x-aksen (med loddrett strek opp til punktet).">
             <input type="checkbox" id="profile-wpt-names"> Punktnavn
@@ -276,9 +292,6 @@
             <button id="btn-mark-start" class="btn btn-green">&#9873; Sett start her</button>
             <button id="btn-mark-end" class="btn btn-red">&#9873; Sett slutt her</button>
             <button id="btn-clear-marks" class="btn">Fjern merker</button>
-            <button id="btn-elevation-source" class="btn"
-                    title="Bytt mellom GPX-filas egne høyder og terrenghøyder fra Kartverkets terrengmodell (krever internett)">
-              &#9968; Høyder: GPX-fila</button>
             <button id="btn-add-wpt" class="btn"
                     title="Legg til et interessepunkt (mat, drikke, sjekkpunkt …) der markøren står">
               &#128205; Sett punkt her</button>
@@ -304,8 +317,29 @@
         </p>
       </section>
 
+      <!-- Flytende hjelpekort for sammenslåing (kan dras og lukkes) -->
+      <div id="merge-hjelp" class="merge-hjelp hidden">
+        <div class="merge-hjelp-topp" id="merge-hjelp-drahandtak" title="Dra for å flytte">
+          <strong>Slik slår du sammen</strong>
+          <button type="button" id="merge-hjelp-lukk" class="merge-hjelp-lukk" title="Lukk (hentes fram igjen med «?»)">&times;</button>
+        </div>
+        <ol class="merge-hjelp-steg">
+          <li>Velg <strong>første del</strong>: klikk <strong>A</strong> på et segment i segmentbiblioteket.</li>
+          <li>Velg <strong>siste del</strong>: klikk <strong>B</strong> på et annet segment.</li>
+          <li>Dra skyvekontrollen i <strong>A</strong> dit du vil dele, og klikk
+            <strong>«Sett delingspunkt her»</strong>. Alt <em>før</em> punktet beholdes.</li>
+          <li>Gjør det samme i <strong>B</strong>. Alt <em>etter</em> punktet beholdes.
+            Knappen <strong>«Nærmest …»</strong> finner nærmeste punkt på det andre sporet.</li>
+          <li>Klikk <strong>«Slå sammen»</strong>, og lagre resultatet som nytt segment eller GPX.</li>
+        </ol>
+      </div>
+
       <!-- Kontrollpanel: Slå sammen -->
       <section id="merge-panel" class="panel hidden">
+        <div class="merge-verktoy">
+          <button type="button" id="merge-hjelp-vis" class="btn btn-small"
+                  title="Vis hjelpekortet med stegene for sammenslåing">? Hjelp</button>
+        </div>
         <div class="merge-grid">
 
           <div class="merge-card" id="merge-card-a">
@@ -593,8 +627,8 @@
         <button value="ok" class="btn btn-primary">Lagre</button>
         <button value="move" id="wpt-move-btn" class="btn hidden"
                 title="Flytt punktet til der markøren på sporet står nå">Flytt til markøren</button>
-        <button value="delete" id="wpt-delete-btn" class="btn btn-danger-subtle hidden">Slett</button>
         <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+        <button value="delete" id="wpt-delete-btn" class="btn btn-danger-subtle hidden">Slett</button>
       </div>
     </form>
   </dialog>
@@ -811,6 +845,8 @@
       <div class="button-row">
         <button value="ok" class="btn btn-primary">Lagre</button>
         <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+        <button value="delete" id="arena-kontakt-delete" class="btn btn-danger-subtle hidden"
+                formnovalidate>Slett</button>
       </div>
     </form>
   </dialog>

@@ -17,6 +17,27 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.13.0 — 29. juli 2026
+
+Ryddigere verktøylinjer (fase 3) og enklere redigering fra bibliotekene.
+
+- **Kartmenyen er gruppert** i tre bolker: **Kartvisning**, **Utseende**
+  (Løype: farge og tykkelse · Punkter: vis/skjul, strek og størrelse) og
+  **Lagre bilde** (velg utsnitt, kart som PNG).
+- **Høydeprofilen er gruppert:** ny sammenleggbar **«Høydedata»**-meny samler
+  høydekilden (Kartverket/GPX-fila — flyttet hit fra knapperaden), høydeskala,
+  utjevning og vektform. Den er lukket som standard, så de anbefalte verdiene
+  (5/5) blir stående med mindre du bevisst åpner og endrer dem. Resten av
+  valgene ligger under **Utseende**.
+- **Hjelpekort for sammenslåing:** «Slå sammen segmenter» viser nå et flytende
+  kort med framgangsmåten steg for steg. Det kan **dras** dit det ikke skjuler
+  kartet og **lukkes** helt — knappen **«? Hjelp»** henter det fram igjen.
+  Både plassering og lukket-tilstand huskes.
+- **Klikk på en linje** i punkt- eller kontaktbiblioteket åpner nå redigeringen
+  direkte (som «Endre»).
+- **Slett-knapp i redigeringsdialogene** for delte punkter og kontakter, plassert
+  nederst til høyre.
+
 ## 2.12.1 — 29. juli 2026
 
 - **Mye mer kompakte lister** i punkt- og kontaktbiblioteket: én linje per

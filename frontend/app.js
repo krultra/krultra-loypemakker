@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.12.1';
+const APP_VERSJON = '2.13.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1958,9 +1958,11 @@ async function redigerDeltPunkt(p, bruktI) {
   const visIkonRad = document.getElementById('wpt-vis-ikon').closest('.wpt-vis-rad');
   const delBibRad = document.getElementById('wpt-del-bib').closest('.wpt-vis-rad');
   document.getElementById('wpt-dialog-title').textContent = 'Rediger delt punkt';
-  for (const id of ['wpt-reuse', 'wpt-shared-note', 'wpt-snap-rad', 'wpt-move-btn', 'wpt-delete-btn']) {
+  for (const id of ['wpt-reuse', 'wpt-shared-note', 'wpt-snap-rad', 'wpt-move-btn']) {
     document.getElementById(id).classList.add('hidden');
   }
+  // «Slett» fjerner punktet fra punktbiblioteket (kalleren håndterer det)
+  document.getElementById('wpt-delete-btn').classList.remove('hidden');
   visIkonRad.classList.add('hidden');
   delBibRad.classList.add('hidden');
   // Nederst: hvilke segmenter bruker dette delte punktet
@@ -1980,6 +1982,7 @@ async function redigerDeltPunkt(p, bruktI) {
   // Vis radene igjen så den vanlige interessepunkt-dialogen ikke arver skjult tilstand
   visIkonRad.classList.remove('hidden');
   delBibRad.classList.remove('hidden');
+  if (handling === 'delete') return { _slett: true };
   if (handling !== 'ok' || !document.getElementById('wpt-name').value.trim()) return null;
 
   let typer = [...document.getElementById('wpt-symbols').querySelectorAll('input:checked')]
@@ -2367,7 +2370,8 @@ function lagDeltBibliotek(cfg) {
     },
 
     /** Én kompakt linje: navn (med antall i parentes) og en «…»-meny med
-     *  Endre/Slett, så lista tar minst mulig plass i venstre stolpe. */
+     *  Endre/Slett, så lista tar minst mulig plass i venstre stolpe.
+     *  Klikk på selve linja åpner redigeringen (som «Endre»). */
     lagRad(el) {
       const bruktI = ktrl.bruk[el.id] || [];
       const rad = document.createElement('div');
@@ -2379,6 +2383,7 @@ function lagDeltBibliotek(cfg) {
         (bruktI.length ? ' (' + bruktI.length + ')' : '');
       navn.title = cfg.radTittel(el) + '\n' +
         (bruktI.length ? 'Brukes i: ' + bruktI.join(', ') : 'Ikke i bruk');
+      navn.addEventListener('click', () => ktrl.visEndre(el, bruktI));
 
       rad.append(navn, lagRadMeny([
         { tekst: 'Endre', handling: () => ktrl.visEndre(el, bruktI) },
@@ -2390,6 +2395,8 @@ function lagDeltBibliotek(cfg) {
     async visEndre(el, bruktI) {
       const verdier = await cfg.rediger(el, bruktI);
       if (!verdier) return;
+      // «Slett» i redigeringsdialogen kommer tilbake hit som en markør
+      if (verdier._slett) { ktrl.slett(el); return; }
       try {
         await api(cfg.endepunkt + '/' + el.id, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -2605,6 +2612,8 @@ async function redigerDeltKontakt(k, bruktI, erNy) {
   g('tittel-en').value = kEn.tittel || '';
   g('beskr-en').value = kEn.beskrivelse || '';
   document.getElementById('arena-kontakt-del-bib-rad').classList.add('hidden');
+  // Slett-knappen gjelder bare en kontakt som allerede ligger i biblioteket
+  document.getElementById('arena-kontakt-delete').classList.toggle('hidden', !!erNy);
   // Ny kontakt er ikke i bruk noe sted ennå — da er brukslista bare støy
   if (erNy) document.getElementById('arena-kontakt-bruk').innerHTML = '';
   else fyllBrukListe('arena-kontakt-bruk', bruktI || [], () => 'arenakart');
@@ -2613,8 +2622,11 @@ async function redigerDeltKontakt(k, bruktI, erNy) {
   const løfte = ventPåDialog(dialog);
   g('tittel').select();
   const handling = await løfte;
+  // Rydd opp så arena-editorens egen kontaktdialog ikke arver tilstanden
   document.getElementById('arena-kontakt-del-bib-rad').classList.remove('hidden');
+  document.getElementById('arena-kontakt-delete').classList.add('hidden');
   document.getElementById('arena-kontakt-bruk').innerHTML = '';
+  if (handling === 'delete') return { _slett: true };
   if (handling !== 'ok' || !g('tittel').value.trim()) return null;
   return {
     // Serveren tildeler ny id ved opprettelse; feltet er påkrevd i modellen
@@ -4146,6 +4158,87 @@ document.getElementById('wpt-size').addEventListener('input', (e) => {
 });
 
 // ============================================================
+// 7b. Hjelpekortet for «Slå sammen segmenter»
+// ============================================================
+// Et flytende kort som forklarer framgangsmåten. Det kan dras dit det ikke
+// skjuler kartdetaljer, og lukkes helt («? Hjelp» henter det fram igjen).
+// Både posisjon og lukket-tilstand huskes lokalt.
+
+const mergeHjelp = {
+  el: document.getElementById('merge-hjelp'),
+  NØKKEL_SKJULT: 'gps-tool.merge-hjelp-skjult',
+  NØKKEL_POS: 'gps-tool.merge-hjelp-pos',
+
+  erSkjult() { return localStorage.getItem(mergeHjelp.NØKKEL_SKJULT) === '1'; },
+
+  /** Vis kortet (om det ikke er lukket av brukeren) — kun i merge-modus. */
+  oppdater(fane) {
+    const vis = fane === 'merge' && !mergeHjelp.erSkjult();
+    mergeHjelp.el.classList.toggle('hidden', !vis);
+    if (vis) mergeHjelp.plasser();
+  },
+
+  /** Sett posisjonen fra minnet, klemt innenfor vinduet (så et kort som ble
+   *  lagt igjen utenfor kanten etter en vindusendring alltid er synlig). */
+  plasser() {
+    let pos = null;
+    try { pos = JSON.parse(localStorage.getItem(mergeHjelp.NØKKEL_POS) || 'null'); }
+    catch (e) { pos = null; }
+    const b = mergeHjelp.el.getBoundingClientRect();
+    const maksX = Math.max(0, window.innerWidth - b.width);
+    const maksY = Math.max(0, window.innerHeight - b.height);
+    // Standardplassering: øverst til høyre, godt klar av toppbanneret
+    const x = pos ? Math.min(Math.max(0, pos.x), maksX) : maksX - 24;
+    const y = pos ? Math.min(Math.max(0, pos.y), maksY) : 96;
+    mergeHjelp.el.style.left = x + 'px';
+    mergeHjelp.el.style.top = y + 'px';
+  },
+
+  lukk() {
+    localStorage.setItem(mergeHjelp.NØKKEL_SKJULT, '1');
+    mergeHjelp.el.classList.add('hidden');
+  },
+
+  vis() {
+    localStorage.setItem(mergeHjelp.NØKKEL_SKJULT, '0');
+    mergeHjelp.el.classList.remove('hidden');
+    mergeHjelp.plasser();
+  },
+};
+
+document.getElementById('merge-hjelp-lukk').addEventListener('click', mergeHjelp.lukk);
+document.getElementById('merge-hjelp-vis').addEventListener('click', mergeHjelp.vis);
+
+// Dra kortet etter overskriftslinja
+(function koblMergeHjelpDrag() {
+  const håndtak = document.getElementById('merge-hjelp-drahandtak');
+  let dx = 0, dy = 0, drar = false;
+  håndtak.addEventListener('mousedown', (e) => {
+    if (e.target.id === 'merge-hjelp-lukk') return; // lukkeknappen er ikke draing
+    const b = mergeHjelp.el.getBoundingClientRect();
+    dx = e.clientX - b.left;
+    dy = e.clientY - b.top;
+    drar = true;
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (!drar) return;
+    const b = mergeHjelp.el.getBoundingClientRect();
+    const x = Math.min(Math.max(0, e.clientX - dx), window.innerWidth - b.width);
+    const y = Math.min(Math.max(0, e.clientY - dy), window.innerHeight - b.height);
+    mergeHjelp.el.style.left = x + 'px';
+    mergeHjelp.el.style.top = y + 'px';
+  });
+  document.addEventListener('mouseup', () => {
+    if (!drar) return;
+    drar = false;
+    const b = mergeHjelp.el.getBoundingClientRect();
+    localStorage.setItem(mergeHjelp.NØKKEL_POS,
+      JSON.stringify({ x: Math.round(b.left), y: Math.round(b.top) }));
+  });
+})();
+
+// ============================================================
 // 8. Fanebytte og oppstart
 // ============================================================
 
@@ -4190,6 +4283,7 @@ function byttFane(fane) {
   const erArena = fane === 'arena';
   oppdaterAktivIndikator(); // navn + aktiv/brukt-tilstand på modusknappene
   visBibliotekFor(fane); // ekspander riktig bibliotek, kollaps det andre
+  mergeHjelp.oppdater(fane); // flytende hjelpekort kun i merge-modus
   document.getElementById('editor-panel').classList.toggle('hidden', fane !== 'editor');
   document.getElementById('merge-panel').classList.toggle('hidden', fane !== 'merge');
 
