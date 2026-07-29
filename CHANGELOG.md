@@ -17,6 +17,28 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.10.0 — 29. juli 2026
+
+Videre GUI-opprydding (fase 1, del 2) — tydeligere modusknapper, ryddigere
+venstre stolpe og mer kontroll over PNG-eksporten.
+
+- **Modusknappene viser hva som redigeres:** «Rediger segment (MMC 50K)», «Slå
+  sammen segmenter (A: …, B: …)» og «Rediger arenakart (Teveltunet)». Tre
+  tydelige tilstander: **aktiv** (hvit på blå), **tatt i bruk men ikke aktiv**
+  (blå ramme) og **ubrukt** (grå).
+- **Venstre stolpe rydder seg selv:** ved oppstart er alle bibliotekene
+  sammenslått, og grupper er sammenslått til du åpner dem. Bytter du til en
+  segment-modus, ekspanderes segmentbiblioteket og arenakartbiblioteket slås
+  sammen (og motsatt for arenakart-modus) — gruppenes åpne/lukket-tilstand
+  huskes per bibliotek.
+- **Punktbibliotek i venstre stolpe med filter:** de delte punktene ligger nå i
+  en egen seksjon (ikke en dialog), med **filter på bruk** — vis punkter brukt i
+  en bestemt **løype**, eller i alle løyper i en bestemt **segmentgruppe**.
+- **PNG-eksport med valgbart detaljnivå:** «Kart som PNG» åpner nå en dialog der
+  du velger zoom/oppløsning (opp til kartkildens maks) — for et utsnitt kan du
+  få vesentlig høyere oppløsning enn skjermen viser.
+- **«Visning:»-ledetekst** foran kart/delt/profil-vekseren.
+
 ## 2.9.0 — 29. juli 2026
 
 Opprydding i brukergrensesnittet (fase 1) — ryddigere toppbanner, arenakart i

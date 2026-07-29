@@ -18,11 +18,7 @@
       <span id="app-version" class="app-version" title="Verktøyets versjon"></span>
     </div>
     <div class="topbar-right">
-      <div class="aktiv-indikator" title="Hva som er åpent akkurat nå (0–1 segment og 0–1 arenakart kan være aktive samtidig)">
-        <span id="aktiv-segment" class="aktiv-chip tom">Segment: –</span>
-        <span id="aktiv-arena" class="aktiv-chip tom">Arena: –</span>
-      </div>
-      <nav class="tabs" title="Velg hovedmodus">
+      <nav class="tabs" title="Velg hovedmodus — navnet i parentes viser hva som redigeres">
         <button id="tab-editor" class="tab active" title="Rediger et løypesegment">&#9998; Rediger segment</button>
         <button id="tab-merge" class="tab" title="Lag et nytt segment ved å slå sammen to eksisterende">&#128279; Slå sammen segmenter</button>
         <button id="tab-arena" class="tab" title="Rediger et arenakart: et oversiktsbilde med inntegnede områder og punkter">🏟️ Rediger arenakart</button>
@@ -53,7 +49,7 @@
         <input type="file" id="loype-file" accept=".loype,.json" hidden>
       </section>
 
-      <section class="library" id="library-segment">
+      <section class="library kollapset" id="library-segment">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-segment" title="Vis/skjul">
             <span class="lib-chevron">▼</span><h2>Segmentbibliotek</h2>
@@ -70,7 +66,7 @@
         </div>
       </section>
 
-      <section class="library" id="library-arena">
+      <section class="library kollapset" id="library-arena">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-arena" title="Vis/skjul">
             <span class="lib-chevron">▼</span><h2>Arenakartbibliotek</h2>
@@ -86,10 +82,25 @@
         </div>
       </section>
 
-      <section class="wpt-lib-section">
-        <button id="btn-wpt-lib" class="btn btn-small btn-block"
-                title="Delte interessepunkter som gjenbrukes på tvers av løyper">
-          🔗 Punktbibliotek…</button>
+      <section class="library kollapset" id="library-punkt">
+        <div class="library-header">
+          <button class="library-toggle" data-lib="library-punkt" title="Vis/skjul">
+            <span class="lib-chevron">▼</span><h2>🔗 Punktbibliotek</h2>
+          </button>
+        </div>
+        <div class="library-body">
+          <p class="muted library-hint">Delte interessepunkter som gjenbrukes på tvers av løyper. Endringer slår inn i alle løyper ved neste åpning.</p>
+          <div class="bib-filter">
+            <label>Gruppe
+              <select id="wpt-filter-gruppe"><option value="">Alle</option></select>
+            </label>
+            <label>Løype
+              <select id="wpt-filter-loype"><option value="">Alle</option></select>
+            </label>
+          </div>
+          <p id="wpt-lib-empty" class="muted hidden"></p>
+          <div id="wpt-sidebar-list" class="wpt-lib-list"></div>
+        </div>
       </section>
     </aside>
 
@@ -139,11 +150,14 @@
         <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
         <button id="btn-export-map" class="btn btn-small btn-primary"
                 title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
-        <div class="viewmode" title="Velg om flaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
-          <button id="view-kart" class="tab" title="Bare kart">&#128506;</button>
-          <button id="view-split" class="tab" title="Delt: kart øverst, høydeprofil nederst">&#9707;</button>
-          <button id="view-profil" class="tab" title="Bare høydeprofil">&#9968;</button>
-        </div>
+        <span class="viewmode-wrap" title="Velg om flaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
+          <span class="viewmode-label">Visning:</span>
+          <span class="viewmode">
+            <button id="view-kart" class="tab" title="Bare kart">&#128506;</button>
+            <button id="view-split" class="tab" title="Delt: kart øverst, høydeprofil nederst">&#9707;</button>
+            <button id="view-profil" class="tab" title="Bare høydeprofil">&#9968;</button>
+          </span>
+        </span>
       </div>
       <div id="map">
         <div id="map-empty" class="map-empty">
@@ -493,6 +507,24 @@
     </form>
   </dialog>
 
+  <!-- Dialog for PNG-eksport av kartet: velg detaljnivå/oppløsning -->
+  <dialog id="png-export-dialog">
+    <form method="dialog">
+      <h3>Lagre kart som PNG</h3>
+      <p class="muted">
+        Høyere detaljnivå gir skarpere bilde og høyere oppløsning, men større
+        fil. Maksimum bestemmes av kartkilden (og en øvre grense for filstørrelse).
+      </p>
+      <label class="field-label" for="png-zoom">Detaljnivå (zoom)</label>
+      <input type="range" id="png-zoom" min="0" max="0" step="1">
+      <p id="png-zoom-info" class="muted"></p>
+      <div class="button-row">
+        <button value="ok" id="png-export-go" class="btn btn-primary">&#11015; Lagre PNG</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Dialog for interessepunkter (PoI / waypoints) -->
   <dialog id="wpt-dialog">
     <form method="dialog">
@@ -566,24 +598,6 @@
       <div class="button-row">
         <button value="ok" class="btn btn-primary" id="wpt-bulk-ok">Legg til valgte</button>
         <button value="cancel" class="btn" formnovalidate>Avbryt</button>
-      </div>
-    </form>
-  </dialog>
-
-  <!-- Punktbiblioteket: oversikt over delte interessepunkter -->
-  <dialog id="wpt-lib-dialog">
-    <form method="dialog">
-      <h3>🔗 Punktbibliotek</h3>
-      <p class="muted">
-        Delte interessepunkter som kan gjenbrukes på tvers av løyper.
-        Punktene redigeres ved å åpne en løype som bruker dem — endringene
-        gjelder da alle. Sletting her lar løypene beholde lokale kopier.
-      </p>
-      <div id="wpt-lib-list" class="wpt-lib-list">
-        <p class="muted">Laster …</p>
-      </div>
-      <div class="button-row">
-        <button value="cancel" class="btn" formnovalidate>Lukk</button>
       </div>
     </form>
   </dialog>
