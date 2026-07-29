@@ -320,24 +320,51 @@ body { display: flex; flex-direction: column; }
 
 /* Punktbibliotek i venstre stolpe */
 .wpt-lib-list {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column;
   margin-bottom: 4px;
 }
-/* Rad i punkt-/kontaktbiblioteket: navn (med antall i parentes) på første
-   linje i full bredde, undertittel og knapper på neste. */
-.wpt-lib-rad {
-  display: flex; flex-direction: column; gap: 4px;
-  padding: 7px 10px;
-  border: 1px solid var(--kant);
-  border-radius: 8px;
+/* Kompakt tekstliste i punkt-/kontaktbiblioteket: én linje per element,
+   uten kortramme. Handlingene ligger i en «…»-meny til høyre. */
+.lib-linje {
+  display: flex; align-items: center; gap: 4px;
+  padding: 1px 0;
   font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
 }
-.lib-rad-topp { font-weight: 600; word-break: break-word; }
-.lib-rad-bunn { display: flex; align-items: center; gap: 6px; }
-.lib-rad-under {
-  flex: 1; min-width: 0; font-size: 12px;
+.lib-linje:last-child { border-bottom: none; }
+.lib-linje-navn {
+  flex: 1; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+
+/* «…»-menyen på en listelinje */
+.rad-meny { position: relative; flex-shrink: 0; }
+.rad-meny-knapp {
+  border: none; background: none; cursor: pointer;
+  padding: 0 4px; line-height: 1;
+  font-size: 15px; color: var(--tekst-dus);
+  border-radius: 4px;
+}
+.rad-meny-knapp:hover { background: #e2e8f0; color: var(--tekst); }
+.rad-meny-innhold {
+  display: none;
+  position: absolute; right: 0; top: 100%; z-index: 500;
+  min-width: 110px;
+  background: var(--flate);
+  border: 1px solid var(--kant);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  padding: 4px;
+}
+.rad-meny.apen .rad-meny-innhold { display: block; }
+.rad-meny-valg {
+  display: block; width: 100%;
+  text-align: left; border: none; background: none; cursor: pointer;
+  padding: 6px 10px; border-radius: 6px;
+  font-size: 13px; font-family: inherit; color: var(--tekst);
+}
+.rad-meny-valg:hover { background: #f1f5f9; }
+.rad-meny-valg.farlig { color: var(--farge-b); }
 
 /* Mens man drar opp eksport-utsnitt på kartet */
 #map.velger-utsnitt { cursor: crosshair !important; }

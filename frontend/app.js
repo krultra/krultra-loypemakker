@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.12.0';
+const APP_VERSJON = '2.12.1';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -1344,7 +1344,7 @@ for (const knapp of document.querySelectorAll('.library-toggle')) {
 
 /**
  * Ekspander bibliotekene som hører til modusen, og kollaps de andre:
- *   Rediger segment      → segment + punkt   (punktene hører til løypene)
+ *   Rediger segment      → kun segment (punktlista er lang; åpnes ved behov)
  *   Slå sammen segmenter → kun segment
  *   Rediger arenakart    → arenakart + kontakt (kontaktene hører til arenaene)
  * Gruppenes utvidet-tilstand ligger i hvert biblioteks eget minne og
@@ -1352,7 +1352,7 @@ for (const knapp of document.querySelectorAll('.library-toggle')) {
  */
 function visBibliotekFor(modus) {
   const åpne = {
-    editor: ['library-segment', 'library-punkt'],
+    editor: ['library-segment'],
     merge: ['library-segment'],
     arena: ['library-arena', 'library-kontakt'],
   }[modus] || [];
@@ -2366,32 +2366,24 @@ function lagDeltBibliotek(cfg) {
       for (const el of synlige) liste.appendChild(ktrl.lagRad(el));
     },
 
-    /** Én rad: navn (med antall i parentes) på første linje, undertittel og
-     *  knappene på neste — kortet bruker full bredde. */
+    /** Én kompakt linje: navn (med antall i parentes) og en «…»-meny med
+     *  Endre/Slett, så lista tar minst mulig plass i venstre stolpe. */
     lagRad(el) {
       const bruktI = ktrl.bruk[el.id] || [];
       const rad = document.createElement('div');
-      rad.className = 'wpt-lib-rad';
+      rad.className = 'lib-linje';
 
-      const topp = document.createElement('div');
-      topp.className = 'lib-rad-topp';
-      topp.textContent = cfg.navnFor(el) +
+      const navn = document.createElement('span');
+      navn.className = 'lib-linje-navn';
+      navn.textContent = cfg.radTekst(el, ktrl.sortering) +
         (bruktI.length ? ' (' + bruktI.length + ')' : '');
-      topp.title = bruktI.length
-        ? 'Brukes i: ' + bruktI.join(', ') : 'Ikke i bruk';
+      navn.title = cfg.radTittel(el) + '\n' +
+        (bruktI.length ? 'Brukes i: ' + bruktI.join(', ') : 'Ikke i bruk');
 
-      const bunn = document.createElement('div');
-      bunn.className = 'lib-rad-bunn';
-      const under = document.createElement('span');
-      under.className = 'muted lib-rad-under';
-      under.textContent = cfg.undertittelFor ? (cfg.undertittelFor(el) || '') : '';
-      bunn.append(
-        under,
-        lagKnapp('Endre', 'btn btn-small', () => ktrl.visEndre(el, bruktI)),
-        lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => ktrl.slett(el)),
-      );
-
-      rad.append(topp, bunn);
+      rad.append(navn, lagRadMeny([
+        { tekst: 'Endre', handling: () => ktrl.visEndre(el, bruktI) },
+        { tekst: 'Slett', klasse: 'farlig', handling: () => ktrl.slett(el) },
+      ]));
       return rad;
     },
 
@@ -2434,6 +2426,45 @@ function lagDeltBibliotek(cfg) {
   };
   return ktrl;
 }
+
+/**
+ * En liten «…»-meny for en listelinje. Sparer plassen to knapper ville tatt.
+ * `valg` = [{tekst, handling, klasse}]. Bare én meny er åpen om gangen;
+ * dokument-lytteren nedenfor lukker den ved klikk utenfor eller Escape.
+ */
+function lagRadMeny(valg) {
+  const meny = document.createElement('div');
+  meny.className = 'rad-meny';
+  const knapp = document.createElement('button');
+  knapp.type = 'button';
+  knapp.className = 'rad-meny-knapp';
+  knapp.textContent = '…';
+  knapp.title = 'Flere valg';
+  const innhold = document.createElement('div');
+  innhold.className = 'rad-meny-innhold';
+  for (const v of valg) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rad-meny-valg' + (v.klasse ? ' ' + v.klasse : '');
+    b.textContent = v.tekst;
+    b.addEventListener('click', () => { lukkRadMenyer(); v.handling(); });
+    innhold.appendChild(b);
+  }
+  knapp.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const var_åpen = meny.classList.contains('apen');
+    lukkRadMenyer();
+    if (!var_åpen) meny.classList.add('apen');
+  });
+  meny.append(knapp, innhold);
+  return meny;
+}
+
+function lukkRadMenyer() {
+  for (const m of document.querySelectorAll('.rad-meny.apen')) m.classList.remove('apen');
+}
+document.addEventListener('click', lukkRadMenyer);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lukkRadMenyer(); });
 
 /**
  * Bygg den samlede filtermenyen: «Velg / fjern alle» øverst, så én bolk per
@@ -2541,6 +2572,8 @@ const punktBib = lagDeltBibliotek({
   kartBibliotek: () => segmentBib,
   kartNavn: (seg) => seg.name,
   navnFor: (p) => p.name,
+  radTekst: (p) => p.name,
+  radTittel: (p) => p.name + (p.desc ? ' — ' + p.desc : ''),
   sorteringsnøkkel: () => (p) => p.name, // alltid alfabetisk på navn
   rediger: (p, bruktI) => redigerDeltPunkt(p, bruktI),
   lagretTekst: (v) => '«' + v.name + '» er oppdatert (slår inn i løypene ved neste åpning)',
@@ -2608,8 +2641,10 @@ const kontaktBib = lagDeltBibliotek({
   kartBibliotek: () => arenaBib,
   kartNavn: (a) => a.navn,
   navnFor: (k) => k.tittel,
-  undertittelFor: (k) => k.navn,
-  // Brukeren velger om lista sorteres på rolletittel (standard) eller navn
+  // Lista viser det man sorterer på — tittel eller navn, ikke begge
+  radTekst: (k, sortering) => (sortering === 'navn' ? (k.navn || k.tittel) : k.tittel),
+  radTittel: (k) => [k.tittel, k.navn, k.telefon, k.epost].filter(Boolean).join(' · '),
+  // Brukeren velger om lista sorteres (og vises) på rolletittel eller navn
   sorteringer: [
     { verdi: 'tittel', tekst: 'Tittel' },
     { verdi: 'navn', tekst: 'Navn' },

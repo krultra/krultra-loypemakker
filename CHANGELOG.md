@@ -17,6 +17,16 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.12.1 — 29. juli 2026
+
+- **Mye mer kompakte lister** i punkt- og kontaktbiblioteket: én linje per
+  element uten kortramme, og handlingene ligger i en **«…»-meny** til høyre i
+  stedet for to knapper. Linjene tar nå ca. en tredjedel av plassen.
+  - Kontaktlista viser **det du sorterer på** — enten tittel eller navn, ikke
+    begge. Full informasjon vises når du holder musepekeren over linja.
+- **«Rediger segment»** åpner nå bare segmentbiblioteket. Punktlista er ofte
+  lang, så den åpnes heller ved behov.
+
 ## 2.12.0 — 29. juli 2026
 
 Opprydding i punkt- og kontaktbiblioteket.
