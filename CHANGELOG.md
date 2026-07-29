@@ -17,6 +17,28 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 2.9.0 — 29. juli 2026
+
+Opprydding i brukergrensesnittet (fase 1) — ryddigere toppbanner, arenakart i
+venstre stolpe, og flere småforbedringer.
+
+- **Arenakartbibliotek i venstre stolpe:** arenakartene har nå sitt eget
+  bibliotek med **gruppering og dra-og-slipp**, akkurat som segmentene — med
+  **Åpne / Endre / Slett** på hvert kort. «Åpne…»-dialogen i arena-verktøylinja
+  er dermed borte. Bibliotek-seksjonene kan slås sammen for å spare plass.
+- **Toppbanneret er rendyrket til en modusveksler:** «Rediger segment», «Slå
+  sammen segmenter» og «Rediger arenakart». En **aktiv-indikator** viser hvilket
+  segment og hvilket arenakart som er åpent (0–1 av hver samtidig).
+  - **«Kart»-knappen** er flyttet inn i **Kartvisning**-nedtrekket som valget
+    «Skjul kart».
+  - **«Bare kart / Delt / Bare profil»** er flyttet til en kompakt ikonveksler
+    ytterst i kartverktøylinja.
+- **Rediger delte punkter direkte** fra punktbiblioteket (ikke bare se og
+  slette). Endringen slår inn i alle løyper som bruker punktet ved neste åpning.
+- **Rettet:** PNG-eksport av kartet viste «&copy; Kartverket» — nå «© Kartverket».
+- Hurtigvalgene «Svart/hvitt» og «Rød fylt» for høydeprofilen er fjernet
+  (erstattes senere av egne, lagrbare oppsett).
+
 ## 2.8.0 — 28. juli 2026
 
 - **Områdestil i arenakart:** hvert område kan nå styres individuelt.

@@ -27,6 +27,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "segments"
 
 # Organiseringen av biblioteket (grupper og rekkefølge): data/library.json
 LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "library.json"
+# Samme, men for arenakartbiblioteket: data/arena-library.json
+ARENA_LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "arena-library.json"
 
 # Gyldige segment-id-er: bare heksadesimale tegn (som uuid4().hex gir oss).
 # Sjekken hindrer at rare verdier i URL-en kan peke utenfor data-mappa.
@@ -166,25 +168,19 @@ def delete_segment(segment_id: str) -> None:
 # ---- Organisering av biblioteket (grupper og rekkefølge) ----
 
 
-def load_library() -> LibraryStructure:
-    """Les biblioteksstrukturen og avstem den mot segmentene som finnes.
+def _avstem_bibliotek(
+    struktur: LibraryStructure, kjente_ids: List[str], id_type: str
+) -> LibraryStructure:
+    """Avstem en bibliotekstruktur mot id-ene som faktisk finnes (self-repair).
 
-    Avstemmingen gjør strukturen selvreparerende:
-      * segment-id-er som ikke lenger finnes på disk fjernes
-      * segmenter som ikke er nevnt i strukturen (nye, eller lagt til
-        utenfra) legges øverst på rotnivået, nyeste først
+    Delt av segment- og arenakartbiblioteket (`id_type` = "segment" / "arena"):
+      * id-er som ikke lenger finnes på disk fjernes
+      * elementer som ikke er nevnt i strukturen (nye, eller lagt til utenfra)
+        legges øverst på rotnivået, nyeste først
       * duplikater fjernes (en id kan bare stå ett sted)
-    Mangler fila helt (første gang), bygges strukturen fra bunnen.
+    `kjente_ids` forutsettes sortert nyeste først.
     """
-    try:
-        struktur = LibraryStructure.model_validate_json(
-            LIBRARY_FILE.read_text(encoding="utf-8")
-        )
-    except Exception:
-        struktur = LibraryStructure()
-
-    kjente = [s.id for s in list_segments()]  # nyeste først
-    kjente_sett = set(kjente)
+    kjente_sett = set(kjente_ids)
     sett_brukt = set()
 
     # Gruppene: behold bare gyldige, ubrukte id-er, i lagret rekkefølge
@@ -198,26 +194,53 @@ def load_library() -> LibraryStructure:
                     sett_brukt.add(sid)
             grupper[entry.name] = ids
 
-    # Rotnivået: gyldige grupper og segmenter i lagret rekkefølge
+    # Rotnivået: gyldige grupper og elementer i lagret rekkefølge
     root = []
     for entry in struktur.root:
         if entry.type == "group" and entry.name in grupper:
             if not any(e.type == "group" and e.name == entry.name for e in root):
                 root.append(LibraryEntry(type="group", name=entry.name))
-        elif entry.type == "segment" and entry.id in kjente_sett and entry.id not in sett_brukt:
-            root.append(LibraryEntry(type="segment", id=entry.id))
+        elif entry.type == id_type and entry.id in kjente_sett and entry.id not in sett_brukt:
+            root.append(LibraryEntry(type=id_type, id=entry.id))
             sett_brukt.add(entry.id)
 
-    # Segmenter som ikke er nevnt noe sted: øverst på rota, nyeste først
-    nye = [sid for sid in kjente if sid not in sett_brukt]
-    root = [LibraryEntry(type="segment", id=sid) for sid in nye] + root
+    # Elementer som ikke er nevnt noe sted: øverst på rota, nyeste først
+    nye = [sid for sid in kjente_ids if sid not in sett_brukt]
+    root = [LibraryEntry(type=id_type, id=sid) for sid in nye] + root
 
     return LibraryStructure(root=root, groups=grupper)
 
 
+def _les_struktur(fil: Path) -> LibraryStructure:
+    try:
+        return LibraryStructure.model_validate_json(fil.read_text(encoding="utf-8"))
+    except Exception:
+        return LibraryStructure()
+
+
+def load_library() -> LibraryStructure:
+    """Les segmentbiblioteket og avstem det mot segmentene som finnes."""
+    kjente = [s.id for s in list_segments()]  # nyeste først
+    return _avstem_bibliotek(_les_struktur(LIBRARY_FILE), kjente, "segment")
+
+
 def save_library(struktur: LibraryStructure) -> LibraryStructure:
-    """Lagre biblioteksstrukturen. Returnerer den avstemte varianten."""
+    """Lagre segmentbiblioteket. Returnerer den avstemte varianten."""
     LIBRARY_FILE.parent.mkdir(parents=True, exist_ok=True)
     LIBRARY_FILE.write_text(struktur.model_dump_json(indent=2), encoding="utf-8")
     # Les tilbake gjennom avstemmingen, så svaret alltid er gyldig
     return load_library()
+
+
+def load_arena_library() -> LibraryStructure:
+    """Les arenakartbiblioteket og avstem det mot arenakartene som finnes."""
+    from . import arena_lagring  # lokal import: unngå importsyklus på modulnivå
+    kjente = [a.id for a in arena_lagring.list_arenaer()]  # nyeste først
+    return _avstem_bibliotek(_les_struktur(ARENA_LIBRARY_FILE), kjente, "arena")
+
+
+def save_arena_library(struktur: LibraryStructure) -> LibraryStructure:
+    """Lagre arenakartbiblioteket. Returnerer den avstemte varianten."""
+    ARENA_LIBRARY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    ARENA_LIBRARY_FILE.write_text(struktur.model_dump_json(indent=2), encoding="utf-8")
+    return load_arena_library()

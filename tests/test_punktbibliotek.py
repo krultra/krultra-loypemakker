@@ -52,6 +52,26 @@ class TestBibliotek:
         with pytest.raises(FileNotFoundError):
             punktbibliotek.slett_punkt(delt.id)
 
+    def test_oppdater_endrer_delte_felt(self, miljø):
+        delt = punktbibliotek.opprett_punkt(_wpt("Før", arena="mmc/gammelt"))
+        oppdatert = punktbibliotek.oppdater_punkt(
+            delt.id, _wpt("Etter", arena="mmc/nytt"))
+        assert oppdatert.id == delt.id  # samme identitet
+        lagret = punktbibliotek.les_bibliotek()[0]
+        assert lagret.name == "Etter"
+        assert lagret.arena == "mmc/nytt"
+
+    def test_oppdater_ukjent_id_feiler(self, miljø):
+        with pytest.raises(FileNotFoundError):
+            punktbibliotek.oppdater_punkt("ffffffff", _wpt())
+
+    def test_oppdatering_spres_til_løyper_ved_åpning(self, miljø):
+        """Redigering i biblioteket slår inn i løypene ved neste åpning."""
+        delt = punktbibliotek.opprett_punkt(_wpt("Drikkestasjon"))
+        seg = _segment("MMC 70K", [_wpt("Drikkestasjon", bib_id=delt.id)])
+        punktbibliotek.oppdater_punkt(delt.id, _wpt("Drikkestasjon Sulsjøan"))
+        assert storage.load_segment(seg.id).waypoints[0].name == "Drikkestasjon Sulsjøan"
+
     def test_skriving_tar_sikkerhetskopi(self, miljø):
         """Hver skriving legger forrige innhold i .bak — så et uhell aldri
         koster mer enn én generasjon av biblioteket."""

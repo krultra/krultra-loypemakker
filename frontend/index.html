@@ -18,18 +18,14 @@
       <span id="app-version" class="app-version" title="Verktøyets versjon"></span>
     </div>
     <div class="topbar-right">
-      <div class="toggles">
-        <button id="btn-toggle-map" class="tab" title="Vis/skjul kartunderlag fra Kartverket (krever internett)">&#128506; Kart</button>
+      <div class="aktiv-indikator" title="Hva som er åpent akkurat nå (0–1 segment og 0–1 arenakart kan være aktive samtidig)">
+        <span id="aktiv-segment" class="aktiv-chip tom">Segment: –</span>
+        <span id="aktiv-arena" class="aktiv-chip tom">Arena: –</span>
       </div>
-      <div class="viewmode" title="Velg om skjermflaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
-        <button id="view-kart" class="tab" title="Bruk hele flaten til kartet">&#128506; Bare kart</button>
-        <button id="view-split" class="tab" title="Delt skjerm: kart øverst, høydeprofil nederst">&#9707; Delt</button>
-        <button id="view-profil" class="tab" title="Bruk hele flaten til høydeprofilen">&#9968; Bare profil</button>
-      </div>
-      <nav class="tabs">
-        <button id="tab-editor" class="tab active">Rediger spor</button>
-        <button id="tab-merge" class="tab">Slå sammen segmenter</button>
-        <button id="tab-arena" class="tab" title="Lag et arenakart: et oversiktsbilde med inntegnede områder og punkter">🏟️ Arenakart</button>
+      <nav class="tabs" title="Velg hovedmodus">
+        <button id="tab-editor" class="tab active" title="Rediger et løypesegment">&#9998; Rediger segment</button>
+        <button id="tab-merge" class="tab" title="Lag et nytt segment ved å slå sammen to eksisterende">&#128279; Slå sammen segmenter</button>
+        <button id="tab-arena" class="tab" title="Rediger et arenakart: et oversiktsbilde med inntegnede områder og punkter">🏟️ Rediger arenakart</button>
       </nav>
     </div>
   </header>
@@ -57,17 +53,37 @@
         <input type="file" id="loype-file" accept=".loype,.json" hidden>
       </section>
 
-      <section class="library">
+      <section class="library" id="library-segment">
         <div class="library-header">
-          <h2>Segmentbibliotek</h2>
+          <button class="library-toggle" data-lib="library-segment" title="Vis/skjul">
+            <span class="lib-chevron">▼</span><h2>Segmentbibliotek</h2>
+          </button>
           <button id="btn-new-group" class="btn btn-small" title="Lag en gruppe å organisere segmenter i (f.eks. «MMC»)">+ Gruppe</button>
         </div>
-        <p class="muted library-hint">Dra segmenter og grupper for å endre rekkefølge — slipp et segment på en gruppe for å legge det i den.</p>
-        <p id="library-empty" class="muted">
-          Ingen lagrede segmenter ennå. Last inn en GPX-fil og lagre et
-          utsnitt, så dukker det opp her.
-        </p>
-        <ul id="segment-list"></ul>
+        <div class="library-body">
+          <p class="muted library-hint">Dra segmenter og grupper for å endre rekkefølge — slipp et segment på en gruppe for å legge det i den.</p>
+          <p id="library-empty" class="muted">
+            Ingen lagrede segmenter ennå. Last inn en GPX-fil og lagre et
+            utsnitt, så dukker det opp her.
+          </p>
+          <ul id="segment-list"></ul>
+        </div>
+      </section>
+
+      <section class="library" id="library-arena">
+        <div class="library-header">
+          <button class="library-toggle" data-lib="library-arena" title="Vis/skjul">
+            <span class="lib-chevron">▼</span><h2>Arenakartbibliotek</h2>
+          </button>
+          <button id="btn-new-arena-group" class="btn btn-small" title="Lag en gruppe å organisere arenakart i">+ Gruppe</button>
+        </div>
+        <div class="library-body">
+          <p class="muted library-hint">Åpne, endre eller slett arenakart — dra for å gruppere og endre rekkefølge, som for segmentene.</p>
+          <p id="arena-library-empty" class="muted">
+            Ingen arenakart ennå. Bytt til «Rediger arenakart» og lag et nytt.
+          </p>
+          <ul id="arena-list"></ul>
+        </div>
       </section>
 
       <section class="wpt-lib-section">
@@ -81,7 +97,7 @@
     <main class="content">
       <!-- Kartverktøylinje: visningstype og PNG-eksport av kartet -->
       <div class="map-toolbar">
-        <label class="profile-control" title="Hvilket kartunderlag som vises (krever at Kart er på)">
+        <label class="profile-control" title="Hvilket kartunderlag som vises — eller «Skjul kart» for å jobbe uten kartlaget fra Kartverket (f.eks. uten internett)">
           Kartvisning
           <select id="map-layer-select">
             <option value="topo">Topografisk (Kartverket)</option>
@@ -89,6 +105,7 @@
             <option value="toporaster">Papirkart-stil (Kartverket)</option>
             <option value="sjokartraster">Sjøkart (Kartverket)</option>
             <option value="satellitt">Satellittbilde (Esri)</option>
+            <option value="__skjul__">Skjul kart</option>
           </select>
         </label>
         <span class="toolbar-divider"></span>
@@ -122,6 +139,11 @@
         <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
         <button id="btn-export-map" class="btn btn-small btn-primary"
                 title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
+        <div class="viewmode" title="Velg om flaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
+          <button id="view-kart" class="tab" title="Bare kart">&#128506;</button>
+          <button id="view-split" class="tab" title="Delt: kart øverst, høydeprofil nederst">&#9707;</button>
+          <button id="view-profil" class="tab" title="Bare høydeprofil">&#9968;</button>
+        </div>
       </div>
       <div id="map">
         <div id="map-empty" class="map-empty">
@@ -194,10 +216,6 @@
             <input type="checkbox" id="profile-wpt-icons"> Punktikoner
             <input type="color" id="profile-wpt-color" value="#334155">
           </label>
-          <span class="profile-control" title="Ferdige fargeoppsett">
-            <button id="preset-bw" class="btn btn-small">Svart/hvitt</button>
-            <button id="preset-red" class="btn btn-small">Rød fylt</button>
-          </span>
           <button id="profile-download" class="btn btn-small" title="Last ned profilen som bilde (PNG)">&#11015; PNG</button>
         </div>
         <div class="profile-canvas-wrap">
@@ -319,10 +337,8 @@
       <!-- Arbeidsområde: Arenakart (helt separat fra løype-/profilflaten) -->
       <section id="arena-workspace" class="arena-workspace hidden">
         <div class="arena-toolbar">
-          <button id="arena-open" class="btn btn-small"
-                  title="Åpne et lagret arenakart">&#128194; Åpne&hellip;</button>
           <button id="arena-new" class="btn btn-small"
-                  title="Start et nytt, tomt arenakart">&#10133; Nytt</button>
+                  title="Start et nytt, tomt arenakart (åpne lagrede arenakart fra Arenakartbiblioteket til venstre)">&#10133; Nytt</button>
           <span class="toolbar-divider"></span>
           <label id="arena-image-label" for="arena-image-input" class="btn btn-small"
                  title="Legg til et oversiktskart/bilde som bakgrunn">&#128444;&#65039; Legg til bilde&hellip;</label>
@@ -759,13 +775,17 @@
     </form>
   </dialog>
 
-  <!-- Arenakart: åpne et lagret arenakart -->
-  <dialog id="arena-open-dialog">
+  <!-- Arenakart: endre navn/beskrivelse (fra Arenakartbiblioteket) -->
+  <dialog id="arena-meta-dialog">
     <form method="dialog">
-      <h3>Åpne arenakart</h3>
-      <div id="arena-open-list" class="arena-open-list"><p class="muted">Laster …</p></div>
+      <h3>Endre arenakart</h3>
+      <label class="field-label" for="arena-meta-navn">Navn</label>
+      <input type="text" id="arena-meta-navn" placeholder="F.eks. «Teveltunet»" autocomplete="off">
+      <label class="field-label" for="arena-meta-beskr">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="arena-meta-beskr" rows="2"></textarea>
       <div class="button-row">
-        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+        <button value="ok" class="btn btn-primary">Lagre</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
       </div>
     </form>
   </dialog>

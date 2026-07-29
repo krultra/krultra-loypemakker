@@ -737,6 +737,9 @@ window.arenaEditor = (function () {
       }
       endret = false;
       settStatus();
+      // Oppdater arenakart-biblioteket i venstre stolpe (nytt kart / endret
+      // antall steder / marker det aktive kartet).
+      if (window.oppdaterArenabibliotek) window.oppdaterArenabibliotek();
       if (!stille) toast('Arenakartet er lagret');
       return true;
     } catch (feil) {
@@ -757,37 +760,19 @@ window.arenaEditor = (function () {
     oppdaterBakgrunnsvelger();
     byggListe();
     settStatus();
+    if (window.oppdaterArenabibliotek) window.oppdaterArenabibliotek();
   }
 
-  async function åpneVelger() {
-    const dialog = document.getElementById('arena-open-dialog');
-    const liste = document.getElementById('arena-open-list');
-    liste.innerHTML = '<p class="muted">Laster …</p>';
-    ventPåDialog(dialog);
-    try {
-      const res = await api('/api/arenas');
-      const data = await res.json();
-      liste.innerHTML = '';
-      if (!data.arenas.length) {
-        liste.innerHTML = '<p class="muted">Ingen lagrede arenakart ennå.</p>';
-        return;
-      }
-      for (const a of data.arenas) {
-        const knapp = document.createElement('button');
-        knapp.type = 'button';
-        knapp.className = 'arena-open-el';
-        knapp.innerHTML = '<strong></strong><span class="muted"></span>';
-        knapp.querySelector('strong').textContent = a.navn;
-        knapp.querySelector('.muted').textContent =
-          a.feature_count + ' steder' + (a.har_bilde ? '' : ' · uten bilde');
-        knapp.addEventListener('click', () => { dialog.close(); åpne(a.id); });
-        liste.appendChild(knapp);
-      }
-    } catch (feil) {
-      liste.innerHTML = '';
-      toast('Kunne ikke hente lista: ' + feil.message, 'error');
-    }
+  /** Sett navn/beskrivelse på det åpne arenakartet (etter «Endre» i biblioteket). */
+  function settNavn(navn, beskrivelse) {
+    arena.navn = navn;
+    if (beskrivelse !== undefined) arena.beskrivelse = beskrivelse;
+    document.getElementById('arena-name').value = navn || '';
+    settStatus();
   }
+
+  /** Id-en til det åpne arenakartet (null hvis ulagret/tomt). */
+  function aktivId() { return arena.id; }
 
   async function åpne(id) {
     if (endret && !confirm('Du har ulagrede endringer. Vil du forkaste dem?')) return;
@@ -817,6 +802,8 @@ window.arenaEditor = (function () {
       }
       byggListe();
       settStatus();
+      // Marker det aktive kartet i venstre stolpe
+      if (window.oppdaterArenabibliotek) window.oppdaterArenabibliotek();
       toast('Arenakartet «' + (arena.navn || '') + '» er åpnet');
     } catch (feil) {
       toast('Kunne ikke åpne: ' + feil.message, 'error');
@@ -1032,10 +1019,19 @@ window.arenaEditor = (function () {
   function merkEndret() { endret = true; settStatus(); }
 
   function settStatus() {
+    // Speil hva som er åpent i toppbannerets aktiv-indikator (kalles etter
+    // åpne/nytt/lagre/navneendring).
+    if (window.oppdaterAktivIndikator) window.oppdaterAktivIndikator();
     const el = document.getElementById('arena-status');
     if (!arena.id && !arena.features.length && !harBilde()) { el.textContent = 'Nytt arenakart'; return; }
     el.textContent = (endret ? '● Ulagrede endringer' : 'Lagret') +
       ' · ' + arena.features.length + ' steder';
+  }
+
+  /** Navnet på det åpne arenakartet (til aktiv-indikatoren) — null hvis tomt. */
+  function aktivNavn() {
+    const harInnhold = arena.id || arena.features.length || harBilde();
+    return harInnhold ? (arena.navn || 'Uten navn') : null;
   }
 
   function visHint(tekst) {
@@ -1048,7 +1044,6 @@ window.arenaEditor = (function () {
   function koblKnapper() {
     const på = (id, fn) => document.getElementById(id).addEventListener('click', fn);
     på('arena-new', nyttArena);
-    på('arena-open', åpneVelger);
     på('arena-draw-polygon', () => startTegning('polygon'));
     på('arena-draw-point', () => startTegning('punkt'));
     på('arena-draw-finish', fullførPolygon);
@@ -1086,5 +1081,5 @@ window.arenaEditor = (function () {
     });
   }
 
-  return { aktiver };
+  return { aktiver, aktivNavn, aktivId, åpne, nyttArena, settNavn };
 })();

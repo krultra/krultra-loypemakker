@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.8.0';
+const APP_VERSJON = '2.9.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -354,24 +354,24 @@ function settKartfliser(på) {
     map.removeLayer(kartfliser);
     kartAttribusjon.remove();
   }
-  document.getElementById('btn-toggle-map').classList.toggle('active', på);
+  // Speil tilstanden i Kartvisning-dropdownen: «Skjul kart» når av, ellers laget.
+  const velger = document.getElementById('map-layer-select');
+  if (velger) velger.value = på ? aktivtKartlag : '__skjul__';
   localStorage.setItem('gps-tool.kart', på ? '1' : '0');
 }
 
 function kartErPå() { return map.hasLayer(kartfliser); }
 
-document.getElementById('btn-toggle-map').addEventListener('click', () => {
-  settKartfliser(!kartErPå());
-});
-
+// Kartvisning-dropdownen styrer både HVILKET kartlag som vises og om kartet
+// vises i det hele tatt («Skjul kart» = jobb uten Kartverket-laget, f.eks. uten
+// internett — erstatter den gamle «Kart»-knappen i toppbanneret).
 document.getElementById('map-layer-select').addEventListener('change', (e) => {
-  const varPå = kartErPå();
-  if (varPå) map.removeLayer(kartfliser);
+  if (e.target.value === '__skjul__') { settKartfliser(false); return; }
+  if (kartErPå()) map.removeLayer(kartfliser);
   aktivtKartlag = e.target.value;
   localStorage.setItem('gps-tool.kartlag', aktivtKartlag);
   kartfliser = lagKartfliser(aktivtKartlag);
-  if (varPå) kartfliser.addTo(map);
-  else settKartfliser(true); // å velge en visning betyr at man vil se kart
+  settKartfliser(true); // å velge et kartlag betyr at man vil se kartet
 });
 
 function tilLatLng(p) { return [p.lat, p.lon]; }
@@ -1012,12 +1012,8 @@ const STANDARD_AKSEFARGER = {
   akseFarge: '#94a3b8', rutenettFarge: '#e2e8f0', tallFarge: '#64748b',
 };
 
-document.getElementById('preset-bw').addEventListener('click', () =>
-  brukProfilPreset(Object.assign(
-    { linje: '#0f172a', fyllPå: false, bakgrunn: '#ffffff' }, STANDARD_AKSEFARGER)));
-document.getElementById('preset-red').addEventListener('click', () =>
-  brukProfilPreset(Object.assign(
-    { linje: '#dc2626', fyllPå: true, fyll: '#f4b8b8', bakgrunn: '#ffffff' }, STANDARD_AKSEFARGER)));
+// (Hurtigvalgene «Svart/hvitt» og «Rød fylt» er fjernet — erstattes senere av
+// brukerens egne lagrede oppsett. brukProfilPreset beholdes til det.)
 
 /** Last ned profilen slik den vises nå, som PNG-bilde. */
 document.getElementById('profile-download').addEventListener('click', () => {
@@ -1042,109 +1038,88 @@ window.addEventListener('resize', () => { if (profilState.synlig) tegnProfil(); 
 // 4. Segmentbiblioteket
 // ============================================================
 
-// Biblioteket har to deler: segmentene selv (data/segments) og
-// organiseringen av dem (data/library.json) — grupper og rekkefølge.
+// Biblioteket finnes i to varianter med lik oppførsel: segmenter (data/segments
+// + data/library.json) og arenakart (data/arenaer + data/arena-library.json).
 // Brukeren omorganiserer med dra-og-slipp; hver endring lagres straks.
-let bibliotek = { root: [], groups: {} };
-let segmentInfo = {}; // id -> sammendrag (navn, dato, antall punkter, …)
+// lagBibliotek() lager én kontroller — konfigurasjonen sier hvor lista bor,
+// hvilken entry-type løse oppføringer har, hvordan et kort bygges osv.
+function lagBibliotek(cfg) {
+  const ktrl = {
+    cfg,
+    data: { root: [], groups: {} },
+    info: {}, // id -> sammendrag
 
-async function oppdaterBibliotek() {
-  const [segRes, libRes] = await Promise.all([api('/api/segments'), api('/api/library')]);
-  const segmenter = (await segRes.json()).segments;
-  bibliotek = await libRes.json();
-  segmentInfo = {};
-  for (const s of segmenter) segmentInfo[s.id] = s;
-  tegnBibliotek();
-}
+    async oppdater() {
+      const { struktur, info } = await cfg.hent();
+      ktrl.data = struktur;
+      ktrl.info = info;
+      ktrl.tegn();
+    },
 
-async function lagreBibliotek() {
-  try {
-    const res = await api('/api/library', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(bibliotek),
-    });
-    bibliotek = await res.json();
-  } catch (feil) {
-    toast(feil.message, 'error');
-  }
-  tegnBibliotek();
-}
+    async lagre() {
+      try {
+        const res = await api(cfg.endepunkt, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(ktrl.data),
+        });
+        ktrl.data = await res.json();
+      } catch (feil) {
+        toast(feil.message, 'error');
+      }
+      ktrl.tegn();
+    },
 
-// --- Sammenlagte grupper huskes lokalt (ren visningstilstand) ---
-function kollapsedeGrupper() {
-  try { return new Set(JSON.parse(localStorage.getItem('gps-tool.kollapsede') || '[]')); }
-  catch (e) { return new Set(); }
-}
-function settKollapset(navn, kollapset) {
-  const sett = kollapsedeGrupper();
-  if (kollapset) sett.add(navn); else sett.delete(navn);
-  localStorage.setItem('gps-tool.kollapsede', JSON.stringify([...sett]));
-}
+    // Sammenlagte grupper huskes lokalt (ren visningstilstand)
+    kollapsede() {
+      try { return new Set(JSON.parse(localStorage.getItem(cfg.kollapsNøkkel) || '[]')); }
+      catch (e) { return new Set(); }
+    },
+    settKollapset(navn, kollapset) {
+      const s = ktrl.kollapsede();
+      if (kollapset) s.add(navn); else s.delete(navn);
+      localStorage.setItem(cfg.kollapsNøkkel, JSON.stringify([...s]));
+    },
 
-function tegnBibliotek() {
-  const liste = document.getElementById('segment-list');
-  liste.innerHTML = '';
-  document.getElementById('library-empty').style.display =
-    bibliotek.root.length === 0 ? 'block' : 'none';
-
-  const kollapset = kollapsedeGrupper();
-  for (const entry of bibliotek.root) {
-    if (entry.type === 'group') {
-      const erKollapset = kollapset.has(entry.name);
-      liste.appendChild(lagGruppeElement(entry.name, erKollapset));
-      if (!erKollapset) {
-        for (const sid of bibliotek.groups[entry.name] || []) {
-          liste.appendChild(lagSegmentElement(sid, entry.name));
+    tegn() {
+      const liste = document.getElementById(cfg.listeId);
+      liste.innerHTML = '';
+      const tomEl = document.getElementById(cfg.emptyId);
+      if (tomEl) tomEl.style.display = ktrl.data.root.length === 0 ? 'block' : 'none';
+      const kollapset = ktrl.kollapsede();
+      for (const entry of ktrl.data.root) {
+        if (entry.type === 'group') {
+          const erK = kollapset.has(entry.name);
+          liste.appendChild(lagGruppeElement(ktrl, entry.name, erK));
+          if (!erK) {
+            for (const id of ktrl.data.groups[entry.name] || []) {
+              liste.appendChild(lagBibElement(ktrl, id, entry.name));
+            }
+          }
+        } else {
+          liste.appendChild(lagBibElement(ktrl, entry.id, null));
         }
       }
-    } else {
-      liste.appendChild(lagSegmentElement(entry.id, null));
-    }
-  }
+    },
+  };
+  return ktrl;
 }
 
-function lagSegmentElement(segmentId, gruppe) {
-  const seg = segmentInfo[segmentId];
+// Ett kort (segment eller arenakart). Skallet + dra-og-slipp er felles; selve
+// innholdet (navn, meta, knapper) fylles av cfg.fyllKort.
+function lagBibElement(ktrl, id, gruppe) {
+  const data = ktrl.info[id];
   const li = document.createElement('li');
   li.className = 'segment-item' + (gruppe ? ' i-gruppe' : '');
   li.draggable = true;
-  li.dataset.dnd = 'seg:' + segmentId;
-  if (!seg) return li; // skal ikke skje (strukturen avstemmes på serveren)
-
-  const navn = document.createElement('div');
-  navn.className = 'seg-name';
-  navn.textContent = seg.name;
-
-  const meta = document.createElement('div');
-  meta.className = 'seg-meta';
-  meta.textContent = fmtDato(seg.created_at) + ' · ' + seg.point_count + ' punkter';
-
-  const knapper = document.createElement('div');
-  knapper.className = 'seg-buttons';
-  if (aktivFane === 'editor') {
-    knapper.appendChild(lagKnapp('Åpne', 'btn btn-small btn-primary', () => åpneSegmentIRedigering(seg.id)));
-  } else {
-    knapper.appendChild(lagKnapp('A', 'btn btn-small btn-primary', () => lastMergeSegment('a', seg.id)));
-    knapper.appendChild(lagKnapp('B', 'btn btn-small btn-red', () => lastMergeSegment('b', seg.id)));
-  }
-  knapper.appendChild(lagKnapp('Endre', 'btn btn-small', () => endreMetadata(seg)));
-  knapper.appendChild(lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => slettSegment(seg)));
-
-  li.append(navn, meta);
-  if (seg.description) {
-    const beskr = document.createElement('div');
-    beskr.className = 'seg-desc';
-    beskr.textContent = seg.description;
-    beskr.title = seg.description;
-    li.appendChild(beskr);
-  }
-  li.appendChild(knapper);
-  kobleDragOgSlipp(li);
+  li.dataset.dnd = ktrl.cfg.dndPrefiks + ':' + id;
+  if (!data) return li; // skal ikke skje (strukturen avstemmes på serveren)
+  ktrl.cfg.fyllKort(li, data, ktrl);
+  kobleDragOgSlipp(li, ktrl);
   return li;
 }
 
-function lagGruppeElement(navn, erKollapset) {
+function lagGruppeElement(ktrl, navn, erKollapset) {
   const li = document.createElement('li');
   li.className = 'group-item';
   li.draggable = true;
@@ -1160,17 +1135,94 @@ function lagGruppeElement(navn, erKollapset) {
 
   const antall = document.createElement('span');
   antall.className = 'group-count';
-  antall.textContent = (bibliotek.groups[navn] || []).length + ' segmenter';
+  antall.textContent = (ktrl.data.groups[navn] || []).length + ' ' + ktrl.cfg.enhet;
 
-  const veksle = () => { settKollapset(navn, !kollapsedeGrupper().has(navn)); tegnBibliotek(); };
+  const veksle = () => { ktrl.settKollapset(navn, !ktrl.kollapsede().has(navn)); ktrl.tegn(); };
   chevron.addEventListener('click', veksle);
   tittel.addEventListener('click', veksle);
 
   li.append(chevron, tittel, antall,
-    lagKnapp('Endre', 'btn', () => giGruppeNyttNavn(navn)),
-    lagKnapp('Slett', 'btn btn-danger-subtle', () => slettGruppe(navn)));
-  kobleDragOgSlipp(li);
+    lagKnapp('Endre', 'btn', () => giGruppeNyttNavn(ktrl, navn)),
+    lagKnapp('Slett', 'btn btn-danger-subtle', () => slettGruppe(ktrl, navn)));
+  kobleDragOgSlipp(li, ktrl);
   return li;
+}
+
+// --- Kortinnhold per bibliotektype ---
+
+function fyllSegmentKort(li, seg, ktrl) {
+  const navn = document.createElement('div');
+  navn.className = 'seg-name';
+  navn.textContent = seg.name;
+
+  const meta = document.createElement('div');
+  meta.className = 'seg-meta';
+  meta.textContent = fmtDato(seg.created_at) + ' · ' + seg.point_count + ' punkter';
+  li.append(navn, meta);
+
+  if (seg.description) {
+    const beskr = document.createElement('div');
+    beskr.className = 'seg-desc';
+    beskr.textContent = seg.description;
+    beskr.title = seg.description;
+    li.appendChild(beskr);
+  }
+  // Marker segmentet som er åpent i redigeringen
+  if (editorState.kilde && editorState.kilde.type === 'segment' &&
+      editorState.kilde.id === seg.id) {
+    li.classList.add('aktiv');
+  }
+
+  const knapper = document.createElement('div');
+  knapper.className = 'seg-buttons';
+  // A/B-valg hører bare til «Slå sammen segmenter». I redigering OG i arenakart-
+  // modus vises «Åpne» i stedet, så A/B forsvinner når man forlater merge (men
+  // selve merge-utvalget beholdes i minnet til man kommer tilbake).
+  if (aktivFane === 'merge') {
+    knapper.appendChild(lagKnapp('A', 'btn btn-small btn-primary', () => lastMergeSegment('a', seg.id)));
+    knapper.appendChild(lagKnapp('B', 'btn btn-small btn-red', () => lastMergeSegment('b', seg.id)));
+  } else {
+    knapper.appendChild(lagKnapp('Åpne', 'btn btn-small btn-primary', () => åpneSegmentIRedigering(seg.id)));
+  }
+  knapper.appendChild(lagKnapp('Endre', 'btn btn-small', () => endreMetadata(seg)));
+  knapper.appendChild(lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => slettSegment(seg)));
+  li.appendChild(knapper);
+}
+
+function fyllArenaKort(li, a, ktrl) {
+  const navn = document.createElement('div');
+  navn.className = 'seg-name';
+  navn.textContent = a.navn || 'Uten navn';
+
+  const meta = document.createElement('div');
+  meta.className = 'seg-meta';
+  meta.textContent = a.feature_count + ' steder' + (a.har_bilde ? '' : ' · uten bilde');
+  li.append(navn, meta);
+
+  if (a.beskrivelse) {
+    const beskr = document.createElement('div');
+    beskr.className = 'seg-desc';
+    beskr.textContent = a.beskrivelse;
+    beskr.title = a.beskrivelse;
+    li.appendChild(beskr);
+  }
+  if (window.arenaEditor && window.arenaEditor.aktivId &&
+      window.arenaEditor.aktivId() === a.id) {
+    li.classList.add('aktiv');
+  }
+
+  const knapper = document.createElement('div');
+  knapper.className = 'seg-buttons';
+  knapper.appendChild(lagKnapp('Åpne', 'btn btn-small btn-primary', () => åpneArena(a.id)));
+  knapper.appendChild(lagKnapp('Endre', 'btn btn-small', () => endreArenaMetadata(a)));
+  knapper.appendChild(lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => slettArena(a)));
+  li.appendChild(knapper);
+}
+
+/** Bytt til arenakart-modus og åpne det valgte arenakartet. */
+function åpneArena(id) {
+  byttFane('arena');
+  if (window.arenaEditor && window.arenaEditor.åpne) window.arenaEditor.åpne(id);
 }
 
 // --- Gruppehåndtering ---
@@ -1187,62 +1239,113 @@ async function spørOmGruppenavn(tittel, forslag) {
   return handling === 'ok' && navn ? navn : null;
 }
 
-async function nyGruppe() {
+async function nyGruppe(ktrl) {
   const navn = await spørOmGruppenavn('Ny gruppe', '');
   if (!navn) return;
-  if (bibliotek.groups[navn] !== undefined) {
+  if (ktrl.data.groups[navn] !== undefined) {
     toast('Det finnes allerede en gruppe som heter «' + navn + '»', 'error');
     return;
   }
-  bibliotek.root.unshift({ type: 'group', name: navn });
-  bibliotek.groups[navn] = [];
-  await lagreBibliotek();
+  ktrl.data.root.unshift({ type: 'group', name: navn });
+  ktrl.data.groups[navn] = [];
+  await ktrl.lagre();
 }
 
-async function giGruppeNyttNavn(gammelt) {
+async function giGruppeNyttNavn(ktrl, gammelt) {
   const nytt = await spørOmGruppenavn('Endre gruppenavn', gammelt);
   if (!nytt || nytt === gammelt) return;
-  if (bibliotek.groups[nytt] !== undefined) {
+  if (ktrl.data.groups[nytt] !== undefined) {
     toast('Det finnes allerede en gruppe som heter «' + nytt + '»', 'error');
     return;
   }
-  for (const entry of bibliotek.root) {
+  for (const entry of ktrl.data.root) {
     if (entry.type === 'group' && entry.name === gammelt) entry.name = nytt;
   }
-  bibliotek.groups[nytt] = bibliotek.groups[gammelt];
-  delete bibliotek.groups[gammelt];
-  settKollapset(nytt, kollapsedeGrupper().has(gammelt));
-  settKollapset(gammelt, false);
-  await lagreBibliotek();
+  ktrl.data.groups[nytt] = ktrl.data.groups[gammelt];
+  delete ktrl.data.groups[gammelt];
+  ktrl.settKollapset(nytt, ktrl.kollapsede().has(gammelt));
+  ktrl.settKollapset(gammelt, false);
+  await ktrl.lagre();
 }
 
-async function slettGruppe(navn) {
-  const antall = (bibliotek.groups[navn] || []).length;
+async function slettGruppe(ktrl, navn) {
+  const antall = (ktrl.data.groups[navn] || []).length;
   if (antall > 0 && !confirm(
-    'Slette gruppa «' + navn + '»? De ' + antall + ' segmentene i den beholdes og flyttes ut på rotnivået.'
+    'Slette gruppa «' + navn + '»? De ' + antall + ' ' + ktrl.cfg.enhet +
+    ' i den beholdes og flyttes ut på rotnivået.'
   )) return;
-  const indeks = bibliotek.root.findIndex((e) => e.type === 'group' && e.name === navn);
+  const indeks = ktrl.data.root.findIndex((e) => e.type === 'group' && e.name === navn);
   if (indeks === -1) return;
-  // Segmentene i gruppa legges ut der gruppa sto
-  const segmenter = (bibliotek.groups[navn] || []).map((sid) => ({ type: 'segment', id: sid }));
-  bibliotek.root.splice(indeks, 1, ...segmenter);
-  delete bibliotek.groups[navn];
-  settKollapset(navn, false);
-  await lagreBibliotek();
+  // Elementene i gruppa legges ut der gruppa sto
+  const løse = (ktrl.data.groups[navn] || []).map((id) => ({ type: ktrl.cfg.entryType, id }));
+  ktrl.data.root.splice(indeks, 1, ...løse);
+  delete ktrl.data.groups[navn];
+  ktrl.settKollapset(navn, false);
+  await ktrl.lagre();
 }
 
-document.getElementById('btn-new-group').addEventListener('click', nyGruppe);
+// --- De to biblioteks-instansene ---
+
+const segmentBib = lagBibliotek({
+  listeId: 'segment-list', emptyId: 'library-empty',
+  entryType: 'segment', dndPrefiks: 'seg', enhet: 'segmenter',
+  endepunkt: '/api/library', kollapsNøkkel: 'gps-tool.kollapsede',
+  hent: async () => {
+    const [segRes, libRes] = await Promise.all([api('/api/segments'), api('/api/library')]);
+    const info = {};
+    for (const s of (await segRes.json()).segments) info[s.id] = s;
+    return { struktur: await libRes.json(), info };
+  },
+  fyllKort: fyllSegmentKort,
+});
+
+const arenaBib = lagBibliotek({
+  listeId: 'arena-list', emptyId: 'arena-library-empty',
+  entryType: 'arena', dndPrefiks: 'arn', enhet: 'arenakart',
+  endepunkt: '/api/arena-library', kollapsNøkkel: 'gps-tool.arena-kollapsede',
+  hent: async () => {
+    const [arRes, libRes] = await Promise.all([api('/api/arenas'), api('/api/arena-library')]);
+    const info = {};
+    for (const a of (await arRes.json()).arenas) info[a.id] = a;
+    return { struktur: await libRes.json(), info };
+  },
+  fyllKort: fyllArenaKort,
+});
+
+// Wrappere med de gamle navnene, så resten av koden (og arena.js via window)
+// kan be om en oppfriskning uten å kjenne kontrollerne.
+async function oppdaterBibliotek() { await segmentBib.oppdater(); }
+async function oppdaterArenabibliotek() { await arenaBib.oppdater(); }
+window.oppdaterArenabibliotek = oppdaterArenabibliotek;
+
+document.getElementById('btn-new-group').addEventListener('click', () => nyGruppe(segmentBib));
+document.getElementById('btn-new-arena-group').addEventListener('click', () => nyGruppe(arenaBib));
+
+// Sammenleggbare bibliotek-seksjoner (venstre stolpe rommer nå flere lister).
+// Kollapstilstanden huskes lokalt per seksjon.
+for (const knapp of document.querySelectorAll('.library-toggle')) {
+  const seksjon = document.getElementById(knapp.dataset.lib);
+  const nøkkel = 'gps-tool.lib-kollaps.' + knapp.dataset.lib;
+  if (localStorage.getItem(nøkkel) === '1') seksjon.classList.add('kollapset');
+  knapp.addEventListener('click', () => {
+    const kollapset = seksjon.classList.toggle('kollapset');
+    localStorage.setItem(nøkkel, kollapset ? '1' : '0');
+  });
+}
 
 // --- Dra og slipp: fritt endre rekkefølge og gruppetilhørighet ---
-// Hvert element bærer 'seg:<id>' eller 'grp:<navn>' i dataset.dnd.
-// Slipp OVER/UNDER et element = ny plassering; slipp PÅ en gruppe-
-// overskrift = legg segmentet i gruppa.
+// Hvert element bærer '<prefiks>:<id>' (seg/arn) eller 'grp:<navn>' i
+// dataset.dnd. Slipp OVER/UNDER et element = ny plassering; slipp PÅ en
+// gruppeoverskrift = legg elementet i gruppa. dndKtrl holder hvilket bibliotek
+// draget gjelder, så man ikke kan dra på tvers av segment- og arenalista.
 
 let dndKilde = null; // dataset.dnd for elementet som dras
+let dndKtrl = null;  // bibliotek-kontrolleren draget hører til
 
-function kobleDragOgSlipp(el) {
+function kobleDragOgSlipp(el, ktrl) {
   el.addEventListener('dragstart', (e) => {
     dndKilde = el.dataset.dnd;
+    dndKtrl = ktrl;
     el.classList.add('dragging');
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', dndKilde);
@@ -1251,17 +1354,19 @@ function kobleDragOgSlipp(el) {
     el.classList.remove('dragging');
     ryddDndMarkering();
     dndKilde = null;
+    dndKtrl = null;
   });
   el.addEventListener('dragover', (e) => {
-    if (!dndKilde || dndKilde === el.dataset.dnd) return;
+    // Bare innenfor samme bibliotek (kan ikke dra segment til arena-lista)
+    if (!dndKilde || dndKtrl !== ktrl || dndKilde === el.dataset.dnd) return;
     // Grupper kan bare plasseres på rotnivået
     if (dndKilde.startsWith('grp:') && el.classList.contains('i-gruppe')) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     ryddDndMarkering();
     const rekt = el.getBoundingClientRect();
-    if (dndKilde.startsWith('seg:') && el.dataset.dnd.startsWith('grp:')) {
-      // Segment over gruppeoverskrift: midten = inn i gruppa, kantene = før/etter
+    if (!dndKilde.startsWith('grp:') && el.dataset.dnd.startsWith('grp:')) {
+      // Element over gruppeoverskrift: midten = inn i gruppa, kantene = før/etter
       const relativ = (e.clientY - rekt.top) / rekt.height;
       if (relativ > 0.3 && relativ < 0.7) { el.classList.add('dnd-into'); return; }
     }
@@ -1272,11 +1377,11 @@ function kobleDragOgSlipp(el) {
   });
   el.addEventListener('drop', (e) => {
     e.preventDefault();
-    if (!dndKilde || dndKilde === el.dataset.dnd) return;
+    if (!dndKilde || dndKtrl !== ktrl || dndKilde === el.dataset.dnd) return;
     const innIGruppe = el.classList.contains('dnd-into');
     const før = el.classList.contains('dnd-over-top');
     ryddDndMarkering();
-    utførSlipp(dndKilde, el.dataset.dnd, { innIGruppe, før });
+    utførSlipp(ktrl, dndKilde, el.dataset.dnd, { innIGruppe, før });
   });
 }
 
@@ -1286,55 +1391,58 @@ function ryddDndMarkering() {
   }
 }
 
-/** Fjern et segment fra strukturen (uansett hvor det står). */
-function fjernSegmentFraStruktur(sid) {
-  bibliotek.root = bibliotek.root.filter((e) => !(e.type === 'segment' && e.id === sid));
-  for (const navn of Object.keys(bibliotek.groups)) {
-    bibliotek.groups[navn] = bibliotek.groups[navn].filter((x) => x !== sid);
+/** Fjern et element fra strukturen (uansett hvor det står). */
+function fjernFraStruktur(ktrl, id) {
+  const t = ktrl.cfg.entryType;
+  ktrl.data.root = ktrl.data.root.filter((e) => !(e.type === t && e.id === id));
+  for (const navn of Object.keys(ktrl.data.groups)) {
+    ktrl.data.groups[navn] = ktrl.data.groups[navn].filter((x) => x !== id);
   }
 }
 
-function utførSlipp(kilde, mål, valg) {
-  if (kilde.startsWith('seg:')) {
-    const sid = kilde.slice(4);
-    fjernSegmentFraStruktur(sid);
+function utførSlipp(ktrl, kilde, mål, valg) {
+  const t = ktrl.cfg.entryType;
+  const prefiks = ktrl.cfg.dndPrefiks + ':';
+  if (kilde.startsWith(prefiks)) {
+    const id = kilde.slice(prefiks.length);
+    fjernFraStruktur(ktrl, id);
 
     if (valg.innIGruppe && mål.startsWith('grp:')) {
-      // Slippt på en gruppeoverskrift: legg segmentet bakerst i gruppa
-      bibliotek.groups[mål.slice(4)].push(sid);
-    } else if (mål.startsWith('seg:')) {
-      const målSid = mål.slice(4);
-      // Ligger målsegmentet i en gruppe, havner vi i samme gruppe
-      const gruppe = Object.keys(bibliotek.groups)
-        .find((g) => bibliotek.groups[g].includes(målSid));
+      // Slippt på en gruppeoverskrift: legg elementet bakerst i gruppa
+      ktrl.data.groups[mål.slice(4)].push(id);
+    } else if (mål.startsWith(prefiks)) {
+      const målId = mål.slice(prefiks.length);
+      // Ligger målelementet i en gruppe, havner vi i samme gruppe
+      const gruppe = Object.keys(ktrl.data.groups)
+        .find((g) => ktrl.data.groups[g].includes(målId));
       if (gruppe) {
-        const i = bibliotek.groups[gruppe].indexOf(målSid);
-        bibliotek.groups[gruppe].splice(valg.før ? i : i + 1, 0, sid);
+        const i = ktrl.data.groups[gruppe].indexOf(målId);
+        ktrl.data.groups[gruppe].splice(valg.før ? i : i + 1, 0, id);
       } else {
-        const i = bibliotek.root.findIndex((e) => e.type === 'segment' && e.id === målSid);
-        bibliotek.root.splice(valg.før ? i : i + 1, 0, { type: 'segment', id: sid });
+        const i = ktrl.data.root.findIndex((e) => e.type === t && e.id === målId);
+        ktrl.data.root.splice(valg.før ? i : i + 1, 0, { type: t, id });
       }
     } else {
       // Før/etter en gruppeoverskrift på rotnivået
-      const i = bibliotek.root.findIndex((e) => e.type === 'group' && e.name === mål.slice(4));
-      bibliotek.root.splice(valg.før ? i : i + 1, 0, { type: 'segment', id: sid });
+      const i = ktrl.data.root.findIndex((e) => e.type === 'group' && e.name === mål.slice(4));
+      ktrl.data.root.splice(valg.før ? i : i + 1, 0, { type: t, id });
     }
   } else {
     // Flytte en hel gruppe på rotnivået
     const navn = kilde.slice(4);
-    const fra = bibliotek.root.findIndex((e) => e.type === 'group' && e.name === navn);
+    const fra = ktrl.data.root.findIndex((e) => e.type === 'group' && e.name === navn);
     if (fra === -1) return;
-    const [entry] = bibliotek.root.splice(fra, 1);
+    const [entry] = ktrl.data.root.splice(fra, 1);
     let i;
     if (mål.startsWith('grp:')) {
-      i = bibliotek.root.findIndex((e) => e.type === 'group' && e.name === mål.slice(4));
+      i = ktrl.data.root.findIndex((e) => e.type === 'group' && e.name === mål.slice(4));
     } else {
-      i = bibliotek.root.findIndex((e) => e.type === 'segment' && e.id === mål.slice(4));
+      i = ktrl.data.root.findIndex((e) => e.type === t && e.id === mål.slice(prefiks.length));
     }
-    if (i === -1) { bibliotek.root.splice(fra, 0, entry); return; }
-    bibliotek.root.splice(valg.før ? i : i + 1, 0, entry);
+    if (i === -1) { ktrl.data.root.splice(fra, 0, entry); return; }
+    ktrl.data.root.splice(valg.før ? i : i + 1, 0, entry);
   }
-  lagreBibliotek();
+  ktrl.lagre();
 }
 
 function lagKnapp(tekst, klasse, onClick) {
@@ -1376,6 +1484,65 @@ async function slettSegment(seg) {
     await api('/api/segments/' + seg.id, { method: 'DELETE' });
     toast('Segmentet «' + seg.name + '» er slettet');
     oppdaterBibliotek();
+  } catch (feil) {
+    toast(feil.message, 'error');
+  }
+}
+
+/** Liten dialog for arenakartets navn + beskrivelse. Returnerer {navn,
+ *  beskrivelse} eller null ved avbryt. */
+async function spørOmArenaMeta(forslag) {
+  const dialog = document.getElementById('arena-meta-dialog');
+  const navnFelt = document.getElementById('arena-meta-navn');
+  const beskrFelt = document.getElementById('arena-meta-beskr');
+  navnFelt.value = forslag.navn || '';
+  beskrFelt.value = forslag.beskrivelse || '';
+  const løfte = ventPåDialog(dialog);
+  navnFelt.select();
+  const handling = await løfte;
+  const navn = navnFelt.value.trim();
+  if (handling !== 'ok' || !navn) return null;
+  return { navn, beskrivelse: beskrFelt.value.trim() || null };
+}
+
+/** Endre navn/beskrivelse på et arenakart uten å laste hele editoren.
+ *  Leser arenaen, bytter feltene og lagrer den tilbake (PUT /api/arenas/{id}). */
+async function endreArenaMetadata(a) {
+  const meta = await spørOmArenaMeta({ navn: a.navn, beskrivelse: a.beskrivelse });
+  if (!meta) return;
+  try {
+    const arena = await (await api('/api/arenas/' + a.id)).json();
+    arena.navn = meta.navn;
+    arena.beskrivelse = meta.beskrivelse;
+    await api('/api/arenas/' + a.id, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(arena),
+    });
+    toast('Arenakartet er oppdatert');
+    oppdaterArenabibliotek();
+    // Er det samme arenakart som er åpent i editoren, oppdater navnet der også
+    if (window.arenaEditor && window.arenaEditor.aktivId
+        && window.arenaEditor.aktivId() === a.id && window.arenaEditor.settNavn) {
+      window.arenaEditor.settNavn(meta.navn, meta.beskrivelse);
+    }
+  } catch (feil) {
+    toast(feil.message, 'error');
+  }
+}
+
+async function slettArena(a) {
+  if (!confirm('Slette arenakartet «' + (a.navn || 'Uten navn') +
+    '»? Dette kan ikke angres.')) return;
+  try {
+    await api('/api/arenas/' + a.id, { method: 'DELETE' });
+    toast('Arenakartet «' + (a.navn || 'Uten navn') + '» er slettet');
+    // Er det åpne arenakartet slettet, nullstill editoren
+    if (window.arenaEditor && window.arenaEditor.aktivId
+        && window.arenaEditor.aktivId() === a.id && window.arenaEditor.nyttArena) {
+      window.arenaEditor.nyttArena();
+    }
+    oppdaterArenabibliotek();
   } catch (feil) {
     toast(feil.message, 'error');
   }
@@ -1683,19 +1850,7 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
   }
 
   // Bygg symbol-avkrysningene (én rute per kategori)
-  const valgte = new Set(wpt ? wptTyper(wpt) : ['sjekkpunkt']);
-  const beholder = document.getElementById('wpt-symbols');
-  beholder.innerHTML = '';
-  for (const [type, def] of Object.entries(WPT_SYMBOLER)) {
-    const rute = document.createElement('label');
-    rute.className = valgte.has(type) ? 'valgt' : '';
-    rute.innerHTML =
-      '<input type="checkbox" value="' + type + '"' + (valgte.has(type) ? ' checked' : '') +
-      '><span>' + def.emoji + ' ' + def.navn + '</span>';
-    const boks = rute.querySelector('input');
-    boks.addEventListener('change', () => rute.classList.toggle('valgt', boks.checked));
-    beholder.appendChild(rute);
-  }
+  byggSymbolValg(wpt ? wptTyper(wpt) : ['sjekkpunkt']);
 
   visWptStatistikk(idx, hoppOverIndeks);
 
@@ -1738,6 +1893,75 @@ async function visWptDialog(wpt, idx, hoppOverIndeks) {
         desc: document.getElementById('wpt-desc-en').value,
       }),
     },
+  };
+}
+
+/** Bygg symbol-avkrysningene (én rute per kategori) i wpt-dialogen, med de
+ *  oppgitte typene forhåndsvalgt. Delt av interessepunkt- og delt-punkt-dialogen. */
+function byggSymbolValg(valgteTyper) {
+  const valgte = new Set(valgteTyper);
+  const beholder = document.getElementById('wpt-symbols');
+  beholder.innerHTML = '';
+  for (const [type, def] of Object.entries(WPT_SYMBOLER)) {
+    const rute = document.createElement('label');
+    rute.className = valgte.has(type) ? 'valgt' : '';
+    rute.innerHTML =
+      '<input type="checkbox" value="' + type + '"' + (valgte.has(type) ? ' checked' : '') +
+      '><span>' + def.emoji + ' ' + def.navn + '</span>';
+    const boks = rute.querySelector('input');
+    boks.addEventListener('change', () => rute.classList.toggle('valgt', boks.checked));
+    beholder.appendChild(rute);
+  }
+}
+
+/** Rediger et delt punkt direkte i punktbiblioteket. Gjenbruker wpt-dialogen,
+ *  men skjuler alt som bare gir mening i løypekontekst (statistikk, snap,
+ *  vis-ikon, del-bib, gjenbruk, flytt). Returnerer et Waypoint-formet objekt
+ *  til PUT /api/waypoints/{id}, eller null ved avbryt. */
+async function redigerDeltPunkt(p) {
+  const dialog = document.getElementById('wpt-dialog');
+  const visIkonRad = document.getElementById('wpt-vis-ikon').closest('.wpt-vis-rad');
+  const delBibRad = document.getElementById('wpt-del-bib').closest('.wpt-vis-rad');
+  document.getElementById('wpt-dialog-title').textContent = 'Rediger delt punkt';
+  for (const id of ['wpt-reuse', 'wpt-shared-note', 'wpt-snap-rad', 'wpt-move-btn', 'wpt-delete-btn']) {
+    document.getElementById(id).classList.add('hidden');
+  }
+  visIkonRad.classList.add('hidden');
+  delBibRad.classList.add('hidden');
+  document.getElementById('wpt-stats').innerHTML = '';
+
+  document.getElementById('wpt-name').value = p.name || '';
+  document.getElementById('wpt-desc').value = p.desc || '';
+  const enO = (p.oversettelser && p.oversettelser.en) || {};
+  document.getElementById('wpt-name-en').value = enO.name || '';
+  document.getElementById('wpt-desc-en').value = enO.desc || '';
+  document.getElementById('wpt-arena').value = p.arena || '';
+  byggSymbolValg(wptTyper(p));
+
+  const løfte = ventPåDialog(dialog);
+  document.getElementById('wpt-name').select();
+  const handling = await løfte;
+  // Vis radene igjen så den vanlige interessepunkt-dialogen ikke arver skjult tilstand
+  visIkonRad.classList.remove('hidden');
+  delBibRad.classList.remove('hidden');
+  if (handling !== 'ok' || !document.getElementById('wpt-name').value.trim()) return null;
+
+  let typer = [...document.getElementById('wpt-symbols').querySelectorAll('input:checked')]
+    .map((b) => b.value);
+  if (typer.length === 0) typer.push('annet');
+  typer = sorterTyper(typer);
+  const primær = WPT_SYMBOLER[typer[0]];
+  return {
+    lat: p.lat, lon: p.lon, ele: p.ele == null ? null : p.ele,
+    name: document.getElementById('wpt-name').value.trim() || primær.navn,
+    desc: document.getElementById('wpt-desc').value.trim() || null,
+    types: typer, sym: primær.sym, type: typer[0],
+    arena: document.getElementById('wpt-arena').value.trim().toLowerCase()
+      .replace(/\s+/g, '') || null,
+    oversettelser: byggOversettelser({
+      name: document.getElementById('wpt-name-en').value,
+      desc: document.getElementById('wpt-desc-en').value,
+    }),
   };
 }
 
@@ -2052,6 +2276,26 @@ async function fyllPunktbibliotek(liste) {
     rad.querySelector('.wpt-lib-bruk').textContent = bruktI.length
       ? 'Brukes i: ' + bruktI.join(', ')
       : 'Ikke i bruk i noen lagrede segmenter';
+    const endre = document.createElement('button');
+    endre.type = 'button';
+    endre.className = 'btn btn-small';
+    endre.textContent = 'Endre';
+    endre.addEventListener('click', async () => {
+      const verdier = await redigerDeltPunkt(p);
+      if (!verdier) return;
+      try {
+        await api('/api/waypoints/' + p.id, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(verdier),
+        });
+        toast('«' + verdier.name + '» er oppdatert (slår inn i løypene ved neste åpning)');
+        fyllPunktbibliotek(liste);
+      } catch (feil) {
+        toast(feil.message, 'error');
+      }
+    });
+    rad.appendChild(endre);
     const slett = document.createElement('button');
     slett.type = 'button'; // må ikke sende inn skjemaet (lukke dialogen)
     slett.className = 'btn btn-small btn-danger-subtle';
@@ -3218,6 +3462,14 @@ function hentFlis(url) {
   });
 }
 
+/** Dekod HTML-entiteter i en ren tekststreng (brukes på kartattribusjonene
+ *  før de tegnes på canvas, der «&copy;» ellers vises literalt). */
+function avkodEntiteter(tekst) {
+  const ta = document.createElement('textarea');
+  ta.innerHTML = tekst;
+  return ta.value;
+}
+
 async function eksporterKartPng() {
   // Vern mot dobbeltklikk: flisehentingen tar noen sekunder, og et nytt
   // klikk i mellomtida ville startet enda en eksport (og enda en dialog).
@@ -3362,7 +3614,9 @@ async function lagKartPngOgLagre() {
   }
 
   // ---- Kildeangivelse (kreves av karttjenestene) ----
-  const kilde = lagDef.attribution.replace(/<[^>]*>/g, '');
+  // Strip HTML-tagger, og dekod entitetene som brukes i attribusjonene
+  // (ellers havner literalen «&copy; Kartverket» i PNG-en i stedet for «©»).
+  const kilde = avkodEntiteter(lagDef.attribution.replace(/<[^>]*>/g, ''));
   ctx.font = '11px "Segoe UI", sans-serif';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'bottom';
@@ -3499,9 +3753,27 @@ document.getElementById('wpt-size').addEventListener('input', (e) => {
 
 let aktivFane = 'editor';
 
+/** Oppdater aktiv-indikatoren i toppbanneret: hvilket segment og hvilket
+ *  arenakart som er åpent (0–1 av hver kan være aktive samtidig). Kalles ved
+ *  fanebytte og når segment/arena åpnes, opprettes eller tømmes (arena.js
+ *  kaller den via window). */
+function oppdaterAktivIndikator() {
+  const segNavn = (editorState.punkter && editorState.navn) || null;
+  const arenaNavn = (window.arenaEditor && window.arenaEditor.aktivNavn
+    && window.arenaEditor.aktivNavn()) || null;
+  const segEl = document.getElementById('aktiv-segment');
+  const arenaEl = document.getElementById('aktiv-arena');
+  segEl.textContent = 'Segment: ' + (segNavn ? '«' + segNavn + '»' : '–');
+  arenaEl.textContent = 'Arena: ' + (arenaNavn ? '«' + arenaNavn + '»' : '–');
+  segEl.classList.toggle('tom', !segNavn);
+  arenaEl.classList.toggle('tom', !arenaNavn);
+}
+window.oppdaterAktivIndikator = oppdaterAktivIndikator;
+
 function byttFane(fane) {
   aktivFane = fane;
   const erArena = fane === 'arena';
+  oppdaterAktivIndikator();
   document.getElementById('tab-editor').classList.toggle('active', fane === 'editor');
   document.getElementById('tab-merge').classList.toggle('active', fane === 'merge');
   document.getElementById('tab-arena').classList.toggle('active', erArena);
@@ -3516,6 +3788,7 @@ function byttFane(fane) {
   document.getElementById('arena-workspace').classList.toggle('hidden', !erArena);
 
   if (erArena) {
+    oppdaterBibliotek(); // fjern A/B-merkene fra segmentkortene i arenakart-modus
     if (window.arenaEditor) window.arenaEditor.aktiver();
     return; // arena styrer sin egen scene
   }
@@ -3537,8 +3810,9 @@ document.getElementById('tab-merge').addEventListener('click', () => byttFane('m
 document.getElementById('tab-arena').addEventListener('click', () => byttFane('arena'));
 
 // Oppstart: gjenopprett lagrede valg, hent biblioteket, vis tom-tilstand
+// settKartfliser speiler selv riktig verdi i Kartvisning-dropdownen («Skjul
+// kart» når kartet er av, ellers det aktive laget).
 settKartfliser(localStorage.getItem('gps-tool.kart') === '1');
-document.getElementById('map-layer-select').value = aktivtKartlag;
 document.getElementById('map-track-color').value = kartEksport.farge;
 document.getElementById('map-track-width').value = kartEksport.tykkelse;
 document.getElementById('map-track-width-val').textContent = kartEksport.tykkelse;
@@ -3576,10 +3850,11 @@ visKartmelding(true);
 document.getElementById('btn-toggle-wpt').classList.toggle('active', wptVis);
 oppdaterWptKnapp(); // deaktivert til en løype er lastet
 oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
+oppdaterArenabibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 24;
+const FORVENTET_BACKEND = 25;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

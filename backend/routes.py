@@ -56,7 +56,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 24
+BACKEND_VERSJON = 25
 
 
 @router.get("/health")
@@ -166,6 +166,21 @@ def lagre_bibliotek(struktur: LibraryStructure):
     return storage.save_library(struktur)
 
 
+@router.get("/arena-library", response_model=LibraryStructure)
+def hent_arena_bibliotek():
+    """Hent organiseringen av arenakartbiblioteket (grupper og rekkefølge)."""
+    return storage.load_arena_library()
+
+
+@router.put("/arena-library", response_model=LibraryStructure)
+def lagre_arena_bibliotek(struktur: LibraryStructure):
+    """Lagre organiseringen etter at brukeren har flyttet/gruppert arenakart."""
+    for entry in struktur.root:
+        if entry.type not in ("group", "arena"):
+            raise HTTPException(status_code=400, detail="Ugyldig oppføringstype")
+    return storage.save_arena_library(struktur)
+
+
 @router.get("/segments/{segment_id}", response_model=SegmentDetail)
 def hent_segment(segment_id: str):
     """Hent ett segment med alle punktene."""
@@ -227,6 +242,18 @@ def delte_punkter(bruk: bool = False):
 def opprett_delt_punkt(punkt: Waypoint):
     """Legg et punkt i punktbiblioteket, så det kan gjenbrukes i andre løyper."""
     return punktbibliotek.opprett_punkt(punkt)
+
+
+@router.put("/waypoints/{bib_id}", response_model=DeltPunkt)
+def oppdater_delt_punkt(bib_id: str, punkt: Waypoint):
+    """Endre et delt punkt direkte i biblioteket (fra punktbibliotek-dialogen).
+
+    Endringen slår inn i alle løyper som bruker punktet ved neste åpning.
+    """
+    try:
+        return punktbibliotek.oppdater_punkt(bib_id, punkt)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Fant ikke det delte punktet")
 
 
 @router.delete("/waypoints/{bib_id}", status_code=204)

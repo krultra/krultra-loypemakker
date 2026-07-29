@@ -51,18 +51,45 @@ body { display: flex; flex-direction: column; }
 
 .topbar-right { display: flex; align-items: center; gap: 18px; }
 
-.toggles { display: flex; gap: 6px; padding-right: 18px; border-right: 1px solid rgba(255,255,255,0.15); }
+/* Aktiv-indikator: hvilket segment/arenakart som er åpent (0–1 av hver) */
+.aktiv-indikator {
+  display: flex;
+  gap: 6px;
+  padding-right: 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+.aktiv-chip {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  white-space: nowrap;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.aktiv-chip.tom { color: #64748b; background: rgba(255, 255, 255, 0.04); }
 
-/* Segmentkontroll for visningsmodus (bare kart / delt / bare profil) */
+/* Segmentkontroll for visningsmodus (bare kart / delt / bare profil) — bor nå i
+   den lyse kartverktøylinja, skjøvet helt til høyre. */
 .viewmode {
   display: flex;
   gap: 2px;
   padding: 2px;
-  background: rgba(255, 255, 255, 0.08);
+  margin-left: auto;
+  background: #eef2f7;
+  border: 1px solid var(--kant);
   border-radius: 9px;
-  margin-right: 18px;
 }
-.viewmode .tab { padding: 6px 12px; }
+.viewmode .tab {
+  padding: 4px 10px;
+  color: var(--tekst-dus);
+  font-size: 15px;
+  line-height: 1;
+}
+.viewmode .tab:hover { background: #fff; color: var(--tekst); }
+.viewmode .tab.active { background: var(--farge-primær); color: #fff; }
 
 .tabs { display: flex; gap: 6px; }
 
@@ -354,7 +381,7 @@ dialog select {
   pointer-events: none;
 }
 
-/* ---------- Segmentbibliotek ---------- */
+/* ---------- Bibliotek (segment + arenakart) ---------- */
 
 .library-header {
   display: flex;
@@ -362,6 +389,20 @@ dialog select {
   justify-content: space-between;
   margin-bottom: 6px;
 }
+
+/* Sammenleggbar seksjonsknapp (chevron + overskrift) */
+.library-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.lib-chevron { font-size: 10px; color: var(--tekst-dus); transition: transform 0.15s; }
+.library.kollapset .lib-chevron { transform: rotate(-90deg); }
+.library.kollapset .library-body { display: none; }
 
 .library h2 {
   font-size: 13px;
@@ -372,6 +413,9 @@ dialog select {
 }
 
 .library-hint { font-size: 11px; margin: 0 0 10px; }
+
+/* Kortet for det aktive segmentet/arenakartet */
+.segment-item.aktiv { border-color: var(--farge-primær); box-shadow: 0 0 0 1px var(--farge-primær) inset; }
 
 /* Gruppeoverskrift i biblioteket */
 .group-item {
@@ -539,9 +583,11 @@ dialog select {
   flex-shrink: 0;
 }
 
-/* Visningsmodus «Bare profil»: skjul kartet og la profilen fylle flaten */
-.content.modus-profil #map,
-.content.modus-profil .map-toolbar { display: none; }
+/* Visningsmodus «Bare profil»: skjul kartet og la profilen fylle flaten.
+   Kartverktøylinja beholdes som en tynn stripe med KUN visningsmodus-vekseren,
+   så man fortsatt kan bytte tilbake til kart/delt. */
+.content.modus-profil #map { display: none; }
+.content.modus-profil .map-toolbar > *:not(.viewmode) { display: none; }
 .content.modus-profil .profile-section {
   flex: 1;
   min-height: 0;

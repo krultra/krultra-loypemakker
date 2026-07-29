@@ -69,6 +69,23 @@ def opprett_punkt(punkt: Waypoint) -> DeltPunkt:
     return delt
 
 
+def oppdater_punkt(bib_id: str, punkt: Waypoint) -> DeltPunkt:
+    """Endre et delt punkt direkte i biblioteket (fra punktbibliotek-dialogen).
+
+    Overskriver de delte feltene med verdiene fra `punkt` og returnerer det
+    oppdaterte punktet. Endringen slår inn i alle løyper som bruker punktet
+    ved neste åpning (via flett_inn). FileNotFoundError hvis id-en er ukjent.
+    """
+    punkter = les_bibliotek()
+    delt = next((p for p in punkter if p.id == bib_id), None)
+    if delt is None:
+        raise FileNotFoundError("Fant ikke delt punkt med id {}".format(bib_id))
+    for felt in _DELTE_FELT:
+        setattr(delt, felt, getattr(punkt, felt))
+    _skriv_bibliotek(punkter)
+    return delt
+
+
 def slett_punkt(bib_id: str) -> None:
     """Fjern et delt punkt. Segmentene beholder sine lokale kopier."""
     punkter = les_bibliotek()
