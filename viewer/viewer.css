@@ -64,7 +64,7 @@ body { display: flex; flex-direction: column; }
   background: #f8fafc;
 }
 
-#lag-knapp, #fullskjerm-knapp {
+#lag-knapp, #fullskjerm-knapp, #last-ned-gpx {
   padding: 6px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
@@ -74,7 +74,7 @@ body { display: flex; flex-direction: column; }
   cursor: pointer;
   white-space: nowrap;
 }
-#lag-knapp:hover, #fullskjerm-knapp:hover { background: #f1f5f9; }
+#lag-knapp:hover, #fullskjerm-knapp:hover, #last-ned-gpx:hover { background: #f1f5f9; }
 
 /* Hint på berøringsskjermer: én finger scroller siden rundt iframen */
 #kart-hint {

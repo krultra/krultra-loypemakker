@@ -36,6 +36,7 @@ const TEKST = {
     satellitt: 'Satellitt', kart: 'Kart', fullskjerm: '⛶ Full skjerm',
     satellittTittel: 'Bytt mellom kart og satellittbilde',
     fullskjermTittel: 'Åpne løypevisningen i egen fane i full størrelse',
+    lastNedGpx: '⤓ GPX', lastNedGpxTittel: 'Last ned løypa som GPX-fil (spor + interessepunkter)',
     distanse: 'Distanse', hoyde: 'Høyde', hoydemeterFraStart: 'Høydemeter fra start',
     moh: 'moh.', fraForrige: 'Fra forrige punkt', fra: 'Fra', start: 'start',
     distanseFraStart: 'Distanse fra start', seArenakart: '🏟️ Se arenakart',
@@ -48,6 +49,7 @@ const TEKST = {
     satellitt: 'Satellite', kart: 'Map', fullskjerm: '⛶ Full screen',
     satellittTittel: 'Switch between map and satellite imagery',
     fullskjermTittel: 'Open the course view in its own tab at full size',
+    lastNedGpx: '⤓ GPX', lastNedGpxTittel: 'Download the course as a GPX file (track + waypoints)',
     distanse: 'Distance', hoyde: 'Elevation', hoydemeterFraStart: 'Ascent/descent from start',
     moh: 'm a.s.l.', fraForrige: 'From previous point', fra: 'From', start: 'start',
     distanseFraStart: 'Distance from start', seArenakart: '🏟️ View arena map',
@@ -145,6 +147,14 @@ function startVisning() {
   settTekst('i-lbl-hm-forrige', t('fraForrige'));
   const hint = document.getElementById('kart-hint');
   if (hint) hint.textContent = t('tofinger');
+  // Last ned GPX-knapp (vises når løypa er lastet)
+  const gpxKnapp = document.getElementById('last-ned-gpx');
+  if (gpxKnapp) {
+    gpxKnapp.textContent = t('lastNedGpx');
+    gpxKnapp.title = t('lastNedGpxTittel');
+    gpxKnapp.classList.remove('skjult');
+    gpxKnapp.addEventListener('click', lastNedGpx);
+  }
   byggSpraakvelger();
 
   // Topptekst og nøkkeltall
@@ -451,6 +461,54 @@ function medSprak(href) {
   if (!href) return href;
   const eksplisitt = new URLSearchParams(location.search).get('lang');
   return eksplisitt ? href + '?lang=' + encodeURIComponent(lang) : href;
+}
+
+/** Bygg en GPX-fil (1.1) fra den publiserte løypa: sporet + interessepunktene.
+ *  Punktene er de forenklede som vises på kartet (RDP ~3 m), med høyder. */
+function byggGpx() {
+  const navn = lok(løype, 'navn') || t('loype');
+  const beskr = lok(løype, 'beskrivelse') || '';
+  const tid = løype.generert || new Date().toISOString();
+  const koord = (v) => Number(v).toFixed(6);
+  let ut = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<gpx version="1.1" creator="KrUltra Løypemakker" ' +
+    'xmlns="http://www.topografix.com/GPX/1/1">\n' +
+    '  <metadata><name>' + escHtml(navn) + '</name>' +
+    (beskr ? '<desc>' + escHtml(beskr) + '</desc>' : '') +
+    '<link href="https://krultra.no"><text>KrUltra</text></link>' +
+    '<time>' + escHtml(tid) + '</time></metadata>\n';
+  // Interessepunkter som <wpt> (høyde hentes fra sporpunktet de er forankret i)
+  for (const w of veipunkter) {
+    const p = punkter[w.idx];
+    const ele = (p && p.ele != null) ? p.ele : null;
+    ut += '  <wpt lat="' + koord(w.lat) + '" lon="' + koord(w.lon) + '">' +
+      (ele != null ? '<ele>' + ele + '</ele>' : '') +
+      '<name>' + escHtml(lok(w, 'name') || '') + '</name>';
+    const d = lok(w, 'desc');
+    if (d) ut += '<desc>' + escHtml(d) + '</desc>';
+    ut += '</wpt>\n';
+  }
+  // Selve sporet
+  ut += '  <trk><name>' + escHtml(navn) + '</name><trkseg>\n';
+  for (const p of punkter) {
+    ut += '    <trkpt lat="' + koord(p.lat) + '" lon="' + koord(p.lon) + '">' +
+      (p.ele != null ? '<ele>' + p.ele + '</ele>' : '') + '</trkpt>\n';
+  }
+  ut += '  </trkseg></trk>\n</gpx>\n';
+  return ut;
+}
+
+/** Last ned løypa som GPX-fil i nettleseren. */
+function lastNedGpx() {
+  const blob = new Blob([byggGpx()], { type: 'application/gpx+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (lok(løype, 'navn') || 'loype').replace(/[\\/:*?"<>|]+/g, '_') + '.gpx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
 /** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */

@@ -17,6 +17,15 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 3.1.0 — 30. juli 2026
+
+- **Last ned GPX fra den publiserte løypevisningen:** en ny **«⤓ GPX»**-knapp
+  lar sluttbrukerne laste ned løypa (spor med høyder + interessepunkter) rett
+  fra kartvisningen, klar til bruk i klokke eller kartapp. Fila bygges i
+  nettleseren fra dataene som allerede vises, og navn/beskrivelse følger
+  språkvalget.
+  - *Merk:* allerede publiserte løyper får knappen når de **republiseres**.
+
 ## 3.0.0 — 30. juli 2026
 
 Milepæl: KUL har vokst fra et løype-verktøy til et komplett arrangørverktøy.

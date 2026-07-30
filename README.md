@@ -26,7 +26,8 @@ konto, ingen abonnement.
    kart + høydeprofil + klikkbare punkter + en markør som viser distanse og
    høydemeter, og bygg den inn på nettsiden din med en liten iframe-snutt.
    Republiser med samme adresse, så oppdateres nettsidene automatisk.
-   Visningene støtter **norsk og engelsk** med språkvelger.
+   Visningene støtter **norsk og engelsk** med språkvelger, og lar
+   sluttbrukerne **laste ned løypa som GPX-fil**.
 
 4. **Lage arenakart.** Ta et oversiktsbilde av arena-/sekretariatsområdet,
    tegn inn **områder og punkter** (sekretariat, servering, sanitær,
