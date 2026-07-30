@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '2.14.0';
+const APP_VERSJON = '3.0.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -2183,6 +2183,20 @@ async function redigerWpt(indeks) {
   lagreVeipunkterAuto();
 }
 
+/** Fjern et delt punkt fra den åpne segmentvisningen etter at det er slettet
+ *  «overalt» fra biblioteket (serveren har alt fjernet det fra segmentfila).
+ *  Uten dette ville punktet blitt stående på kartet til segmentet lastes på nytt. */
+function fjernSlettetPunktFraEditor(bibId) {
+  if (!editorState.veipunkter) return;
+  const før = editorState.veipunkter.length;
+  editorState.veipunkter = editorState.veipunkter.filter((w) => w.bib_id !== bibId);
+  if (editorState.veipunkter.length === før) return; // punktet var ikke i denne løypa
+  if (aktivFane === 'editor') {
+    tegnVeipunkter();
+    if (profilState.synlig) tegnProfil();
+  }
+}
+
 /** Kan brukeren legge til/endre PoI nå? (Ikke for ulagrede sammenslåinger.) */
 function kanRedigereWpt() {
   const k = editorState.kilde;
@@ -2476,7 +2490,7 @@ function lagDeltBibliotek(cfg) {
         toast('«' + cfg.navnFor(el) + '» er fjernet' +
           (valg === 'alle' && bruktI.length ? ' fra biblioteket og alle ' + bruktI.length + ' ' + cfg.enhetFlertall : ''));
         ktrl.oppdater();
-        if (cfg.etterSlett) cfg.etterSlett();
+        if (cfg.etterSlett) cfg.etterSlett(el, valg);
       } catch (feil) { toast(feil.message, 'error'); }
     },
   };
@@ -2667,6 +2681,9 @@ const punktBib = lagDeltBibliotek({
   radTekst: (p) => p.name,
   radTittel: (p) => p.name + (p.desc ? ' — ' + p.desc : ''),
   sorteringsnøkkel: () => (p) => p.name, // alltid alfabetisk på navn
+  // «Slett overalt» fjerner punktet fra segmentene på serveren — speil det i
+  // den åpne segmentvisningen, så det ikke ser ut som om punktet består.
+  etterSlett: (p, valg) => { if (valg === 'alle') fjernSlettetPunktFraEditor(p.id); },
   rediger: (p, bruktI) => redigerDeltPunkt(p, bruktI),
   lagretTekst: (v) => '«' + v.name + '» er oppdatert (slår inn i løypene ved neste åpning)',
   slettSpørsmål: (p) => 'Slette det delte punktet «' + p.name + '»? Løypene som ' +

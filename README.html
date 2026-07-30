@@ -119,12 +119,25 @@ også kommersielt — så lenge opphavsrettsnotisen følger med.</p>
 <p><strong>Publisere interaktive løypevisninger på nett.</strong> Lag en visning med
    kart + høydeprofil + klikkbare punkter + en markør som viser distanse og
    høydemeter, og bygg den inn på nettsiden din med en liten iframe-snutt.
-   Republiser med samme adresse, så oppdateres nettsidene automatisk.</p>
+   Republiser med samme adresse, så oppdateres nettsidene automatisk.
+   Visningene støtter <strong>norsk og engelsk</strong> med språkvelger.</p>
+</li>
+<li>
+<p><strong>Lage arenakart.</strong> Ta et oversiktsbilde av arena-/sekretariatsområdet,
+   tegn inn <strong>områder og punkter</strong> (sekretariat, servering, sanitær,
+   parkering …) med farge, kontur og beskrivelse, knytt <strong>kontakter</strong> til
+   stedene, og publiser arenakartet på sin egen nettadresse. Løypepunkter
+   kan lenke rett til arenakartet, og et arenakart kan lenke videre til et
+   annet (oversikt → detalj).</p>
 </li>
 </ol>
-<p>I tillegg: et <strong>segment-bibliotek</strong> for å organisere løypedeler i grupper,
-og et <strong>punktbibliotek</strong> for å gjenbruke de samme interessepunktene på
-tvers av løyper (nyttig når mange løyper deler trasé).</p>
+<p>I tillegg er alt organisert i <strong>bibliotek</strong> i venstre kolonne: et
+<strong>segmentbibliotek</strong> og et <strong>arenakartbibliotek</strong> (begge med grupper og
+dra-og-slipp), et <strong>punktbibliotek</strong> for å gjenbruke interessepunkter på
+tvers av løyper, og et <strong>kontaktbibliotek</strong> for å gjenbruke kontakter på
+tvers av arenakart. Toppmenyen veksler mellom hovedmodusene (rediger
+segment · slå sammen segmenter · rediger arenakart) og viser hva som er
+åpent.</p>
 <h2 id="kom-i-gang">Kom i gang</h2>
 <p><strong>Du trenger:</strong> en Windows-PC og Python 3.9 eller nyere.</p>
 <ol>
@@ -157,8 +170,8 @@ får du en fil du sender til <code>post@krultra.no</code>.</p>
 <li><strong>Tester:</strong> <code>python -m pytest</code> (fra prosjektmappa med <code>.venv</code> aktivert).</li>
 </ul>
 <p>Koden er organisert i <code>backend/</code> (server + GPX-logikk), <code>frontend/</code> (alt du
-ser i nettleseren), <code>viewer/</code> (den innebygde løypevisningen), <code>tests/</code> og
-<code>docs/</code>.</p>
+ser i nettleseren — løype-, sammenslåings- og arenakart-editoren), <code>viewer/</code>
+(de innebygde løype- og arenakart-visningene), <code>tests/</code> og <code>docs/</code>.</p>
 <p>Denne og all annen dokumentasjon finnes også som pene HTML-sider du kan
 dobbeltklikke og åpne direkte i nettleseren (se <code>README.html</code> og
 <code>docs/index.html</code>). Markdown-filene er kilden — endrer du dem, bygg HTML-

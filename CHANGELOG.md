@@ -17,6 +17,28 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 3.0.0 — 30. juli 2026
+
+Milepæl: KUL har vokst fra et løype-verktøy til et komplett arrangørverktøy.
+Denne versjonen samler arbeidet fra 2.5–2.14 og markerer det med et hovednummer.
+
+- **Arenakart** (nytt hovedområde): tegn områder og punkter på et
+  oversiktsbilde, med farge/kontur, typer, kontakter og flerspråklig innhold,
+  og publiser hvert arenakart på egen nettadresse. Løypepunkter kan lenke til
+  arenakart, og arenakart kan lenke videre til hverandre (oversikt → detalj).
+- **Delte kontakter** med eget **kontaktbibliotek**, og **arenakartbibliotek**
+  med gruppering og dra-og-slipp — ved siden av segment- og punktbiblioteket.
+- **Flerspråklige publiserte visninger** (norsk + engelsk) med språkvelger.
+- **Kraftig opprydding i brukergrensesnittet:** toppmeny som ren modusveksler
+  med aktiv-indikator, alle bibliotek samlet i venstre kolonne med filtrering,
+  grupperte og sammenleggbare verktøylinjer, dragbar grense mellom kart og
+  høydeprofil, valgbar oppløsning ved PNG-eksport, og et flyttbart hjelpekort
+  for sammenslåing.
+
+- **Rettet:** når et delt punkt slettes «overalt», forsvinner det nå også fra
+  den åpne segmentvisningen med én gang (før ble det stående på kartet til
+  segmentet ble lastet på nytt — men slettingen var reell).
+
 ## 2.14.0 — 29. juli 2026
 
 - **Rettet en alvorlig feil:** interessepunkter kunne ikke lagres i det hele

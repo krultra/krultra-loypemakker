@@ -26,10 +26,22 @@ konto, ingen abonnement.
    kart + høydeprofil + klikkbare punkter + en markør som viser distanse og
    høydemeter, og bygg den inn på nettsiden din med en liten iframe-snutt.
    Republiser med samme adresse, så oppdateres nettsidene automatisk.
+   Visningene støtter **norsk og engelsk** med språkvelger.
 
-I tillegg: et **segment-bibliotek** for å organisere løypedeler i grupper,
-og et **punktbibliotek** for å gjenbruke de samme interessepunktene på
-tvers av løyper (nyttig når mange løyper deler trasé).
+4. **Lage arenakart.** Ta et oversiktsbilde av arena-/sekretariatsområdet,
+   tegn inn **områder og punkter** (sekretariat, servering, sanitær,
+   parkering …) med farge, kontur og beskrivelse, knytt **kontakter** til
+   stedene, og publiser arenakartet på sin egen nettadresse. Løypepunkter
+   kan lenke rett til arenakartet, og et arenakart kan lenke videre til et
+   annet (oversikt → detalj).
+
+I tillegg er alt organisert i **bibliotek** i venstre kolonne: et
+**segmentbibliotek** og et **arenakartbibliotek** (begge med grupper og
+dra-og-slipp), et **punktbibliotek** for å gjenbruke interessepunkter på
+tvers av løyper, og et **kontaktbibliotek** for å gjenbruke kontakter på
+tvers av arenakart. Toppmenyen veksler mellom hovedmodusene (rediger
+segment · slå sammen segmenter · rediger arenakart) og viser hva som er
+åpent.
 
 ## Kom i gang
 
@@ -68,8 +80,8 @@ får du en fil du sender til `post@krultra.no`.
 - **Tester:** `python -m pytest` (fra prosjektmappa med `.venv` aktivert).
 
 Koden er organisert i `backend/` (server + GPX-logikk), `frontend/` (alt du
-ser i nettleseren), `viewer/` (den innebygde løypevisningen), `tests/` og
-`docs/`.
+ser i nettleseren — løype-, sammenslåings- og arenakart-editoren), `viewer/`
+(de innebygde løype- og arenakart-visningene), `tests/` og `docs/`.
 
 Denne og all annen dokumentasjon finnes også som pene HTML-sider du kan
 dobbeltklikke og åpne direkte i nettleseren (se `README.html` og
