@@ -105,6 +105,44 @@ for hver versjon ligger i <a href="docs/"><code>docs/</code></a>.</p>
 </ul>
 <p>Versjonene før 2.0.0 (under <strong>Utviklingshistorikk</strong> nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.</p>
+<h2 id="320-4-august-2026">3.2.0 — 4. august 2026</h2>
+<ul>
+<li><strong>3D fly-by:</strong> se en simulert gjennomkjøring av løypa i 3D-terreng, der
+  kameraet flyter bak markøren som en drone som følger en løper. Underveis
+  vises distanse, høyde og høydemeter. Spill av/pause, fart 1×–8×,
+  framdriftslinje og veksling mellom satellittbilde (standard) og
+  Kartverkets kart.</li>
+<li><strong>I verktøyet:</strong> knappen <strong>«▶ Fly-by»</strong> i kartverktøylinja (gruppa 3D).</li>
+<li><strong>I publiserte løypevisninger:</strong> knappen <strong>«▶ 3D»</strong> øverst, så også
+    deltakerne kan fly gjennom løypa.</li>
+<li><strong>Runde rundt hvert interessepunkt:</strong> dronen stopper og tar en full
+    360°-runde rundt punktet før turen fortsetter. Kan skrus av med
+    «Stopp ved punkter».</li>
+<li><strong>Klikkbare punkter:</strong> klikk på navneskiltet for pause og et detaljkort
+    med tjenester, beskrivelse, høyde, distanse og høydemeter — og lenke til
+    <strong>arenakartet</strong> når punktet har ett (åpnes i ny fane, så fly-byen står
+    urørt bak). Klikk utenfor, så fortsetter turen.</li>
+<li><strong>Styr kameraet underveis:</strong> dra for å svinge og vippe, rull eller knip
+    for å zoome — like godt under avspilling som i pause.</li>
+<li><strong>Klikk på kartet</strong> for å pause og fortsette, i tillegg til knappen og
+    mellomromstasten.</li>
+<li>Farten starter på <strong>0,5×</strong> (rolig nok til å se seg om), og kan settes
+    opp til 8×.</li>
+<li><strong>Rolig kamera:</strong> kameraet står stille så lenge løypa videre er godt
+    innenfor utsnittet, og korrigerer bare når den er på vei ut — som en
+    dronefører som holder bildet i ro i stedet for å følge hver sving.</li>
+<li><strong>Kameraet går aldri under bakken</strong>, og med «Hold løperen synlig» heves
+    det også når terrenget kommer mellom kameraet og løperen. Din egen
+    kameravinkel legges tilbake så snart utsikten er fri.</li>
+<li>Løypa foran løperen tegnes rød (skiller seg fra veier og stier i
+    satellittbildet); tilbakelagt del har løypas egen farge.</li>
+<li>Fly-byen venter til landskapet er ferdig lastet før den starter.</li>
+<li>Terrengformen kommer fra åpne globale høydedata; høydene i selve løypa
+    er fortsatt Kartverkets tall. 3D-biblioteket lastes først når noen
+    faktisk åpner en fly-by, så vanlig visning er like rask som før.</li>
+<li><em>Merk:</em> allerede publiserte løyper får knappen når de <strong>republiseres</strong>.</li>
+<li>Detaljer: <a href="docs/versjon-3.2.0.html">docs/versjon-3.2.0.md</a></li>
+</ul>
 <h2 id="310-30-juli-2026">3.1.0 — 30. juli 2026</h2>
 <ul>
 <li><strong>Last ned GPX fra den publiserte løypevisningen:</strong> en ny <strong>«⤓ GPX»</strong>-knapp

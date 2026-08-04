@@ -20,7 +20,7 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '3.1.0';
+const APP_VERSJON = '3.2.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -4223,6 +4223,62 @@ function oppdaterRuteStil() {
     mergeState.resultatSpor.setStyle({ color: kartEksport.farge, weight: kartEksport.tykkelse + 1 });
   }
 }
+
+// ============================================================
+// 3D fly-by (forhåndsvisning i verktøyet)
+// ============================================================
+
+/**
+ * Åpne en simulert gjennomkjøring av sporet som vises nå — samme
+ * visning som deltakerne får i den publiserte løypa, så arrangøren kan
+ * se resultatet før publisering.
+ *
+ * Veipunktene lagres med lat/lon (uten indeks — den beregnes først ved
+ * publisering), så her forankres de i sporet med `nærmesteSporIndeks`.
+ */
+function åpneFlybyEditor() {
+  const kilde = profilKilde();
+  if (!kilde || !kilde.punkter || kilde.punkter.length < 4) {
+    alert('Last inn et spor først — fly-by trenger en løype å følge.');
+    return;
+  }
+  const punkter = kilde.punkter;
+  const høyder = høyderMedInterpolering(punkter);
+  if (!høyder) {
+    alert('Sporet mangler høydedata. Hent høyder fra Kartverket først, ' +
+      'så kan fly-byen vise stigningene riktig.');
+    return;
+  }
+
+  // Høydemeter akkumulert per punkt, med samme utjevning som profilen
+  const glatte = gaussUtjevning(høyder, profilState.utjevning, profilState.vektform);
+  const oppAkk = [0], nedAkk = [0];
+  for (let i = 1; i < glatte.length; i++) {
+    const d = glatte[i] - glatte[i - 1];
+    oppAkk.push(oppAkk[i - 1] + Math.max(0, d));
+    nedAkk.push(nedAkk[i - 1] + Math.max(0, -d));
+  }
+
+  // Veipunkter: bare for det innlastede sporet i redigeringsfanen
+  let veipunkter = [];
+  if (aktivFane === 'editor' && punkter === editorState.punkter) {
+    veipunkter = editorState.veipunkter.map((w) =>
+      Object.assign({}, w, { idx: nærmesteSporIndeks(w) }));
+  }
+
+  KULFlyby.åpne({
+    punkter,
+    avstander: kilde.avstander,
+    oppAkk,
+    nedAkk,
+    veipunkter,
+    stil: { rutefarge: kartEksport.farge, tykkelse: kartEksport.tykkelse },
+    navn: kilde.navn || 'Løype',
+    lang: 'no',
+  });
+}
+
+document.getElementById('btn-flyby').addEventListener('click', åpneFlybyEditor);
 
 document.getElementById('map-track-color').addEventListener('input', (e) => {
   kartEksport.farge = e.target.value;

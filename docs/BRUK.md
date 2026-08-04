@@ -53,6 +53,65 @@ farten øker jo lenger du holder.
   **tykkelse**) og interessepunkter som bilde. Bruk **«Velg utsnitt»** og
   dra opp et rektangel på kartet for å eksportere bare det området.
 
+## 3D fly-by: se en gjennomkjøring av løypa
+
+**«▶ Fly-by»** (gruppa **3D** i kartverktøylinja) viser løypa som en
+simulert gjennomkjøring: en markør beveger seg gjennom løypa, og kameraet
+flyter bak den som en drone som følger etter en løper. Underveis vises
+distanse, høyde og høydemeter, og du får en varsling hver gang du
+passerer et interessepunkt.
+
+- **Spill av / Pause** — knappen, mellomromstasten, eller bare **klikk på
+  3D-kartet**. **↺** starter på nytt.
+- **Framdriftslinja** hopper til et sted i løypa (piltastene spoler).
+- **0,5× – 8×** styrer farten. **0,5× er standard**, så man rekker å se seg
+  om. Korte løyper bruker minst 1,5 minutt, lange maks 5 minutter ved 1× —
+  altså det dobbelte ved 0,5×.
+- **Kart / Satellitt** bytter hva som drapes over terrenget. Satellittbilde
+  er standard, siden det er der 3D-terrenget kommer best til sin rett.
+- **Esc** lukker fly-byen.
+
+**Styr kameraet mens det spilles av.** Dra med musa for å svinge kameraet
+rundt løperen (sidelengs) og vippe det opp og ned (opp/ned). Rull for å
+zoome — eller knip med to fingre på berøringsskjerm. Alt dette virker like
+godt under avspilling som i pause. Selve retningen følger løypa; du legger
+din egen vinkel oppå.
+
+**Stopp ved punkter.** Som standard stanser dronen ved hvert
+interessepunkt, står et lite øyeblikk i ro mens kartet rundt lastes
+ferdig, og tar så en full runde rundt stedet før turen fortsetter. Vil du
+heller fly uavbrutt gjennom, skru av **«Stopp ved punkter»** øverst.
+Setter du avspillingen på pause midt i en runde, fortsetter den der den
+slapp når du spiller av igjen.
+
+**Klikk på et punkt** (navneskiltet i terrenget) for å sette avspillingen
+på pause og få opp detaljene: hvilke tjenester som finnes der,
+beskrivelsen, høyde over havet, distanse fra start og høydemeter. Har
+punktet et **arenakart** knyttet til seg, ligger det en lenke dit i kortet
+— den åpner arenakartet i en ny fane, så fly-byen fortsetter uforstyrret i
+fanen bak. Klikk utenfor kortet — eller trykk Esc — så fortsetter turen der
+den slapp.
+
+**Hold løperen synlig.** Kameraet passer alltid på å holde seg over
+bakken. Med denne innstillingen på heves det også når en kolle kommer
+mellom kameraet og løperen, og senkes tilbake til din valgte vinkel så
+snart utsikten er fri igjen.
+
+Løypa **foran** løperen er rød, så den skiller seg fra veier og store
+stier i satellittbildet; delen som er **tilbakelagt** har løypas egen farge.
+
+Fly-byen venter til landskapet rundt løypa er ferdig lastet før den
+starter, så turen ikke begynner i et halvferdig terreng.
+
+Krever at sporet har høydedata (hent gjerne **høyder fra Kartverket**
+først), internett, og en nettleser med 3D-støtte (WebGL). Terrengformen
+kommer fra åpne globale høydedata, mens høydetallene som vises er
+Kartverkets.
+
+Publiserte løypevisninger har den samme fly-byen bak knappen **«▶ 3D»**,
+slik at deltakerne kan fly gjennom løypa selv. Allerede publiserte løyper
+får knappen når de republiseres.
+
 ## Høydeprofil
 
 **«Høydeprofil»** (eller visningsmodus **«Delt» / «Bare profil»**) viser

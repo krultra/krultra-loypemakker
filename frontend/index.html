@@ -8,6 +8,7 @@
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
   <link rel="stylesheet" href="style.css?v=30">
+  <link rel="stylesheet" href="flyby.css?v=30">
 </head>
 <body>
 
@@ -174,6 +175,12 @@
           <button id="btn-clear-crop" class="btn btn-small hidden">Fjern utsnitt</button>
           <button id="btn-export-map" class="btn btn-small btn-primary"
                   title="Lagre kartet (med rute og punkter) som PNG-bilde">&#11015; Kart som PNG</button>
+        </span>
+
+        <span class="tb-gruppe">
+          <span class="tb-tittel">3D</span>
+          <button id="btn-flyby" class="btn btn-small"
+                  title="Se en simulert gjennomkjøring av løypa i 3D-terreng — kameraet følger etter som en drone">&#9654; Fly-by</button>
         </span>
 
         <span class="viewmode-wrap" title="Velg om flaten skal vise bare kart, bare høydeprofil, eller begge (delt)">
@@ -947,6 +954,9 @@
 
   <script src="vendor/leaflet.js"></script>
   <script src="felles.js?v=30"></script>
+  <!-- 3D fly-by. Selve 3D-biblioteket (maplibre) lastes først når
+       brukeren åpner en fly-by, så oppstarten er like rask som før. -->
+  <script src="flyby.js?v=30" data-maplibre="vendor/"></script>
   <script src="app.js?v=30"></script>
   <script src="arena.js?v=30"></script>
 </body>

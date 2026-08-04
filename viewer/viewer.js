@@ -44,6 +44,7 @@ const TEKST = {
     omLopet: 'Om løpet', tofinger: 'Bruk to fingre for å flytte kartet',
     laster: 'Laster løypa …', lasterFeil: 'Kunne ikke laste løypa',
     proevOppdater: 'Prøv å oppdatere siden.', loypekartTittel: 'Løypekart', loype: 'Løype',
+    flyby: '▶ 3D', flybyTittel: 'Se en simulert gjennomkjøring av løypa i 3D',
   },
   en: {
     satellitt: 'Satellite', kart: 'Map', fullskjerm: '⛶ Full screen',
@@ -57,6 +58,7 @@ const TEKST = {
     omLopet: 'About the race', tofinger: 'Use two fingers to move the map',
     laster: 'Loading the course …', lasterFeil: 'Could not load the course',
     proevOppdater: 'Please refresh the page.', loypekartTittel: 'Course map', loype: 'Course',
+    flyby: '▶ 3D', flybyTittel: 'Watch a simulated 3D fly-through of the course',
   },
 };
 
@@ -154,6 +156,14 @@ function startVisning() {
     gpxKnapp.title = t('lastNedGpxTittel');
     gpxKnapp.classList.remove('skjult');
     gpxKnapp.addEventListener('click', lastNedGpx);
+  }
+  // 3D fly-by — bare når nettleseren faktisk støtter 3D-kart (WebGL)
+  const flybyKnapp = document.getElementById('flyby-knapp');
+  if (flybyKnapp && window.KULFlyby && KULFlyby.tilgjengelig(punkter)) {
+    flybyKnapp.textContent = t('flyby');
+    flybyKnapp.title = t('flybyTittel');
+    flybyKnapp.classList.remove('skjult');
+    flybyKnapp.addEventListener('click', åpneFlyby);
   }
   byggSpraakvelger();
 
@@ -509,6 +519,22 @@ function lastNedGpx() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+/** Åpne 3D fly-by med løypedataene som allerede er beregnet her.
+ *  (Selve 3D-biblioteket lastes av flyby.js ved første åpning.) */
+function åpneFlyby() {
+  KULFlyby.åpne({
+    punkter, avstander, oppAkk, nedAkk, veipunkter,
+    stil: løype.stil || {},
+    navn: lok(løype, 'navn') || t('loype'),
+    lang, lok,
+    // Punkter som peker på et arenakart får en lenke i detaljkortet.
+    // Adressen bygges av de samme (slug-validerte) hjelperne som
+    // popupene på kartet bruker, så importerte løyper ikke kan
+    // smugle inn en ondsinnet lenke.
+    arenaUrl: (w) => medSprak(arenaHref(w.arena)),
+  });
 }
 
 /** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */

@@ -1,0 +1,538 @@
+/* ============================================================
+   3D fly-by — utseende for fullskjerms-overlegget.
+
+   Brukes både i verktøyet og i de publiserte løypevisningene, så
+   reglene er navnerommet under .kul-flyby / .fb-* og arver ingenting
+   fra sidene rundt.
+
+   Endrer du noe her: endringen når de publiserte visningene først når
+   viewer-assets publiseres på nytt (ASSET_VERSJON i publisering.py).
+   ============================================================ */
+
+/* Siden bak skal ikke kunne scrolles mens fly-byen er åpen */
+body.kul-flyby-aapen { overflow: hidden; }
+
+.kul-flyby {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: #0b1220;
+  color: #e2e8f0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 14px;
+}
+
+.kul-flyby .fb-skjult { display: none !important; }
+
+/* ---------- Topplinje ---------- */
+
+.kul-flyby .fb-topp {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  flex: none;
+}
+
+.kul-flyby .fb-tittel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.kul-flyby .fb-merke {
+  flex: none;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.kul-flyby .fb-navn {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kul-flyby .fb-topp-hoyre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+/* Av/på for «stopp ved punkter» */
+.kul-flyby .fb-bryter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.kul-flyby .fb-bryter input {
+  accent-color: #2563eb;
+  cursor: pointer;
+  margin: 0;
+}
+
+/* ---------- Knapper ---------- */
+
+.kul-flyby .fb-knapp {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.kul-flyby .fb-knapp:hover { background: #334155; }
+
+.kul-flyby .fb-knapp:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.kul-flyby .fb-lukk { padding: 6px 10px; font-size: 15px; }
+
+.kul-flyby .fb-spill { min-width: 92px; font-weight: 600; }
+
+.kul-flyby .fb-spill.fb-spiller {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+}
+
+.kul-flyby .fb-omstart { font-size: 16px; padding: 6px 10px; }
+
+/* ---------- Scenen (kart + overlegg) ---------- */
+
+.kul-flyby .fb-scene {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Over horisonten tegner MapLibre ingenting — da synes denne
+     himmelen gjennom lerretet og gir en naturlig utsikt. */
+  background: linear-gradient(180deg, #1e3a8a 0%, #3b82f6 42%, #93c5fd 68%, #dbeafe 100%);
+}
+
+.kul-flyby .fb-kart { position: absolute; inset: 0; }
+
+/* MapLibre-lerretet må slippe himmelen bak gjennom */
+.kul-flyby .maplibregl-map { background: transparent; }
+.kul-flyby .maplibregl-canvas-container canvas { outline: none; }
+
+/* Kameraet dras med musa — vis det med peker */
+.kul-flyby .maplibregl-canvas-container { cursor: grab; }
+.kul-flyby .maplibregl-canvas-container.fb-drar { cursor: grabbing; }
+
+.kul-flyby .maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+}
+.kul-flyby .maplibregl-ctrl-attrib a { color: #93c5fd; }
+
+.kul-flyby .fb-laster {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 18, 32, 0.86);
+  color: #e2e8f0;
+  font-size: 15px;
+  z-index: 5;
+  text-align: center;
+  padding: 20px;
+}
+
+/* ---------- Løpermarkøren ---------- */
+
+.kul-flyby .fb-loper {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.kul-flyby .fb-loper-glod,
+.kul-flyby .fb-loper-prikk {
+  position: absolute;
+  border-radius: 50%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.kul-flyby .fb-loper-glod {
+  width: 26px;
+  height: 26px;
+  opacity: 0.35;
+  animation: fb-puls 1.6s ease-out infinite;
+}
+
+.kul-flyby .fb-loper-prikk {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes fb-puls {
+  0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0.5; }
+  100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kul-flyby .fb-loper-glod { animation: none; }
+}
+
+/* ---------- Veipunkter i 3D ----------
+   Merket står et stykke OVER punktet med en tynn strek ned til en liten
+   fot som markerer selve stedet. Da legger etikettene seg ikke oppå
+   terrenget, og de er lette å lese mens kameraet beveger seg. */
+
+.kul-flyby .fb-wpt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;   /* bare selve boksen skal kunne klikkes */
+}
+
+.kul-flyby .fb-wpt-boks {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.55);
+  border-radius: 6px;
+  padding: 4px 8px;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #f1f5f9;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.kul-flyby .fb-wpt-boks:hover {
+  background: rgba(37, 99, 235, 0.92);
+  border-color: #60a5fa;
+}
+
+.kul-flyby .fb-wpt-strek {
+  width: 2px;
+  height: 42px;
+  background: linear-gradient(180deg,
+    rgba(226, 232, 240, 0.95) 0%, rgba(226, 232, 240, 0.35) 100%);
+}
+
+.kul-flyby .fb-wpt-fot {
+  width: 7px;
+  height: 7px;
+  margin-top: -1px;
+  border-radius: 50%;
+  background: #f8fafc;
+  border: 1.5px solid #334155;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+
+.kul-flyby .fb-wpt-sym,
+.kul-flyby .fb-toast-sym {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.kul-flyby .fb-wpt-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  line-height: 1;
+}
+
+.kul-flyby .fb-wpt-navn {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Varsling når man passerer et punkt ---------- */
+
+.kul-flyby .fb-toast {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translate(-50%, -14px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #334155;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 15px;
+  color: #f8fafc;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  z-index: 6;
+  max-width: min(92%, 520px);
+}
+
+.kul-flyby .fb-toast.fb-toast-vis {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.kul-flyby .fb-toast-navn {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kul-flyby .fb-toast-dist { color: #94a3b8; font-size: 13px; flex: none; }
+
+/* ---------- Detaljkort for et interessepunkt ---------- */
+
+.kul-flyby .fb-kort {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92%, 420px);
+  max-height: 78%;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.97);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.6);
+  z-index: 8;
+}
+
+.kul-flyby .fb-kort h3 {
+  margin: 0 26px 8px 0;
+  font-size: 18px;
+  color: #f8fafc;
+}
+
+.kul-flyby .fb-kort-lukk {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 17px;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+.kul-flyby .fb-kort-lukk:hover { color: #f8fafc; }
+
+.kul-flyby .fb-kort-typer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+
+.kul-flyby .fb-kort-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  background: #1e293b;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-family: "Segoe UI Emoji", "Segoe UI", sans-serif;
+}
+
+.kul-flyby .fb-kort-beskr {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #e2e8f0;
+}
+
+/* Lenke videre til arenakartet (åpnes i ny fane, så fly-byen består) */
+.kul-flyby .fb-kort-arena { margin: 0 0 12px; }
+
+.kul-flyby .fb-kort-arena a {
+  display: inline-block;
+  background: #1d4ed8;
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 13px;
+  border-radius: 6px;
+}
+
+.kul-flyby .fb-kort-arena a:hover { background: #2563eb; }
+
+.kul-flyby .fb-kort table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.kul-flyby .fb-kort td {
+  padding: 5px 0;
+  border-top: 1px solid #1e293b;
+  vertical-align: top;
+}
+
+.kul-flyby .fb-kort td:first-child { color: #94a3b8; padding-right: 12px; }
+.kul-flyby .fb-kort td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Avlesningen (distanse, høyde, høydemeter, neste) ---------- */
+
+.kul-flyby .fb-avlesning {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 2px 22px;
+  background: rgba(15, 23, 42, 0.82);
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  z-index: 4;
+  max-width: calc(100% - 24px);
+  pointer-events: none;
+}
+
+.kul-flyby .fb-celle {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kul-flyby .fb-navn2 {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #94a3b8;
+}
+
+.kul-flyby .fb-verdi {
+  font-size: 17px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.kul-flyby .fb-celle-neste .fb-verdi {
+  font-size: 14px;
+  font-weight: 500;
+  max-width: 210px;
+}
+
+/* ---------- Bunnlinja (avspillingskontroller) ---------- */
+
+.kul-flyby .fb-bunn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  flex: none;
+}
+
+.kul-flyby .fb-scrubber {
+  flex: 1 1 auto;
+  min-width: 60px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.kul-flyby .fb-farter { display: flex; gap: 4px; flex: none; }
+
+.kul-flyby .fb-fart {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  border-radius: 5px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.kul-flyby .fb-fart:hover { background: #334155; }
+
+.kul-flyby .fb-fart.fb-fart-aktiv {
+  background: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.kul-flyby .fb-hjelp {
+  flex: none;
+  text-align: center;
+  font-size: 11px;
+  color: #64748b;
+  padding: 0 12px 8px;
+  background: #0f172a;
+}
+
+/* ---------- Små skjermer ---------- */
+
+@media (max-width: 720px) {
+  .kul-flyby .fb-hjelp { display: none; }
+  .kul-flyby .fb-bryter span { display: none; }  /* bare avkryssingsboksen */
+
+  .kul-flyby .fb-avlesning {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    gap: 2px 12px;
+    padding: 8px 10px;
+    max-width: none;
+  }
+
+  .kul-flyby .fb-verdi { font-size: 15px; }
+  .kul-flyby .fb-celle-neste .fb-verdi { font-size: 13px; max-width: 150px; }
+  .kul-flyby .fb-spill { min-width: 74px; }
+  .kul-flyby .fb-fart { padding: 5px 7px; }
+  .kul-flyby .fb-navn { font-size: 13px; }
+  .kul-flyby .fb-wpt-strek { height: 32px; }
+  .kul-flyby .fb-wpt-navn { max-width: 130px; }
+}

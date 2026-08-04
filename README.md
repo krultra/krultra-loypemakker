@@ -29,7 +29,13 @@ konto, ingen abonnement.
    Visningene støtter **norsk og engelsk** med språkvelger, og lar
    sluttbrukerne **laste ned løypa som GPX-fil**.
 
-4. **Lage arenakart.** Ta et oversiktsbilde av arena-/sekretariatsområdet,
+4. **Vise løypa i 3D — «fly-by».** Se en simulert gjennomkjøring der
+   kameraet flyter bak en markør gjennom løypa, som en drone etter en
+   løper — med distanse, høyde og høydemeter underveis, og varsling når
+   du passerer et interessepunkt. Finnes både i verktøyet og i de
+   publiserte visningene, så deltakerne kan fly gjennom løypa selv.
+
+5. **Lage arenakart.** Ta et oversiktsbilde av arena-/sekretariatsområdet,
    tegn inn **områder og punkter** (sekretariat, servering, sanitær,
    parkering …) med farge, kontur og beskrivelse, knytt **kontakter** til
    stedene, og publiser arenakartet på sin egen nettadresse. Løypepunkter

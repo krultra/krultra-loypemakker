@@ -27,7 +27,7 @@ from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
 # at nye publiseringer laster opp friske assets uten å røre gamle løyper.
-ASSET_VERSJON = 13
+ASSET_VERSJON = 14
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -296,8 +296,14 @@ def _viewer_filer() -> "list[tuple[str, bytes]]":
         ("viewer.js", (VIEWER_DIR / "viewer.js").read_bytes()),
         ("viewer.css", (VIEWER_DIR / "viewer.css").read_bytes()),
         ("felles.js", (frontend / "felles.js").read_bytes()),
+        ("flyby.js", (frontend / "flyby.js").read_bytes()),
+        ("flyby.css", (frontend / "flyby.css").read_bytes()),
         ("leaflet.js", (frontend / "vendor" / "leaflet.js").read_bytes()),
         ("leaflet.css", (frontend / "vendor" / "leaflet.css").read_bytes()),
+        # 3D-biblioteket for fly-by. Lastes bare ned av nettleseren når
+        # en bruker faktisk åpner en fly-by, men må ligge klart her.
+        ("maplibre-gl.js", (frontend / "vendor" / "maplibre-gl.js").read_bytes()),
+        ("maplibre-gl.css", (frontend / "vendor" / "maplibre-gl.css").read_bytes()),
         ("favicon.png", (VIEWER_DIR / "favicon.png").read_bytes()),
     ]
     return filer
