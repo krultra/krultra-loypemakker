@@ -322,8 +322,9 @@ class _MappeMål:
         mappe = Path(mål["mappe"])
         self.rot = mappe if mappe.is_absolute() else _ROT / mappe
 
-    def har_assets(self, versjon: int) -> bool:
-        return (self.rot / "assets" / "v{}".format(versjon) / "viewer.js").exists()
+    def har_assets(self, versjon: int, filnavn) -> bool:
+        mappe = self.rot / "assets" / "v{}".format(versjon)
+        return all((mappe / navn).exists() for navn in filnavn)
 
     def skriv(self, rel_sti: str, innhold: bytes) -> None:
         sti = self.rot / rel_sti
@@ -369,12 +370,13 @@ class _SftpMål:
             except FileNotFoundError:
                 self.sftp.mkdir(sti)
 
-    def har_assets(self, versjon: int) -> bool:
-        try:
-            self.sftp.stat("{}/assets/v{}/viewer.js".format(self.rotsti, versjon))
-            return True
-        except FileNotFoundError:
-            return False
+    def har_assets(self, versjon: int, filnavn) -> bool:
+        for navn in filnavn:
+            try:
+                self.sftp.stat("{}/assets/v{}/{}".format(self.rotsti, versjon, navn))
+            except FileNotFoundError:
+                return False
+        return True
 
     def skriv(self, rel_sti: str, innhold: bytes) -> None:
         fjernsti = "{}/{}".format(self.rotsti, rel_sti)
@@ -437,9 +439,15 @@ def _publiser_til(mål: dict, slug: str, course: dict) -> None:
     """Skriv assets (ved behov) + løypefilene til ETT konkret mål."""
     skriver = lag_skriver(mål)
     try:
-        # Delte assets: bare første gang per viewer-versjon
-        if not skriver.har_assets(ASSET_VERSJON):
-            for rel, innhold in _viewer_filer():
+        # Delte assets: bare første gang per viewer-versjon.
+        # Vi sjekker at ALLE filene finnes, ikke bare én av dem. Kommer det
+        # en ny fil i pakka (som flyby.js gjorde i 3.2.0) og noen
+        # publiserer på nytt uten at versjonsnummeret slår til, ville en
+        # sjekk på bare viewer.js sagt «alt er på plass» — og index.html
+        # ville pekt på en fil som aldri ble lastet opp.
+        filer = _viewer_filer()
+        if not skriver.har_assets(ASSET_VERSJON, [rel for rel, _ in filer]):
+            for rel, innhold in filer:
                 skriver.skriv("assets/v{}/{}".format(ASSET_VERSJON, rel), innhold)
 
         skriver.skriv("{}/index.html".format(slug), _index_html())
