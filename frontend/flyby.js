@@ -130,10 +130,27 @@ var KULFlyby = (function () {
   var MAKS_SVING = 18;       // maks grader kameraet svinger per sekund
 
   var KAMERA_TAU = 0.28;     // hvor kjapt zoom/pitch/dra-vinkel glir på plass
+
+  // «Myk følging»: kartet er IKKE naglet til løperen. Så lenge prikken
+  // holder seg innenfor den indre perimeteren står kartet helt i ro, og
+  // prikken får bevege seg fritt på skjermen — det er den bevegelsen som
+  // gir flyt og fart i bildet. Kommer prikken utenfor, øker kartets
+  // etterfølging gradvis, og ved den ytre perimeteren tar kartet alt, så
+  // prikken aldri kan forsvinne ut. Målt som andel av vindusstørrelsen;
+  // ellipse fordi det er mer naturlig å drive framover enn sidelengs.
+  var PERIM_INDRE_X = 0.11;  // halv bredde på indre perimeter
+  var PERIM_INDRE_Y = 0.08;  // halv høyde
+  var PERIM_YTRE_K = 2.6;    // ytre perimeter = indre × denne
+  var PERIM_TAU = 0.75;      // hvor mykt kartet henter inn avviket
   var ORBIT_SEK = 11.0;      // full runde rundt et punkt ved 1× fart
   var ORBIT_VENT_MS = 2500;  // maks venting på fliser før runden settes i gang
   var ORBIT_PITCH = 55;      // kameraet senkes til dette under runden
-  var MAKS_LINJEPUNKTER = 2500;
+  // Publiserte løyper er alt forenklet ved publisering (de lengste ligger
+  // rundt 3–4000 punkter), så taket her skal ikke slå inn på dem i det
+  // hele tatt — det er bare en sikring for rå spor i verktøyet, som kan ha
+  // titusenvis av punkter. Lavere tak ga unødig kantete strek i 3D.
+  var MAKS_LINJEPUNKTER = 12000;
+  var LINJE_MIN_MS = 50;     // sjeldnere oppdatering av «tilbakelagt»-linja
   var FARTER = [0.5, 1, 2, 4, 8];
   var STANDARD_FART = 0.5;   // rolig som standard — man skal rekke å se seg om
   var FLISFRIST_MS = 12000;  // gir opp ventingen på fliser etter dette
@@ -425,6 +442,7 @@ var KULFlyby = (function () {
     var satellitt = true;      // satellitt er standard (som hos Strava m.fl.)
     var brukerHarStyrt = false;
     var orbit = null;          // {wpt, tid, varighet} når vi går runden rundt et punkt
+    var kamSenter = null;      // {lng, lat} kameraet ser mot — henger etter løperen
     var kortWpt = null;        // veipunktet som vises i detaljkortet
     var kortFortsett = false;  // skal avspillingen gjenopptas når kortet lukkes?
 
@@ -659,6 +677,63 @@ var KULFlyby = (function () {
     }
 
     /**
+     * Myk følging: flytt kamerapunktet bare når løperen er på vei ut av
+     * den indre perimeteren.
+     *
+     * Alt regnes i SKJERMPIKSLER, ikke i meter. Da tar vi automatisk
+     * høyde for zoom, kameravinkel og terreng — en meter nær horisonten
+     * er få piksler, en meter nede i bildet er mange. `dx/dy` er hvor
+     * langt prikken ligger fra der kameraet ser, målt på skjermen:
+     *
+     *   n <= 1                 innenfor indre perimeter → kartet står helt i ro
+     *   1 < n < PERIM_YTRE_K   kartet henter inn gradvis mer
+     *   n >= PERIM_YTRE_K      hard grense: prikken slipper aldri utenfor
+     *
+     * Under en runde rundt et punkt låser vi kameraet til punktet, ellers
+     * ville prikken drevet ut av bildet mens vi snurrer.
+     */
+    function følgMykt(p, hopp, dt) {
+      if (!kamSenter || hopp) {
+        kamSenter = { lng: p.lon, lat: p.lat };
+        return;
+      }
+      if (orbit) {
+        kamSenter = { lng: p.lon, lat: p.lat };
+        return;
+      }
+
+      var pk, pl;
+      try {
+        pk = map.project([kamSenter.lng, kamSenter.lat]);
+        pl = map.project([p.lon, p.lat]);
+      } catch (e) { return; }
+
+      var dx = pl.x - pk.x, dy = pl.y - pk.y;
+      var d = Math.hypot(dx, dy);
+      if (!isFinite(d) || d < 0.01) return;
+
+      var boks = ui.kart;
+      var ix = Math.max(20, (boks.clientWidth || 800) * PERIM_INDRE_X);
+      var iy = Math.max(20, (boks.clientHeight || 500) * PERIM_INDRE_Y);
+      var n = Math.hypot(dx / ix, dy / iy);   // 1.0 = akkurat på indre perimeter
+      if (n <= 1) return;                     // fritt spillerom: ikke rør kartet
+
+      // Hvor mange piksler ligger prikken utenfor den indre perimeteren?
+      var overskudd = d * (1 - 1 / n);
+      // Andelen vi henter inn vokser med hvor langt ute den er
+      var t = begrens((n - 1) / (PERIM_YTRE_K - 1), 0, 1);
+      var skift = overskudd * (t * t) * (1 - Math.exp(-dt / PERIM_TAU));
+      // Ytre perimeter er absolutt — her tar kartet alt som trengs
+      if (n > PERIM_YTRE_K) skift = Math.max(skift, d - d * PERIM_YTRE_K / n);
+      if (skift <= 0) return;
+
+      try {
+        var ny = map.unproject([pk.x + (dx / d) * skift, pk.y + (dy / d) * skift]);
+        if (isFinite(ny.lng) && isFinite(ny.lat)) kamSenter = { lng: ny.lng, lat: ny.lat };
+      } catch (e) { /* utenfor kartet — behold forrige senter */ }
+    }
+
+    /**
      * Pass på at kameraet har fri bane: aldri under bakken, og — hvis
      * brukeren vil — heller ikke med en kolle mellom seg og løperen.
      *
@@ -818,10 +893,12 @@ var KULFlyby = (function () {
         }
       }
 
+      følgMykt(p, hopp, dt);
+
       // Bare flytt kartet når noe faktisk har endret seg — står fly-byen
       // i pause med kameraet i ro, er det ingen grunn til å tegne om.
       var nyKam = {
-        lon: p.lon, lat: p.lat,
+        lon: kamSenter.lng, lat: kamSenter.lat,
         bearing: (kursNå == null ? 0 : kursNå) + kam.dreie + kam.orbitVinkel,
         zoom: kam.zoom,
         pitch: begrens(kam.pitch - kam.korr, MIN_PITCH, MAKS_PITCH),
@@ -840,14 +917,23 @@ var KULFlyby = (function () {
         ((orbit ? avstander[orbit.wpt.idx] : s) / totalKm) * 1000));
     }
 
-    /** Tilbakelagt del av ruta — bare når den forenklede linja har vokst. */
+    /** Tilbakelagt del av ruta — bare når linja har vokst, og ikke for ofte. */
+    var sistLinjeTid = 0;
     function oppdaterRuteLinje(p, hopp) {
       var lo = 0, hi = visIdx.length - 1;
       while (lo < hi) {                      // siste visIdx <= p.idx
         var mid = (lo + hi + 1) >> 1;
         if (visIdx[mid] <= p.idx) lo = mid; else hi = mid - 1;
       }
-      if (lo === sistVisIdx && !hopp) return;
+      if (!hopp) {
+        if (lo === sistVisIdx) return;
+        // Med full punkttetthet vokser linja mange ganger i sekundet.
+        // Å bygge geometrien på nytt hver gang er unødig — øyet ser
+        // uansett ikke forskjell på 20 og 60 oppdateringer i sekundet.
+        var nå = performance.now();
+        if (nå - sistLinjeTid < LINJE_MIN_MS) return;
+        sistLinjeTid = nå;
+      }
       sistVisIdx = lo;
       var koord = visKoord.slice(0, lo + 1);
       koord.push([p.lon, p.lat]);

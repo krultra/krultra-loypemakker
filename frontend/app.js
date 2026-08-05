@@ -4520,7 +4520,7 @@ oppdaterKontaktbibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 28;
+const FORVENTET_BACKEND = 29;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {
