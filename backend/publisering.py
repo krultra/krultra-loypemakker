@@ -27,6 +27,14 @@ from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
 # at nye publiseringer laster opp friske assets uten å røre gamle løyper.
+#
+# VIKTIG: bump ALLTID BACKEND_VERSJON (backend/routes.py) og
+# FORVENTET_BACKEND (frontend/app.js) sammen med denne. Tallet her leses
+# inn når serveren starter, mens viewer/index.html leses fra disk ved hver
+# publisering. Kjører brukeren en server som ble startet før endringen,
+# blir malen ny mens versjonsnummeret er gammelt — og publiseringen peker
+# på en assets-mappe som mangler de nye filene. Versjonssjekken mot
+# /api/health er det som fanger opp nettopp det.
 ASSET_VERSJON = 14
 
 _ROT = Path(__file__).resolve().parent.parent
