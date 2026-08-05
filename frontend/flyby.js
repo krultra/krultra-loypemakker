@@ -182,6 +182,11 @@ var KULFlyby = (function () {
   var KLARING_MAKS = 45;     // hvor mye vinkelen maks kan senkes
   var SIKT_PRØVER_TERRENG = 8; // punkter langs sikta kamera → løper
 
+  // Hvilke punktskilt som tegnes i videoen. Halve synsfeltet er romslig
+  // satt, så skilt ikke forsvinner før de er godt utenfor bildekanten.
+  var SKILT_SYNSFELT = 80;   // grader til hver side for kameraretningen
+  var SKILT_MAKS_KM = 6;     // lenger unna enn dette er skiltet uleselig
+
   // Løypa foran løperen tegnes i en tydelig rød, så den ikke forveksles
   // med veier og store stier i satellittbildet. Den tilbakelagte delen
   // beholder løypas egen farge fra publiseringen.
@@ -1188,7 +1193,7 @@ var KULFlyby = (function () {
      *  `sk` er skalafaktoren fra kartets CSS-piksler til lerretet. */
     function tegnOverleggPåLerret(ctx, sk, bredde, høyde) {
       var p = posVed(orbit ? avstander[orbit.wpt.idx] : s);
-      tegnVeipunktSkilt(ctx, sk, bredde, høyde);
+      tegnVeipunktSkilt(ctx, sk, bredde, høyde, kameraSted());
       tegnLøperprikk(ctx, sk, p);
       tegnAvlesning(ctx, sk, høyde);
       if (toastNå) tegnToast(ctx, sk, bredde);
@@ -1199,10 +1204,34 @@ var KULFlyby = (function () {
       return { x: pt.x * sk, y: pt.y * sk };
     }
 
-    function tegnVeipunktSkilt(ctx, s, bredde, høyde) {
+    /** Hvor kameraet står, og hvilken vei det ser. Null hvis ukjent. */
+    function kameraSted() {
+      try {
+        var fc = map.getFreeCameraOptions();
+        if (!fc || !fc.position) return null;
+        var ll = fc.position.toLngLat();
+        return { lat: ll.lat, lon: ll.lng, kurs: map.getBearing() };
+      } catch (e) { return null; }
+    }
+
+    function tegnVeipunktSkilt(ctx, s, bredde, høyde, kamera) {
       for (var j = 0; j < veipunkter.length; j++) {
         var w = veipunkter[j];
         if (w.vis_ikon === false) continue;
+
+        // Punkter BAK kameraet må lukes ut før vi projiserer dem.
+        // map.project() gir en gyldig koordinat også for dem, men den er
+        // speilvendt og lander typisk øverst i bildet — derfor samlet alle
+        // punktene seg i toppen. MapLibres egne markører gjør denne
+        // sorteringen selv, så skjermen har alltid sett riktig ut; her må
+        // vi gjøre den for hånd. Vi luker samtidig ut punkter så langt
+        // unna at skiltet uansett bare ville stått og flimret i horisonten.
+        if (kamera) {
+          if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) continue;
+          var mot = kurs(kamera, { lat: w.lat, lon: w.lon });
+          if (Math.abs(vinkelDiff(kamera.kurs, mot)) > SKILT_SYNSFELT) continue;
+        }
+
         var pt;
         try { pt = tilLerret([w.lon, w.lat], s); } catch (e) { continue; }
         // Utenfor bildet (med romslig margin) — hopp over

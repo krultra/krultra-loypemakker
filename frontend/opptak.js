@@ -109,10 +109,28 @@ var KULOpptak = (function () {
     document.addEventListener('visibilitychange', this._påSynlighet);
   }
 
-  /** Tegn ett bilde: kartet først, så overlegget oppå. */
+  /**
+   * Tegn ett bilde: himmel i bunnen, så kartet, så overlegget oppå.
+   *
+   * Himmelen MÅ tegnes her. Kartlerretet er gjennomsiktig over
+   * horisonten — det er nettopp derfor CSS-himmelen synes gjennom det på
+   * skjermen — så et `drawImage` alene ville verken gitt videoen en
+   * himmel eller viska ut forrige bilde. Uten dette blir alt som tegnes
+   * i himmelområdet liggende bilde etter bilde, og toppen av videoen
+   * gror igjen med gamle ledestreker.
+   */
   Opptak.prototype.bilde = function (tegnOverlegg) {
     if (this.stoppet || this.opptaker.state !== 'recording') return;
     var ctx = this.ctx;
+    if (!this._himmel) {
+      this._himmel = ctx.createLinearGradient(0, 0, 0, this.høyde);
+      this._himmel.addColorStop(0, '#1e3a8a');
+      this._himmel.addColorStop(0.42, '#3b82f6');
+      this._himmel.addColorStop(0.68, '#93c5fd');
+      this._himmel.addColorStop(1, '#dbeafe');
+    }
+    ctx.fillStyle = this._himmel;
+    ctx.fillRect(0, 0, this.bredde, this.høyde);
     try {
       ctx.drawImage(this.kartCanvas, 0, 0, this.bredde, this.høyde);
     } catch (e) {
