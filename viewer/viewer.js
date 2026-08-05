@@ -44,7 +44,7 @@ const TEKST = {
     omLopet: 'Om løpet', tofinger: 'Bruk to fingre for å flytte kartet',
     laster: 'Laster løypa …', lasterFeil: 'Kunne ikke laste løypa',
     proevOppdater: 'Prøv å oppdatere siden.', loypekartTittel: 'Løypekart', loype: 'Løype',
-    flyby: '▶ 3D-flytur',
+    flyby: '▶ Flyover',
     flybyTittel: 'Spill av en gjennomkjøring av løypa i 3D-terreng — du kan styre kameraet underveis',
   },
   en: {
@@ -59,8 +59,8 @@ const TEKST = {
     omLopet: 'About the race', tofinger: 'Use two fingers to move the map',
     laster: 'Loading the course …', lasterFeil: 'Could not load the course',
     proevOppdater: 'Please refresh the page.', loypekartTittel: 'Course map', loype: 'Course',
-    flyby: '▶ 3D fly-through',
-    flybyTittel: 'Play a fly-through of the course in 3D terrain — you can steer the camera as it plays',
+    flyby: '▶ Flyover',
+    flybyTittel: 'Play a flyover of the course in 3D terrain — you can steer the camera as it plays',
   },
 };
 
