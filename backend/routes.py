@@ -62,13 +62,26 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 32
+BACKEND_VERSJON = 33
 
 
 @router.get("/health")
 def helse():
-    """Enkel statussjekk. Brukes av frontend til å oppdage utdatert server."""
-    return {"ok": True, "versjon": BACKEND_VERSJON}
+    """Statussjekk. Brukes av frontend til å oppdage utdatert server.
+
+    Tar også med asset-versjonene, så man kan se i grensesnittet hvilken
+    kode serveren FAKTISK kjører. Det er lett å tro at en omstart tok når
+    frontend viser et nytt versjonsnummer — men frontend-filene leses fra
+    disk ved hver forespørsel, mens disse tallene ligger i minnet til
+    serverprosessen.
+    """
+    return {
+        "ok": True,
+        "versjon": BACKEND_VERSJON,
+        "assets": publisering.ASSET_VERSJON,
+        "arena_assets": arena_publisering.ARENA_ASSET_VERSJON,
+        "video_assets": video_publisering.VIDEO_ASSET_VERSJON,
+    }
 
 
 # Øvre grense for opplastede GPX-filer. Romslig (svært lange spor på

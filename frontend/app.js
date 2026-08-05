@@ -20,7 +20,11 @@
 // (MAJOR.MINOR.PATCH, se CHANGELOG.md) og oppdateres i git-tag ved
 // hver GitHub-release. Helt uavhengig av BACKEND_VERSJON/FORVENTET_BACKEND
 // under, som bare er en intern teller for å oppdage utdatert server.
-const APP_VERSJON = '3.2.0';
+// Siste siffer økes ved HVER endring som krever at KUL startes på nytt for
+// å virke (dvs. alt som rører backend/), og ellers ved merkbare endringer.
+// Da kan man se på skjermen om omstarten faktisk tok — hold det i takt med
+// BACKEND_VERSJON i backend/routes.py.
+const APP_VERSJON = '3.2.1';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -4753,7 +4757,7 @@ oppdaterVideobibliotek();   // feiler stille på eldre server uten videostøtte
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 32;
+const FORVENTET_BACKEND = 33;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {
@@ -4773,3 +4777,28 @@ sjekkServerversjon();
 
 // Vis verktøyets versjon i topplinja
 document.getElementById('app-version').textContent = 'versjon ' + APP_VERSJON;
+
+/**
+ * Vis hvilken kode serveren faktisk kjører, ved siden av versjonsnummeret.
+ * Backend-tallet er det viktigste: frontend-filene leses fra disk ved hver
+ * forespørsel og ser derfor alltid ferske ut, mens backend-koden ligger i
+ * minnet til serverprosessen fra den ble startet.
+ */
+async function visServerversjoner() {
+  const el = document.getElementById('app-version');
+  try {
+    const data = await (await fetch('/api/health')).json();
+    el.textContent = 'versjon ' + APP_VERSJON + ' · b' + data.versjon;
+    el.title =
+      'Verktøyet: ' + APP_VERSJON +
+      '\nBackend: ' + data.versjon + ' (forventet ' + FORVENTET_BACKEND + ')' +
+      '\nLøype-assets: v' + (data.assets != null ? data.assets : '?') +
+      '\nArena-assets: v' + (data.arena_assets != null ? data.arena_assets : '?') +
+      '\nVideo-assets: v' + (data.video_assets != null ? data.video_assets : '?') +
+      '\n\nBackend-tallet viser hva den kjørende serveren har i minnet.' +
+      ' Stemmer det ikke med forventet, må KUL startes på nytt.';
+  } catch (feil) {
+    el.title = 'Fikk ikke kontakt med serveren.';
+  }
+}
+visServerversjoner();

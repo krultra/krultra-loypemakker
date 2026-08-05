@@ -600,6 +600,18 @@ var KULFlyby = (function () {
       if (window.console && console.debug) console.debug('flyby:', e && e.error);
     });
 
+    // Videoopptaket MÅ fanges her, ikke rett etter jumpTo i løkka.
+    // jumpTo endrer transformen med en gang, men MapLibre tegner først på
+    // sin egen animasjonsramme. Fanget vi bildet rett etter jumpTo, fikk vi
+    // FORRIGE bildes kart sammen med skjermposisjoner regnet fra den NYE
+    // transformen — og da skled punktskiltene i forhold til kartet. Avviket
+    // vokste med avstanden, siden en liten dreining flytter fjerne punkter
+    // mye mer på skjermen enn nære. I 'render' er lerretets innhold og
+    // map.project() garantert samme transform.
+    map.on('render', function () {
+      if (opptak) opptak.bilde(tegnOverleggPåLerret);
+    });
+
     map.on('load', function () {
       if (instans && instans.ødelagt) return;
 
@@ -888,10 +900,12 @@ var KULFlyby = (function () {
       sjekkKlaring(posVed(orbit ? avstander[orbit.wpt.idx] : s), nå);
       tegn(false, dt);
 
-      // Opptaket tegnes ETTER kartet, så bildet vi spiller inn er det
-      // samme som står på skjermen akkurat nå.
       if (opptak) {
-        opptak.bilde(tegnOverleggPåLerret);
+        // Selve opptaket skjer i 'render'-hendelsen (se map.on('render')
+        // nedenfor). Her ber vi bare kartet om å tegne dette bildet, slik
+        // at det også blir spilt inn når kameraet står stille — for
+        // eksempel mens et punktkort er oppe.
+        map.triggerRepaint();
         ui.recTid.textContent = tidTekst(opptak.varighet());
       }
 
@@ -1197,6 +1211,140 @@ var KULFlyby = (function () {
       tegnLøperprikk(ctx, sk, p);
       tegnAvlesning(ctx, sk, høyde);
       if (toastNå) tegnToast(ctx, sk, bredde);
+      // Åpner man et punktkort mens det spilles inn, skal det med i videoen
+      if (kortWpt) tegnKort(ctx, sk, bredde, høyde);
+    }
+
+    /** Del en tekst i linjer som får plass innenfor `maksB`. */
+    function brytTekst(ctx, tekst, maksB) {
+      var ord = String(tekst).split(/\s+/);
+      var linjer = [], linje = '';
+      for (var i = 0; i < ord.length; i++) {
+        var kandidat = linje ? linje + ' ' + ord[i] : ord[i];
+        if (linje && ctx.measureText(kandidat).width > maksB) {
+          linjer.push(linje);
+          linje = ord[i];
+        } else {
+          linje = kandidat;
+        }
+      }
+      if (linje) linjer.push(linje);
+      return linjer;
+    }
+
+    /**
+     * Punktkortet tegnet inn i opptaket — samme innhold som HTML-kortet.
+     * Målene speiler .fb-kort i flyby.css. Høyden regnes ut først, så
+     * kortet kan midtstilles uansett hvor mye tekst punktet har.
+     */
+    function tegnKort(ctx, sk, bredde, høyde) {
+      var w = kortWpt;
+      var st = statistikkFor(w.idx);
+      var boksB = Math.min(420 * sk, bredde * 0.92);
+      var pad = 20 * sk;
+      var innB = boksB - pad * 2;
+
+      var tittelPx = 18 * sk, brødPx = 13.5 * sk, tabellPx = 13 * sk;
+      var chipPx = 12.5 * sk, ikonPx = 15 * sk;
+
+      var tittel = lok(w, 'name') || w.name || '';
+      var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
+      var beskr = lok(w, 'desc');
+
+      var rader = [
+        [t('distanseFraStart'), kmT(st.dist)],
+        [t('fraForrige') + ' (' + st.forrigeNavn + ')', kmT(st.distForrige)],
+      ];
+      if (st.høyde != null) rader.push([t('hoyde'), Math.round(st.høyde) + ' ' + t('moh')]);
+      if (st.oppStart != null) {
+        rader.push([t('hoydemeterFraStart'),
+          '↑ ' + st.oppStart + ' m · ↓ ' + st.nedStart + ' m']);
+      }
+
+      // ---- Mål opp innholdet før vi tegner ----
+      ctx.font = brødPx + 'px ' + SKRIFT;
+      var beskrLinjer = beskr ? brytTekst(ctx, beskr, innB) : [];
+      var chipH = typer.length ? (22 * sk + 8 * sk) : 0;
+      var h = pad + tittelPx * 1.3 + 8 * sk + chipH +
+        beskrLinjer.length * brødPx * 1.5 + (beskrLinjer.length ? 10 * sk : 0) +
+        rader.length * tabellPx * 2.0 + pad;
+
+      var x = (bredde - boksB) / 2;
+      var y = Math.max(10 * sk, (høyde - h) / 2);
+
+      // ---- Bakgrunn ----
+      ctx.fillStyle = 'rgba(15,23,42,0.97)';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1 * sk;
+      rundtRekt(ctx, x, y, boksB, h, 12 * sk);
+      ctx.fill();
+      ctx.stroke();
+
+      var cy = y + pad;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      // ---- Tittel ----
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 ' + tittelPx + 'px ' + SKRIFT;
+      ctx.fillText(tittel, x + pad, cy);
+      cy += tittelPx * 1.3 + 8 * sk;
+
+      // ---- Tjenester (symbol + navn) ----
+      if (typer.length) {
+        var cx = x + pad;
+        ctx.font = chipPx + 'px ' + SKRIFT;
+        for (var q = 0; q < typer.length; q++) {
+          var etikett = typeNavn(typer[q]);
+          var tekstB = ctx.measureText(etikett).width;
+          var chipB = ikonPx + 6 * sk + tekstB + 16 * sk;
+          if (cx + chipB > x + boksB - pad && cx > x + pad) break;  // én rad holder
+          ctx.fillStyle = '#1e293b';
+          rundtRekt(ctx, cx, cy, chipB, 22 * sk, 5 * sk);
+          ctx.fill();
+          if (typeof tegnSymbolCanvas === 'function') {
+            tegnSymbolCanvas(ctx, typer[q], cx + 8 * sk + ikonPx / 2, cy + 11 * sk, ikonPx);
+          }
+          ctx.fillStyle = '#cbd5e1';
+          ctx.font = chipPx + 'px ' + SKRIFT;
+          ctx.textBaseline = 'middle';
+          ctx.fillText(etikett, cx + 8 * sk + ikonPx + 6 * sk, cy + 11 * sk);
+          ctx.textBaseline = 'top';
+          cx += chipB + 8 * sk;
+        }
+        cy += chipH;
+      }
+
+      // ---- Beskrivelse ----
+      if (beskrLinjer.length) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = brødPx + 'px ' + SKRIFT;
+        for (var i = 0; i < beskrLinjer.length; i++) {
+          ctx.fillText(beskrLinjer[i], x + pad, cy);
+          cy += brødPx * 1.5;
+        }
+        cy += 10 * sk;
+      }
+
+      // ---- Tabellen ----
+      ctx.font = tabellPx + 'px ' + SKRIFT;
+      for (i = 0; i < rader.length; i++) {
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 1 * sk;
+        ctx.beginPath();
+        ctx.moveTo(x + pad, cy);
+        ctx.lineTo(x + boksB - pad, cy);
+        ctx.stroke();
+        var radY = cy + tabellPx * 0.5;
+        ctx.fillStyle = '#94a3b8';
+        ctx.textAlign = 'left';
+        ctx.fillText(rader[i][0], x + pad, radY);
+        ctx.fillStyle = '#f1f5f9';
+        ctx.textAlign = 'right';
+        ctx.fillText(rader[i][1], x + boksB - pad, radY);
+        ctx.textAlign = 'left';
+        cy += tabellPx * 2.0;
+      }
     }
 
     function tilLerret(lngLat, sk) {
