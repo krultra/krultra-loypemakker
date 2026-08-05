@@ -35,6 +35,7 @@ const NØYTRAL = '#64748b'; // farge for elementer uten type
 const TEKST = {
   no: {
     liste: 'Liste', fullskjerm: '⛶ Full skjerm', steder: 'Steder', kontakter: 'Kontakter',
+    tilbake: '← Tilbake', tilbakeTittel: 'Tilbake til løypekartet du kom fra',
     visAlle: '▾ Vis alle', skjulAlle: '▸ Skjul alle', annet: 'Annet',
     ingenSteder: 'Ingen steder er markert ennå.',
     ingenKontakter: 'Ingen kontakter er tilgjengelige nå.',
@@ -47,6 +48,7 @@ const TEKST = {
   },
   en: {
     liste: 'List', fullskjerm: '⛶ Full screen', steder: 'Places', kontakter: 'Contacts',
+    tilbake: '← Back', tilbakeTittel: 'Back to the course map you came from',
     visAlle: '▾ Expand all', skjulAlle: '▸ Collapse all', annet: 'Other',
     ingenSteder: 'No places marked yet.',
     ingenKontakter: 'No contacts are available right now.',
@@ -146,6 +148,7 @@ function startVisning() {
   byggPanelFaner();
   byggListeToggle();
   byggFullskjerm();
+  byggTilbake();
   byggKontaktKort();
   settListeAuto();
 }
@@ -714,6 +717,27 @@ function byggFullskjerm() {
   fs.classList.remove('skjult');
   fs.addEventListener('click', () =>
     window.open(window.location.href, '_blank', 'noopener'));
+}
+
+/**
+ * «Tilbake»-knapp når man kom hit fra en løypevisning (eller et annet
+ * arenakart). Nå som slike lenker åpnes i samme vindu — også inne i en
+ * iframe — måtte arenakartet få en synlig vei tilbake; ellers ble man
+ * stående i innbygde visninger uten annet enn nettleserens egen
+ * tilbakeknapp, som er lett å overse i en iframe.
+ *
+ * Vi bruker nettleserhistorikken framfor en fast ../-adresse. Da havner
+ * man nøyaktig der man kom fra, og vi slipper å anta at det finnes en
+ * publisert løype på nivået over (et arenakart kan stå alene).
+ */
+function byggTilbake() {
+  if (window.history.length <= 1) return;   // kom hit direkte — ingen vei tilbake
+  const b = document.getElementById('arena-tilbake');
+  if (!b) return;
+  b.textContent = t('tilbake');
+  b.title = t('tilbakeTittel');
+  b.classList.remove('skjult');
+  b.addEventListener('click', () => window.history.back());
 }
 
 /** Liten språkvelger (NO/EN) i toppen. Klikk laster siden på nytt med ?lang=. */

@@ -441,8 +441,12 @@ function åpnePopup(w) {
   // Slugene valideres til trygge tegn før de settes i href.
   const arenaMål = medSprak(arenaHref(w.arena));
   const arenaLenke = arenaMål
-    ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaMål) +
-      '" target="_blank" rel="noopener">' + escHtml(t('seArenakart')) + '</a></p>' : '';
+    // Åpnes i samme vindu — er visningen bygd inn på en side, skal
+    // arenakartet dukke opp i den samme iframen, ikke sprette ut i en ny
+    // fane. Vil leseren ha stor skjerm, tar hun først «Full skjerm» på
+    // løypevisningen og går videre derfra.
+    ? '<p class="wpt-popup-arena"><a href="' + escHtml(arenaMål) + '">' +
+      escHtml(t('seArenakart')) + '</a></p>' : '';
   const wDesc = lok(w, 'desc');
   const html = '<div class="wpt-popup"><h3>' + escHtml(lok(w, 'name') || '') + '</h3>' +
     '<div class="wpt-popup-typer">' + typer + '</div>' +

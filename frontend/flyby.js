@@ -1424,9 +1424,11 @@ var KULFlyby = (function () {
       // visningen kan; verktøyet har ingen publisert arena å peke på).
       // Adressen valideres av kalleren — vi escaper den uansett her.
       var arena = arenaUrl(w);
+      // Samme vindu, som ellers i visningen: er løypa bygd inn på en side,
+      // skal arenakartet åpnes i iframen og ikke sprette ut i en ny fane.
       var arenaDel = arena
-        ? '<p class="fb-kort-arena"><a href="' + escHtml(arena) +
-          '" target="_blank" rel="noopener">' + escHtml(t('seArenakart')) + '</a></p>'
+        ? '<p class="fb-kort-arena"><a href="' + escHtml(arena) + '">' +
+          escHtml(t('seArenakart')) + '</a></p>'
         : '';
       var rad = function (navn, verdi) {
         return '<tr><td>' + escHtml(navn) + '</td><td>' + escHtml(verdi) + '</td></tr>';
