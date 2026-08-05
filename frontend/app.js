@@ -4275,7 +4275,31 @@ function åpneFlybyEditor() {
     stil: { rutefarge: kartEksport.farge, tykkelse: kartEksport.tykkelse },
     navn: kilde.navn || 'Løype',
     lang: 'no',
+    lagreVideo: lagreFlyoverVideo,
   });
+}
+
+/** Legg en ferdig innspilt flyover-video i KUL sitt videobibliotek. */
+async function lagreFlyoverVideo(res, navn) {
+  const skjema = new FormData();
+  // Filnavnet her betyr lite — serveren gir videoen sin egen id — men
+  // endelsen må stemme med formatet nettleseren spilte inn i.
+  skjema.append('file', res.blob, 'flyover.' + res.endelse);
+  skjema.append('navn', navn);
+  skjema.append('varighet', String(Math.round(res.varighet * 10) / 10));
+  skjema.append('bredde', String(res.bredde));
+  skjema.append('hoyde', String(res.høyde));
+  const kilde = profilKilde();
+  if (kilde && kilde.navn) skjema.append('loype', kilde.navn);
+
+  const svar = await fetch('/api/videos', { method: 'POST', body: skjema });
+  if (!svar.ok) {
+    const feil = await svar.json().catch(() => ({}));
+    throw new Error(feil.detail || ('HTTP ' + svar.status));
+  }
+  const video = await svar.json();
+  toast('Videoen «' + video.navn + '» er lagret i KUL.', 'success');
+  return video;
 }
 
 document.getElementById('btn-flyby').addEventListener('click', åpneFlybyEditor);

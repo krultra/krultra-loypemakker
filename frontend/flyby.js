@@ -76,6 +76,14 @@ var KULFlyby = (function () {
       sikt: 'Hold løperen synlig',
       siktTittel: 'Hev kameraet når terrenget kommer mellom det og løperen',
       seArenakart: '🏟️ Se arenakart',
+      taOpp: '⏺ Ta opp', stoppOpptak: '⏹ Stopp opptak',
+      taOppTittel: 'Spill inn en video av flyoveren slik du kjører den — ' +
+        'kamerabevegelser og pauser blir med',
+      opptakFeil: 'Kunne ikke starte opptaket.',
+      videoKlar: 'Videoen er klar', videonavn: 'Navn',
+      lastNed: '⤓ Last ned', lagreIKul: 'Lagre i KUL',
+      lagrer: 'Lagrer …', lagret: 'Lagret i KUL.',
+      lagreFeil: 'Klarte ikke å lagre:',
       distanseFraStart: 'Distanse fra start', fraForrige: 'Fra forrige punkt',
       hoydemeterFraStart: 'Høydemeter fra start', start: 'start',
       lukkKort: 'Lukk', klikkForMer: 'Klikk for detaljer',
@@ -95,6 +103,14 @@ var KULFlyby = (function () {
       sikt: 'Keep runner visible',
       siktTittel: 'Raise the camera when terrain comes between it and the runner',
       seArenakart: '🏟️ View arena map',
+      taOpp: '⏺ Record', stoppOpptak: '⏹ Stop recording',
+      taOppTittel: 'Record a video of the flyover as you run it — ' +
+        'camera moves and pauses are included',
+      opptakFeil: 'Could not start recording.',
+      videoKlar: 'Your video is ready', videonavn: 'Name',
+      lastNed: '⤓ Download', lagreIKul: 'Save in KUL',
+      lagrer: 'Saving …', lagret: 'Saved in KUL.',
+      lagreFeil: 'Could not save:',
       distanseFraStart: 'Distance from start', fraForrige: 'From previous point',
       hoydemeterFraStart: 'Ascent/descent from start', start: 'start',
       lukkKort: 'Close', klikkForMer: 'Click for details',
@@ -336,6 +352,9 @@ var KULFlyby = (function () {
         '<div class="fb-laster"></div>' +
         '<div class="fb-toast"></div>' +
         '<div class="fb-kort fb-skjult"></div>' +
+        '<div class="fb-rec fb-skjult"><span class="fb-rec-prikk"></span>' +
+          '<span class="fb-rec-tid">0:00</span></div>' +
+        '<div class="fb-video fb-skjult"></div>' +
         '<div class="fb-avlesning">' +
           '<div class="fb-celle"><span class="fb-navn2">' + escHtml(t('distanse')) +
             '</span><span class="fb-verdi fb-dist">–</span></div>' +
@@ -348,6 +367,7 @@ var KULFlyby = (function () {
         '</div>' +
       '</div>' +
       '<div class="fb-bunn">' +
+        '<button type="button" class="fb-knapp fb-opptak fb-skjult" disabled></button>' +
         '<button type="button" class="fb-knapp fb-spill" disabled></button>' +
         '<button type="button" class="fb-knapp fb-omstart" title="' +
           escHtml(t('omstart')) + '">↺</button>' +
@@ -379,6 +399,10 @@ var KULFlyby = (function () {
       lukk: rot.querySelector('.fb-lukk'),
       stopp: rot.querySelector('.fb-stopp'),
       sikt: rot.querySelector('.fb-sikt'),
+      opptak: rot.querySelector('.fb-opptak'),
+      rec: rot.querySelector('.fb-rec'),
+      recTid: rot.querySelector('.fb-rec-tid'),
+      video: rot.querySelector('.fb-video'),
     };
     ui.laster.textContent = t('laster');
     ui.lag.textContent = t('kart');      // satellitt er standard → tilbyr «Kart»
@@ -400,6 +424,10 @@ var KULFlyby = (function () {
     var nedAkk = (o.nedAkk && o.nedAkk.length === n) ? o.nedAkk : null;
     var stil = o.stil || {};
     var arenaUrl = o.arenaUrl;
+    // Kalleren avgjør om en ferdig video kan lagres et sted. Verktøyet
+    // sender inn en funksjon som legger den i KUL; i en publisert visning
+    // finnes ingen server å lagre til, og da tilbys bare nedlasting.
+    var lagreVideo = o.lagreVideo || null;
     var rutefarge = stil.rutefarge || '#dc2626';
     var lokale = lang === 'en' ? 'en-GB' : 'nb-NO';
     var veipunkter = (o.veipunkter || [])
@@ -469,6 +497,10 @@ var KULFlyby = (function () {
       // til de samme retningene, og da skal flisene fortsatt ligge klare.
       maxTileCacheSize: 600,
       fadeDuration: 0,
+      // Nødvendig for å kunne lese kartbildet ut i et annet lerret, som
+      // videoopptaket gjør. Uten dette kan WebGL-bufferet være tømt når
+      // vi henter det, og opptaket blir svart.
+      preserveDrawingBuffer: true,
       // Vi styrer kameraet selv hvert bilde — MapLibres egne håndterere
       // ville hele tiden blitt avbrutt av det (og zoom virket da bare i
       // pause). De slås av her og erstattes av våre egne lenger nede.
@@ -587,6 +619,7 @@ var KULFlyby = (function () {
         klar = true;
         ui.laster.classList.add('fb-skjult');
         ui.spill.disabled = false;
+        ui.opptak.disabled = false;
         if (!brukerHarStyrt) settSpiller(true);
         sistTid = performance.now();
         rafId = requestAnimationFrame(løkke);
@@ -835,7 +868,13 @@ var KULFlyby = (function () {
           }
         } else {
           s += (totalKm / varighet) * fart * dt;
-          if (s >= totalKm) { s = totalKm; settSpiller(false); ferdigTekst(); }
+          if (s >= totalKm) {
+            s = totalKm;
+            settSpiller(false);
+            ferdigTekst();
+            // Kom vi i mål mens vi tok opp, er videoen ferdig
+            if (opptak) stoppOpptak();
+          }
           sjekkVeipunkt();
         }
       }
@@ -843,6 +882,14 @@ var KULFlyby = (function () {
       glideKamera(dt);
       sjekkKlaring(posVed(orbit ? avstander[orbit.wpt.idx] : s), nå);
       tegn(false, dt);
+
+      // Opptaket tegnes ETTER kartet, så bildet vi spiller inn er det
+      // samme som står på skjermen akkurat nå.
+      if (opptak) {
+        opptak.bilde(tegnOverleggPåLerret);
+        ui.recTid.textContent = tidTekst(opptak.varighet());
+      }
+
       rafId = requestAnimationFrame(løkke);
     }
 
@@ -950,24 +997,32 @@ var KULFlyby = (function () {
       return (typeof fmtKm === 'function') ? fmtKm(km, lokale) : km.toFixed(2) + ' km';
     }
 
+    // Siste avleste verdier. Holdes her fordi videoopptaket tegner den
+    // samme informasjonen på nytt inn i lerretet sitt (HTML-laget blir
+    // ikke med i et canvas-opptak).
+    var avlest = { dist: '', hoyde: '', hm: '', neste: '' };
+
     function oppdaterAvlesning(km, p) {
-      ui.dist.textContent = kmT(km);
+      avlest.dist = kmT(km);
       var h = høydeVed(p);
-      ui.hoyde.textContent = h == null ? '–' : Math.round(h) + ' ' + t('moh');
+      avlest.hoyde = h == null ? '–' : Math.round(h) + ' ' + t('moh');
       var opp = akkVed(oppAkk, p), ned = akkVed(nedAkk, p);
-      ui.hm.textContent = (opp == null) ? '–'
+      avlest.hm = (opp == null) ? '–'
         : '↑ ' + Math.round(opp) + ' · ↓ ' + Math.round(ned || 0) + ' m';
 
       var neste = null;
       for (var j = 0; j < veipunkter.length; j++) {
         if (veipunkter[j].idx > p.idx) { neste = veipunkter[j]; break; }
       }
-      if (neste) {
-        ui.neste.textContent = (lok(neste, 'name') || neste.name || '') +
-          ' · ' + Math.max(0, avstander[neste.idx] - km).toFixed(1) + ' km';
-      } else {
-        ui.neste.textContent = t('mal') + ' · ' + Math.max(0, totalKm - km).toFixed(1) + ' km';
-      }
+      avlest.neste = neste
+        ? (lok(neste, 'name') || neste.name || '') +
+          ' · ' + Math.max(0, avstander[neste.idx] - km).toFixed(1) + ' km'
+        : t('mal') + ' · ' + Math.max(0, totalKm - km).toFixed(1) + ' km';
+
+      ui.dist.textContent = avlest.dist;
+      ui.hoyde.textContent = avlest.hoyde;
+      ui.hm.textContent = avlest.hm;
+      ui.neste.textContent = avlest.neste;
     }
 
     function ferdigTekst() { ui.spill.textContent = t('omstart'); }
@@ -1089,7 +1144,9 @@ var KULFlyby = (function () {
     }
 
     var toastTimer = null;
+    var toastNå = null;        // {w} mens meldinga vises — også for opptaket
     function visToast(w) {
+      toastNå = w;
       ui.toast.innerHTML = '<span class="fb-toast-sym">' + symbolerHtml(w, 18) + '</span>' +
         '<span class="fb-toast-navn"></span><span class="fb-toast-dist"></span>';
       ui.toast.querySelector('.fb-toast-navn').textContent = lok(w, 'name') || w.name || '';
@@ -1102,7 +1159,221 @@ var KULFlyby = (function () {
 
     function skjulToast() {
       clearTimeout(toastTimer);
+      toastNå = null;
       ui.toast.classList.remove('fb-toast-vis');
+    }
+
+    // ============================================================
+    // Overlegget tegnet på nytt i et lerret (for videoopptaket)
+    // ============================================================
+    // Punktskilt, løperprikk og avlesning er HTML oppå kartet, og HTML
+    // blir ikke med når man spiller inn et canvas. Her tegnes det samme
+    // en gang til med canvas-kall, slik at videoen ser ut som skjermen.
+    // Målene speiler reglene i flyby.css; `s` skalerer fra kartets
+    // CSS-piksler (som map.project() gir) til lerretets oppløsning.
+
+    var SKRIFT = '"Segoe UI", system-ui, sans-serif';
+
+    function rundtRekt(ctx, x, y, b, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + b, y, x + b, y + h, r);
+      ctx.arcTo(x + b, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + b, y, r);
+      ctx.closePath();
+    }
+
+    /** Tegn hele overlegget inn i opptakets lerret.
+     *  `sk` er skalafaktoren fra kartets CSS-piksler til lerretet. */
+    function tegnOverleggPåLerret(ctx, sk, bredde, høyde) {
+      var p = posVed(orbit ? avstander[orbit.wpt.idx] : s);
+      tegnVeipunktSkilt(ctx, sk, bredde, høyde);
+      tegnLøperprikk(ctx, sk, p);
+      tegnAvlesning(ctx, sk, høyde);
+      if (toastNå) tegnToast(ctx, sk, bredde);
+    }
+
+    function tilLerret(lngLat, sk) {
+      var pt = map.project(lngLat);
+      return { x: pt.x * sk, y: pt.y * sk };
+    }
+
+    function tegnVeipunktSkilt(ctx, s, bredde, høyde) {
+      for (var j = 0; j < veipunkter.length; j++) {
+        var w = veipunkter[j];
+        if (w.vis_ikon === false) continue;
+        var pt;
+        try { pt = tilLerret([w.lon, w.lat], s); } catch (e) { continue; }
+        // Utenfor bildet (med romslig margin) — hopp over
+        if (pt.x < -400 * s || pt.x > bredde + 400 * s ||
+            pt.y < -300 * s || pt.y > høyde + 200 * s) continue;
+
+        var navn = lok(w, 'name') || w.name || '';
+        var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
+        var ikonPx = 15 * s;
+        var tekstPx = 12 * s;
+        ctx.font = tekstPx + 'px ' + SKRIFT;
+        var tekstB = ctx.measureText(navn).width;
+        var pad = 8 * s, gap = 5 * s;
+        var symB = typer.length * (ikonPx + 2 * s);
+        var boksB = pad * 2 + symB + (navn ? gap + tekstB : 0);
+        var boksH = Math.max(ikonPx, tekstPx) + 2 * pad * 0.7;
+
+        var fotY = pt.y - 4 * s;
+        var strekTopp = pt.y - 49 * s;
+        var boksY = strekTopp - boksH;
+        var boksX = pt.x - boksB / 2;
+
+        // Ledestrek ned til stedet
+        var grad = ctx.createLinearGradient(0, strekTopp, 0, pt.y);
+        grad.addColorStop(0, 'rgba(226,232,240,0.95)');
+        grad.addColorStop(1, 'rgba(226,232,240,0.35)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 2 * s;
+        ctx.beginPath();
+        ctx.moveTo(pt.x, strekTopp);
+        ctx.lineTo(pt.x, pt.y - 7 * s);
+        ctx.stroke();
+
+        // Foten som markerer selve punktet
+        ctx.beginPath();
+        ctx.arc(pt.x, fotY, 3.5 * s, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fill();
+        ctx.lineWidth = 1.5 * s;
+        ctx.strokeStyle = '#334155';
+        ctx.stroke();
+
+        // Selve skiltet
+        ctx.fillStyle = 'rgba(15,23,42,0.88)';
+        ctx.strokeStyle = 'rgba(148,163,184,0.55)';
+        ctx.lineWidth = 1 * s;
+        rundtRekt(ctx, boksX, boksY, boksB, boksH, 6 * s);
+        ctx.fill();
+        ctx.stroke();
+
+        var cx = boksX + pad;
+        for (var q = 0; q < typer.length; q++) {
+          if (typeof tegnSymbolCanvas === 'function') {
+            tegnSymbolCanvas(ctx, typer[q], cx + ikonPx / 2, boksY + boksH / 2, ikonPx);
+          }
+          cx += ikonPx + 2 * s;
+        }
+        if (navn) {
+          ctx.fillStyle = '#f1f5f9';
+          ctx.font = tekstPx + 'px ' + SKRIFT;
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(navn, cx + gap, boksY + boksH / 2);
+        }
+      }
+    }
+
+    function tegnLøperprikk(ctx, s, p) {
+      var pt;
+      try { pt = tilLerret([p.lon, p.lat], s); } catch (e) { return; }
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 13 * s, 0, 2 * Math.PI);
+      ctx.fillStyle = rutefarge;
+      ctx.globalAlpha = 0.3;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 6 * s, 0, 2 * Math.PI);
+      ctx.fillStyle = rutefarge;
+      ctx.fill();
+      ctx.lineWidth = 2 * s;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+    }
+
+    function tegnAvlesning(ctx, s, høyde) {
+      var celler = [
+        [t('distanse'), avlest.dist],
+        [t('hoyde'), avlest.hoyde],
+        [t('stigning'), avlest.hm],
+        [t('neste'), avlest.neste],
+      ];
+      var navnPx = 10.5 * s, verdiPx = 17 * s;
+      var pad = 14 * s, radH = 34 * s;
+      ctx.font = verdiPx + 'px ' + SKRIFT;
+      var kolB = 0;
+      for (var i = 0; i < celler.length; i++) {
+        kolB = Math.max(kolB, ctx.measureText(celler[i][1]).width);
+      }
+      ctx.font = navnPx + 'px ' + SKRIFT;
+      for (i = 0; i < celler.length; i++) {
+        kolB = Math.max(kolB, ctx.measureText(celler[i][0].toUpperCase()).width);
+      }
+      var kolonner = 2, rader = 2;
+      var innB = kolonner * kolB + 22 * s;
+      var boksB = innB + pad * 2, boksH = rader * radH + pad * 1.4;
+      var x = 12 * s, y = høyde - boksH - 12 * s;
+
+      ctx.fillStyle = 'rgba(15,23,42,0.82)';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1 * s;
+      rundtRekt(ctx, x, y, boksB, boksH, 8 * s);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      for (i = 0; i < celler.length; i++) {
+        var kol = i % 2, rad = Math.floor(i / 2);
+        var cx = x + pad + kol * (kolB + 22 * s);
+        var cy = y + pad * 0.7 + rad * radH;
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = navnPx + 'px ' + SKRIFT;
+        ctx.textBaseline = 'top';
+        ctx.fillText(celler[i][0].toUpperCase(), cx, cy);
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = '600 ' + verdiPx + 'px ' + SKRIFT;
+        ctx.fillText(celler[i][1], cx, cy + navnPx + 4 * s);
+      }
+    }
+
+    function tegnToast(ctx, s, bredde) {
+      var w = toastNå;
+      var navn = lok(w, 'name') || w.name || '';
+      var dist = kmT(avstander[w.idx]);
+      var tekstPx = 15 * s, distPx = 13 * s, ikonPx = 18 * s;
+      var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
+      ctx.font = '600 ' + tekstPx + 'px ' + SKRIFT;
+      var navnB = ctx.measureText(navn).width;
+      ctx.font = distPx + 'px ' + SKRIFT;
+      var distB = ctx.measureText(dist).width;
+      var pad = 16 * s, gap = 10 * s;
+      var symB = typer.length * (ikonPx + 2 * s);
+      var boksB = pad * 2 + symB + gap + navnB + gap + distB;
+      var boksH = 40 * s;
+      var x = (bredde - boksB) / 2, y = 16 * s;
+
+      ctx.fillStyle = 'rgba(15,23,42,0.92)';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1 * s;
+      rundtRekt(ctx, x, y, boksB, boksH, 8 * s);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#2563eb';            // den blå kanten til venstre
+      rundtRekt(ctx, x, y, 4 * s, boksH, 2 * s);
+      ctx.fill();
+
+      var cx = x + pad;
+      for (var q = 0; q < typer.length; q++) {
+        if (typeof tegnSymbolCanvas === 'function') {
+          tegnSymbolCanvas(ctx, typer[q], cx + ikonPx / 2, y + boksH / 2, ikonPx);
+        }
+        cx += ikonPx + 2 * s;
+      }
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = '600 ' + tekstPx + 'px ' + SKRIFT;
+      ctx.fillText(navn, cx + gap, y + boksH / 2);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = distPx + 'px ' + SKRIFT;
+      ctx.fillText(dist, cx + gap + navnB + gap, y + boksH / 2);
     }
 
     /** Detaljkortet for et punkt: pause + all informasjonen om stedet. */
@@ -1196,6 +1467,118 @@ var KULFlyby = (function () {
     }
 
     // ============================================================
+    // Videoopptak
+    // ============================================================
+
+    var opptak = null;
+
+    function opptakMulig() {
+      return typeof KULOpptak !== 'undefined' && KULOpptak.tilgjengelig();
+    }
+
+    /** Start opptak: spol til start, sett i gang, og spill inn derfra. */
+    function startOpptak() {
+      if (opptak || !klar) return;
+      var lerret = map.getCanvas();
+      try {
+        opptak = KULOpptak.start({ kartCanvas: lerret });
+      } catch (feil) {
+        alert(t('opptakFeil') + ' (' + feil.message + ')');
+        return;
+      }
+      nullstill();
+      settSpiller(true);
+      ui.opptak.textContent = t('stoppOpptak');
+      ui.opptak.classList.add('fb-tar-opp');
+      ui.rec.classList.remove('fb-skjult');
+    }
+
+    /** Avslutt opptaket og vis resultatet. */
+    function stoppOpptak() {
+      if (!opptak) return;
+      var o = opptak;
+      opptak = null;
+      ui.opptak.textContent = t('taOpp');
+      ui.opptak.classList.remove('fb-tar-opp');
+      ui.rec.classList.add('fb-skjult');
+      settSpiller(false);
+      o.stopp().then(function (res) {
+        if (res && res.blob && res.blob.size) visVideo(res);
+      });
+    }
+
+    function tidTekst(sek) {
+      var m = Math.floor(sek / 60), r = Math.floor(sek % 60);
+      return m + ':' + (r < 10 ? '0' : '') + r;
+    }
+
+    /** Forhåndsvisning av den ferdige videoen, med lagring og nedlasting. */
+    function visVideo(res) {
+      var url = URL.createObjectURL(res.blob);
+      var mb = (res.blob.size / (1024 * 1024)).toFixed(1);
+      var standardNavn = (o.navn || 'flyover').replace(/[\\/:*?"<>|]+/g, '_');
+
+      ui.video.innerHTML =
+        '<button type="button" class="fb-kort-lukk">✕</button>' +
+        '<h3>' + escHtml(t('videoKlar')) + '</h3>' +
+        '<video class="fb-video-spiller" controls playsinline></video>' +
+        '<p class="fb-video-fakta">' + escHtml(tidTekst(res.varighet)) + ' · ' +
+          res.bredde + '×' + res.høyde + ' · ' + mb + ' MB · ' +
+          escHtml(res.endelse.toUpperCase()) + '</p>' +
+        '<label class="fb-video-navn">' + escHtml(t('videonavn')) +
+          '<input type="text" class="fb-video-navn-felt"></label>' +
+        '<div class="fb-video-knapper">' +
+          '<button type="button" class="fb-knapp fb-video-last">' +
+            escHtml(t('lastNed')) + '</button>' +
+          (lagreVideo
+            ? '<button type="button" class="fb-knapp fb-video-lagre fb-primaer">' +
+              escHtml(t('lagreIKul')) + '</button>' : '') +
+        '</div>' +
+        '<p class="fb-video-status"></p>';
+
+      var spiller = ui.video.querySelector('.fb-video-spiller');
+      spiller.src = url;
+      var navnFelt = ui.video.querySelector('.fb-video-navn-felt');
+      navnFelt.value = standardNavn;
+      var status = ui.video.querySelector('.fb-video-status');
+
+      function lukk() {
+        ui.video.classList.add('fb-skjult');
+        ui.video.innerHTML = '';
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      }
+      ui.video.querySelector('.fb-kort-lukk').addEventListener('click', lukk);
+
+      ui.video.querySelector('.fb-video-last').addEventListener('click', function () {
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = (navnFelt.value || standardNavn) + '.' + res.endelse;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      });
+
+      var lagreKnapp = ui.video.querySelector('.fb-video-lagre');
+      if (lagreKnapp) {
+        lagreKnapp.addEventListener('click', function () {
+          lagreKnapp.disabled = true;
+          status.textContent = t('lagrer');
+          lagreVideo(res, navnFelt.value || standardNavn)
+            .then(function () {
+              status.textContent = t('lagret');
+              setTimeout(lukk, 1200);
+            })
+            .catch(function (feil) {
+              lagreKnapp.disabled = false;
+              status.textContent = t('lagreFeil') + ' ' + (feil.message || '');
+            });
+        });
+      }
+
+      ui.video.classList.remove('fb-skjult');
+    }
+
+    // ============================================================
     // Kontroller
     // ============================================================
 
@@ -1206,6 +1589,15 @@ var KULFlyby = (function () {
     }
 
     ui.spill.addEventListener('click', vekslAvspilling);
+
+    if (opptakMulig()) {
+      ui.opptak.textContent = t('taOpp');
+      ui.opptak.title = t('taOppTittel');
+      ui.opptak.classList.remove('fb-skjult');
+      ui.opptak.addEventListener('click', function () {
+        if (opptak) stoppOpptak(); else startOpptak();
+      });
+    }
 
     ui.omstart.addEventListener('click', function () {
       brukerHarStyrt = true;
@@ -1345,6 +1737,7 @@ var KULFlyby = (function () {
     function lukk() {
       if (!instans || instans.ødelagt) return;
       instans.ødelagt = true;
+      if (opptak) { try { opptak.stopp(); } catch (e) { /* uansett på vei ut */ } opptak = null; }
       if (rafId) cancelAnimationFrame(rafId);
       clearTimeout(toastTimer);
       document.removeEventListener('keydown', påTast);

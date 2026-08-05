@@ -416,6 +416,132 @@ body.kul-flyby-aapen { overflow: hidden; }
   white-space: nowrap;
 }
 
+/* ---------- Videoopptak ---------- */
+
+.kul-flyby .fb-opptak { min-width: 104px; }
+
+.kul-flyby .fb-opptak.fb-tar-opp {
+  background: #b91c1c;
+  border-color: #ef4444;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Rød «tar opp»-indikator oppe i hjørnet av scenen */
+.kul-flyby .fb-rec {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid #b91c1c;
+  border-radius: 999px;
+  padding: 6px 14px 6px 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: #fecaca;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.kul-flyby .fb-rec-prikk {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: fb-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes fb-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kul-flyby .fb-rec-prikk { animation: none; }
+}
+
+/* Dialogen med den ferdige videoen */
+.kul-flyby .fb-video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94%, 560px);
+  max-height: 88%;
+  overflow-y: auto;
+  background: rgba(15, 23, 42, 0.98);
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.65);
+  z-index: 9;
+}
+
+.kul-flyby .fb-video h3 {
+  margin: 0 26px 12px 0;
+  font-size: 18px;
+  color: #f8fafc;
+}
+
+.kul-flyby .fb-video-spiller {
+  width: 100%;
+  border-radius: 8px;
+  background: #000;
+  display: block;
+}
+
+.kul-flyby .fb-video-fakta {
+  margin: 8px 0 12px;
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.kul-flyby .fb-video-navn {
+  display: block;
+  font-size: 12.5px;
+  color: #cbd5e1;
+  margin-bottom: 14px;
+}
+
+.kul-flyby .fb-video-navn-felt {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.kul-flyby .fb-video-knapper {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kul-flyby .fb-knapp.fb-primaer {
+  background: #1d4ed8;
+  border-color: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.kul-flyby .fb-knapp.fb-primaer:hover { background: #2563eb; }
+
+.kul-flyby .fb-video-status {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #94a3b8;
+  min-height: 1em;
+}
+
 /* ---------- Avlesningen (distanse, høyde, høydemeter, neste) ---------- */
 
 .kul-flyby .fb-avlesning {

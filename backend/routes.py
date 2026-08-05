@@ -23,6 +23,7 @@ from . import (
     segment_ops,
     storage,
     timestamps,
+    video_lagring,
 )
 from .models import (
     ArenaContact,
@@ -533,3 +534,67 @@ def publiser_arena(req: ArenaPublishRequest):
     arena.publiser_bilde_ids = req.bilde_ids
     arena_lagring._skriv(arena)
     return ArenaPublishResponse(**resultat)
+
+
+# ============================================================
+# Flyover-videoer
+# ============================================================
+# Videoene spilles inn i nettleseren og lastes opp hit som en fil.
+# De kan bli store, så de tas imot som multipart (strømmes til disk av
+# Starlette) i stedet for som JSON med base64.
+
+
+@router.get("/videos")
+def liste_videoer():
+    """Alle lagrede videoer, nyeste først."""
+    return {"videoer": video_lagring.les_index()}
+
+
+@router.post("/videos", status_code=201)
+async def lagre_video(
+    file: UploadFile = File(...),
+    navn: str = Form(...),
+    loype: str = Form(None),
+    varighet: float = Form(None),
+    bredde: int = Form(None),
+    hoyde: int = Form(None),
+):
+    innhold = await file.read()
+    try:
+        return video_lagring.lagre(
+            innhold, file.content_type or "", navn,
+            loype=loype, varighet=varighet, bredde=bredde, hoyde=hoyde,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/videos/{video_id}/fil")
+def hent_videofil(video_id: str):
+    """Selve videofila — brukes til avspilling og nedlasting i verktøyet."""
+    try:
+        sti = video_lagring.sti_for(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    v = video_lagring.hent(video_id)
+    return FileResponse(
+        sti, media_type=v.get("mime") or "application/octet-stream",
+        filename="{}.{}".format(v["navn"], sti.suffix.lstrip(".")),
+    )
+
+
+@router.patch("/videos/{video_id}")
+def endre_video(video_id: str, req: dict):
+    try:
+        return video_lagring.gi_nytt_navn(video_id, req.get("navn", ""))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.delete("/videos/{video_id}", status_code=204)
+def slett_video(video_id: str):
+    try:
+        video_lagring.slett(video_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return Response(status_code=204)
