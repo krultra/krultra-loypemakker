@@ -122,6 +122,19 @@
           <div id="kontakt-sidebar-list" class="wpt-lib-list"></div>
         </div>
       </section>
+
+      <section class="library kollapset" id="library-video">
+        <div class="library-header">
+          <button class="library-toggle" data-lib="library-video" title="Vis/skjul">
+            <span class="lib-chevron">▼</span><h2>🎬 Videobibliotek</h2>
+          </button>
+        </div>
+        <div class="library-body">
+          <p class="muted library-hint">Flyover-videoer du har spilt inn. Ta opp nye med «Ta opp» inne i Flyover.</p>
+          <p id="video-lib-empty" class="muted hidden"></p>
+          <div id="video-sidebar-list" class="wpt-lib-list"></div>
+        </div>
+      </section>
     </aside>
 
     <!-- Høyre kolonne: kart øverst, kontrollpanel nederst -->
@@ -539,6 +552,10 @@
         <option value="no">Norsk</option>
         <option value="en">Engelsk</option>
       </select>
+      <label class="field-label" for="publish-video">
+        Lenke til flyover-video <span class="muted">(valgfri — adressenavnet videoen er publisert under, f.eks. «video». Gir løypekartet en 🎬-knapp.)</span>
+      </label>
+      <input type="text" id="publish-video" placeholder="f.eks. video" autocomplete="off">
       <div id="publish-result" class="publish-result hidden">
         <p><strong>Publisert!</strong> <a id="publish-url" href="#" target="_blank" rel="noopener"></a></p>
         <label class="field-label">Lim inn denne snutten på nettsiden (én gang):</label>
@@ -547,6 +564,48 @@
       </div>
       <div class="button-row">
         <button value="ok" id="publish-go" class="btn btn-primary">Publiser</button>
+        <button value="cancel" class="btn" formnovalidate>Lukk</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Dialog for publisering av flyover-video -->
+  <dialog id="video-publish-dialog">
+    <form method="dialog">
+      <h3>Publiser flyover-video</h3>
+      <p class="muted" id="video-publish-om"></p>
+      <label class="field-label" for="video-publish-target">Publiseringsmål</label>
+      <select id="video-publish-target"></select>
+      <label class="field-label" for="video-publish-event">
+        Løypas adressenavn <span class="muted">(videoen legges under denne løypa, f.eks. «mmc-100m»)</span>
+      </label>
+      <input type="text" id="video-publish-event" placeholder="f.eks. mmc-100m" autocomplete="off">
+      <label class="field-label" for="video-publish-slug">
+        Videoens adressenavn <span class="muted">(blir siste del av adressen — «video» passer for den første)</span>
+      </label>
+      <input type="text" id="video-publish-slug" value="video" autocomplete="off">
+      <label class="field-label" for="video-publish-name">Tittel</label>
+      <input type="text" id="video-publish-name" autocomplete="off">
+      <label class="field-label" for="video-publish-name-en">Tittel (engelsk) <span class="muted">(valgfri)</span></label>
+      <input type="text" id="video-publish-name-en" autocomplete="off">
+      <label class="field-label" for="video-publish-desc">Beskrivelse <span class="muted">(valgfri)</span></label>
+      <textarea id="video-publish-desc" rows="2"></textarea>
+      <label class="field-label" for="video-publish-desc-en">Beskrivelse (engelsk) <span class="muted">(valgfri)</span></label>
+      <textarea id="video-publish-desc-en" rows="2"></textarea>
+      <label class="field-label" for="video-publish-sprak">Standardspråk for innbygging</label>
+      <select id="video-publish-sprak">
+        <option value="no">Norsk</option>
+        <option value="en">Engelsk</option>
+      </select>
+      <div id="video-publish-result" class="publish-result hidden">
+        <p><strong>Publisert!</strong> <a id="video-publish-url" href="#" target="_blank" rel="noopener"></a></p>
+        <label class="field-label">Lim inn denne snutten på nettsiden:</label>
+        <textarea id="video-publish-embed" rows="3" readonly></textarea>
+        <button type="button" id="video-publish-copy" class="btn btn-small">Kopier snutten</button>
+        <p class="muted" id="video-publish-hint"></p>
+      </div>
+      <div class="button-row">
+        <button value="ok" id="video-publish-go" class="btn btn-primary">Publiser</button>
         <button value="cancel" class="btn" formnovalidate>Lukk</button>
       </div>
     </form>

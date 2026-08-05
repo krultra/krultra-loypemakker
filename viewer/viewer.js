@@ -46,6 +46,7 @@ const TEKST = {
     proevOppdater: 'Prøv å oppdatere siden.', loypekartTittel: 'Løypekart', loype: 'Løype',
     flyby: '▶ Flyover',
     flybyTittel: 'Spill av en gjennomkjøring av løypa i 3D-terreng — du kan styre kameraet underveis',
+    video: '🎬 Video', videoTittel: 'Se en ferdig flyover-video av løypa',
   },
   en: {
     satellitt: 'Satellite', kart: 'Map', fullskjerm: '⛶ Full screen',
@@ -61,6 +62,7 @@ const TEKST = {
     proevOppdater: 'Please refresh the page.', loypekartTittel: 'Course map', loype: 'Course',
     flyby: '▶ Flyover',
     flybyTittel: 'Play a flyover of the course in 3D terrain — you can steer the camera as it plays',
+    video: '🎬 Video', videoTittel: 'Watch a ready-made flyover video of the course',
   },
 };
 
@@ -166,6 +168,17 @@ function startVisning() {
     flybyKnapp.title = t('flybyTittel');
     flybyKnapp.classList.remove('skjult');
     flybyKnapp.addEventListener('click', åpneFlyby);
+  }
+  // Lenke til en publisert flyover-video, når løypa har fått en.
+  // Slugen valideres på samme måte som arena-lenkene, så en importert
+  // løype ikke kan smugle inn en ondsinnet adresse.
+  const videoLenke = document.getElementById('video-lenke');
+  const videoSlug = String(løype.video || '');
+  if (videoLenke && /^[a-z0-9][a-z0-9-]*$/.test(videoSlug)) {
+    videoLenke.textContent = t('video');
+    videoLenke.title = t('videoTittel');
+    videoLenke.href = medSprak('./' + videoSlug + '/');
+    videoLenke.classList.remove('skjult');
   }
   byggSpraakvelger();
 

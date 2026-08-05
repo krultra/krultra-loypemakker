@@ -35,7 +35,7 @@ from .models import Point, Waypoint
 # blir malen ny mens versjonsnummeret er gammelt — og publiseringen peker
 # på en assets-mappe som mangler de nye filene. Versjonssjekken mot
 # /api/health er det som fanger opp nettopp det.
-ASSET_VERSJON = 15
+ASSET_VERSJON = 16
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -236,6 +236,9 @@ def bygg_course_json(
         "standard_sprak": meta.get("standard_sprak") or "no",
         # Oversettelser av løypas navn/beskrivelse (toppnivå), om noen.
         "oversettelser": meta.get("oversettelser") or None,
+        # Valgfri flyover-video publisert under løypa (./<slug>/). Er den
+        # satt, viser løypevisningen en knapp som åpner videoen.
+        "video": meta.get("video") or None,
         "stil": stil,
         "punkter": [
             [round(p.lat, 6), round(p.lon, 6), None if p.ele is None else round(p.ele, 1)]

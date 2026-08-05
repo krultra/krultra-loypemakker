@@ -3367,6 +3367,7 @@ async function åpnePubliseringsdialog() {
   document.getElementById('publish-name-en').value = enO.navn || '';
   document.getElementById('publish-desc-en').value = enO.beskrivelse || '';
   document.getElementById('publish-sprak').value = editorState.standard_sprak || 'no';
+  document.getElementById('publish-video').value = editorState.video || '';
   document.getElementById('publish-result').classList.add('hidden');
   dialog.showModal();
 }
@@ -3396,6 +3397,7 @@ async function utførPublisering() {
         oversettelser,
         points: punkter,
         waypoints: aktuelleVeipunkter(punkter),
+        video: document.getElementById('publish-video').value.trim().toLowerCase() || null,
       }),
     });
     const data = await res.json();
@@ -3408,6 +3410,7 @@ async function utførPublisering() {
     // i samme økt beholder den engelske tittelen/beskrivelsen og standardspråket.
     editorState.oversettelser = oversettelser;
     editorState.standard_sprak = standard_sprak;
+    editorState.video = document.getElementById('publish-video').value.trim().toLowerCase() || null;
     // Ved gruppepublisering kan noen av målene ha feilet (delvis suksess)
     if (data.advarsel) toast(data.advarsel, 'error');
     else toast('Løypevisningen er publisert');
@@ -3418,6 +3421,202 @@ async function utførPublisering() {
     knapp.textContent = 'Publiser';
   }
 }
+
+// ============================================================
+// Videobibliotek: innspilte flyover-videoer
+// ============================================================
+
+let videoBibliotek = [];
+
+/** Hent lista med lagrede videoer og tegn den i venstre kolonne. */
+async function oppdaterVideobibliotek() {
+  try {
+    const res = await api('/api/videos');
+    videoBibliotek = (await res.json()).videoer || [];
+  } catch (feil) {
+    videoBibliotek = [];   // eldre server uten videostøtte — bare tom liste
+  }
+  tegnVideobibliotek();
+}
+
+function videoStørrelse(byte) {
+  return (byte / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+function videoVarighet(sek) {
+  if (!sek) return '';
+  const m = Math.floor(sek / 60), r = Math.round(sek % 60);
+  return m + ':' + (r < 10 ? '0' : '') + r;
+}
+
+function tegnVideobibliotek() {
+  const liste = document.getElementById('video-sidebar-list');
+  const tom = document.getElementById('video-lib-empty');
+  if (!liste) return;
+  liste.innerHTML = '';
+  if (!videoBibliotek.length) {
+    tom.textContent = 'Ingen videoer ennå. Åpne Flyover og trykk «Ta opp».';
+    tom.classList.remove('hidden');
+    return;
+  }
+  tom.classList.add('hidden');
+
+  for (const v of videoBibliotek) {
+    const rad = document.createElement('div');
+    rad.className = 'wpt-lib-item';
+    const fakta = [videoVarighet(v.varighet), videoStørrelse(v.storrelse),
+      v.loype].filter(Boolean).join(' · ');
+    rad.innerHTML =
+      '<div class="wpt-lib-tekst">' +
+        '<span class="wpt-lib-navn"></span>' +
+        '<span class="wpt-lib-meta"></span>' +
+      '</div>' +
+      '<div class="wpt-lib-knapper">' +
+        '<a class="btn btn-small" target="_blank" rel="noopener" title="Spill av videoen i egen fane">▶</a>' +
+        '<button class="btn btn-small" data-h="publiser" title="Publiser videoen på nett">Publiser</button>' +
+        '<button class="btn btn-small" data-h="navn" title="Gi videoen et nytt navn">Endre</button>' +
+        '<button class="btn btn-small btn-danger-subtle" data-h="slett" title="Slett videoen">Slett</button>' +
+      '</div>';
+    rad.querySelector('.wpt-lib-navn').textContent = v.navn;
+    rad.querySelector('.wpt-lib-meta').textContent = fakta;
+    rad.querySelector('a').href = '/api/videos/' + v.id + '/fil';
+    rad.querySelector('[data-h="publiser"]').addEventListener(
+      'click', () => åpneVideoPublisering(v));
+    rad.querySelector('[data-h="navn"]').addEventListener(
+      'click', () => endreVideonavn(v));
+    rad.querySelector('[data-h="slett"]').addEventListener(
+      'click', () => slettVideo(v));
+    liste.appendChild(rad);
+  }
+}
+
+async function endreVideonavn(v) {
+  const nytt = prompt('Nytt navn på videoen:', v.navn);
+  if (nytt === null || !nytt.trim()) return;
+  try {
+    await api('/api/videos/' + v.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ navn: nytt.trim() }),
+    });
+    await oppdaterVideobibliotek();
+  } catch (feil) { toast(feil.message, 'error'); }
+}
+
+async function slettVideo(v) {
+  if (!confirm('Slette videoen «' + v.navn + '»?\n\nFila blir borte for godt. ' +
+    'Er den publisert, blir den liggende på nett til du fjerner den der.')) return;
+  try {
+    await api('/api/videos/' + v.id, { method: 'DELETE' });
+    await oppdaterVideobibliotek();
+    toast('Videoen er slettet');
+  } catch (feil) { toast(feil.message, 'error'); }
+}
+
+/** Publiseringsdialogen for én video. */
+let videoSomPubliseres = null;
+
+async function åpneVideoPublisering(v) {
+  videoSomPubliseres = v;
+  const dialog = document.getElementById('video-publish-dialog');
+  const målValg = document.getElementById('video-publish-target');
+  try {
+    const res = await api('/api/publish/targets');
+    const mål = (await res.json()).targets;
+    målValg.innerHTML = '';
+    for (const m of mål) {
+      const opt = document.createElement('option');
+      opt.value = m.navn;
+      opt.textContent = m.navn + (m.baseUrl ? ' — ' + m.baseUrl : ' (lokal mappe)');
+      målValg.appendChild(opt);
+    }
+    if (!mål.length) {
+      toast('Ingen publiseringsmål er satt opp — se data/publisering.json', 'error');
+      return;
+    }
+  } catch (feil) {
+    toast(feil.message, 'error');
+    return;
+  }
+
+  document.getElementById('video-publish-om').textContent =
+    v.navn + ' · ' + [videoVarighet(v.varighet), videoStørrelse(v.storrelse)]
+      .filter(Boolean).join(' · ');
+  // Løypa foreslås fra den åpne løypa, ellers fra videoens egen merking
+  document.getElementById('video-publish-event').value =
+    editorState.adressenavn || lagSlug(v.loype || editorState.navn || '');
+  document.getElementById('video-publish-slug').value = 'video';
+  document.getElementById('video-publish-name').value = v.navn;
+  document.getElementById('video-publish-name-en').value = '';
+  document.getElementById('video-publish-desc').value = '';
+  document.getElementById('video-publish-desc-en').value = '';
+  document.getElementById('video-publish-sprak').value =
+    editorState.standard_sprak || 'no';
+  document.getElementById('video-publish-result').classList.add('hidden');
+  dialog.showModal();
+}
+
+async function utførVideoPublisering() {
+  if (!videoSomPubliseres) return;
+  const knapp = document.getElementById('video-publish-go');
+  knapp.disabled = true;
+  knapp.textContent = 'Publiserer …';
+  const videoSlug = document.getElementById('video-publish-slug').value.trim().toLowerCase();
+  const oversettelser = byggOversettelser({
+    navn: document.getElementById('video-publish-name-en').value,
+    beskrivelse: document.getElementById('video-publish-desc-en').value,
+  });
+  try {
+    const res = await api('/api/videos/' + videoSomPubliseres.id + '/publish', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        target: document.getElementById('video-publish-target').value,
+        event_slug: document.getElementById('video-publish-event').value.trim().toLowerCase(),
+        video_slug: videoSlug,
+        navn: document.getElementById('video-publish-name').value.trim(),
+        beskrivelse: document.getElementById('video-publish-desc').value.trim() || null,
+        standard_sprak: document.getElementById('video-publish-sprak').value,
+        oversettelser,
+        link: editorState.link,
+      }),
+    });
+    const data = await res.json();
+    const lenke = document.getElementById('video-publish-url');
+    lenke.textContent = data.url;
+    lenke.href = data.url;
+    document.getElementById('video-publish-embed').value = data.iframe;
+    document.getElementById('video-publish-hint').textContent =
+      'Vil du at løypekartet skal lenke til videoen, skriv «' + videoSlug +
+      '» i feltet «Lenke til flyover-video» når du publiserer løypa på nytt.';
+    document.getElementById('video-publish-result').classList.remove('hidden');
+    if (data.advarsel) toast(data.advarsel, 'error');
+    else toast('Videoen er publisert');
+  } catch (feil) {
+    toast(feil.message, 'error');
+  } finally {
+    knapp.disabled = false;
+    knapp.textContent = 'Publiser';
+  }
+}
+
+document.querySelector('#video-publish-dialog form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const handling = (e.submitter && e.submitter.value) || 'ok';
+  if (handling === 'cancel') document.getElementById('video-publish-dialog').close();
+  else utførVideoPublisering();
+});
+
+document.getElementById('video-publish-copy').addEventListener('click', async () => {
+  const felt = document.getElementById('video-publish-embed');
+  try {
+    await navigator.clipboard.writeText(felt.value);
+    toast('Snutten er kopiert til utklippstavla');
+  } catch (feil) {
+    felt.select();
+    toast('Kopier med Ctrl+C (teksten er markert)', 'error');
+  }
+});
 
 document.getElementById('btn-publish').addEventListener('click', åpnePubliseringsdialog);
 
@@ -4299,6 +4498,7 @@ async function lagreFlyoverVideo(res, navn) {
   }
   const video = await svar.json();
   toast('Videoen «' + video.navn + '» er lagret i KUL.', 'success');
+  oppdaterVideobibliotek();   // vis den med én gang i biblioteket
   return video;
 }
 
@@ -4541,10 +4741,11 @@ oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterArenabibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterPunktbibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterKontaktbibliotek().catch((feil) => toast(feil.message, 'error'));
+oppdaterVideobibliotek();   // feiler stille på eldre server uten videostøtte
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 29;
+const FORVENTET_BACKEND = 30;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!--
+  Publisert flyover-video — laget av KrUltra Løypemakker.
+  Denne fila er en MAL: ved publisering byttes __V__ ut med gjeldende
+  asset-versjon og __DATA__ med videoens egne opplysninger. All logikk
+  og utseende ligger i delte assets (../../video-assets/v<N>/), så en
+  video-mappe består kun av denne lille fila + selve videofila.
+-->
+<html lang="nb">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex">
+  <title>Flyover</title>
+  <link rel="icon" type="image/png" href="../../video-assets/v__V__/favicon.png">
+  <link rel="stylesheet" href="../../video-assets/v__V__/video.css">
+</head>
+<body>
+
+  <header id="topp">
+    <div id="topp-tekst">
+      <h1 id="tittel"></h1>
+      <p id="beskrivelse"></p>
+    </div>
+    <div id="topp-knapper">
+      <!-- Vises bare når videoen er bygd inn i en annen side (iframe) -->
+      <button id="fullskjerm-knapp" class="skjult"
+              title="Åpne videoen i egen fane i full størrelse">⛶ Full skjerm</button>
+    </div>
+  </header>
+
+  <div id="ramme">
+    <video id="spiller" controls playsinline preload="metadata"></video>
+  </div>
+
+  <footer id="bunn"></footer>
+
+  <!-- Videoens egne opplysninger, bakt inn ved publisering -->
+  <script type="application/json" id="video-data">__DATA__</script>
+  <script src="../../video-assets/v__V__/video.js"></script>
+</body>
+</html>

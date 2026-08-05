@@ -276,6 +276,9 @@ class PublishRequest(BaseModel):
     standard_sprak: Optional[str] = None
     # Oversettelser av løypas navn/beskrivelse — se Waypoint.oversettelser.
     oversettelser: Optional[Dict[str, Dict[str, str]]] = None
+    # Adressenavnet til en flyover-video publisert under løypa (f.eks.
+    # «video»). Er den satt, får løypevisningen en knapp til ./<video>/.
+    video: Optional[str] = None
 
 
 class PublishResponse(BaseModel):

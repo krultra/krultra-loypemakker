@@ -24,6 +24,7 @@ from . import (
     storage,
     timestamps,
     video_lagring,
+    video_publisering,
 )
 from .models import (
     ArenaContact,
@@ -61,7 +62,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 29
+BACKEND_VERSJON = 30
 
 
 @router.get("/health")
@@ -331,9 +332,15 @@ def publiser_løype(req: PublishRequest):
     """
     if len(req.points) < 2:
         raise HTTPException(status_code=400, detail="Løypa må ha minst to punkter")
+    video = _trim(req.video)
+    if video and not publisering.GYLDIG_SLUG.match(video.lower()):
+        raise HTTPException(
+            status_code=400,
+            detail="Ugyldig videonavn: bruk små bokstaver a–z, tall og bindestrek")
     meta = {"navn": _trim(req.name), "beskrivelse": _trim(req.description),
             "link": _trim(req.link), "standard_sprak": req.standard_sprak,
-            "oversettelser": req.oversettelser}
+            "oversettelser": req.oversettelser,
+            "video": video.lower() if video else None}
     course = publisering.bygg_course_json(req.points, req.waypoints, meta, req.stil)
     try:
         resultat = publisering.publiser(req.target, req.slug.strip().lower(), course)
@@ -598,3 +605,22 @@ def slett_video(video_id: str):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     return Response(status_code=204)
+
+
+@router.post("/videos/{video_id}/publish")
+def publiser_video(video_id: str, req: dict):
+    """Publiser en lagret video som en egen side under løypa."""
+    try:
+        return video_publisering.publiser_video(
+            req.get("target", ""),
+            (req.get("event_slug") or "").strip().lower(),
+            (req.get("video_slug") or "video").strip().lower(),
+            video_id,
+            (req.get("navn") or "").strip(),
+            beskrivelse=_trim(req.get("beskrivelse")),
+            standard_sprak=req.get("standard_sprak") or "no",
+            oversettelser=req.get("oversettelser") or None,
+            link=_trim(req.get("link")),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
