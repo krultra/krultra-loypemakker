@@ -186,6 +186,11 @@ var KULFlyby = (function () {
   // satt, så skilt ikke forsvinner før de er godt utenfor bildekanten.
   var SKILT_SYNSFELT = 80;   // grader til hver side for kameraretningen
   var SKILT_MAKS_KM = 6;     // lenger unna enn dette er skiltet uleselig
+  // Tett nok til å fange smale rygger: 20 prøver over maks 6 km er ett
+  // oppslag per ~300 m. Sjekken er strupet til noen ganger i sekundet, så
+  // det er god råd til å prøve tett.
+  var SKILT_PRØVER = 20;
+  var SKILT_SJEKK_MS = 180;  // hvor ofte synligheten regnes ut på nytt
 
   // Løypa foran løperen tegnes i en tydelig rød, så den ikke forveksles
   // med veier og store stier i satellittbildet. Den tilbakelagte delen
@@ -491,6 +496,8 @@ var KULFlyby = (function () {
       korr: 0, korrMål: 0,
     };
     var sistKlaring = 0;       // når vi sist sjekket terrenget
+    var skiltSynlig = {};      // veipunktindeks → skal skiltet tegnes?
+    var sistSkiltSjekk = 0;
 
     // ---- Kartet ----
     var map = new maplibregl.Map({
@@ -830,9 +837,10 @@ var KULFlyby = (function () {
     }
 
     /** Står terrenget i veien for sikta fra kameraet til løperen? */
-    function skjultAvTerreng(kamLL, kamAlt, målLL, målAlt) {
-      for (var i = 1; i < SIKT_PRØVER_TERRENG; i++) {
-        var f = i / SIKT_PRØVER_TERRENG;
+    function skjultAvTerreng(kamLL, kamAlt, målLL, målAlt, prøver) {
+      var n = prøver || SIKT_PRØVER_TERRENG;
+      for (var i = 1; i < n; i++) {
+        var f = i / n;
         var h = map.queryTerrainElevation({
           lng: kamLL.lng + (målLL.lng - kamLL.lng) * f,
           lat: kamLL.lat + (målLL.lat - kamLL.lat) * f,
@@ -840,6 +848,61 @@ var KULFlyby = (function () {
         if (h != null && h > kamAlt + (målAlt - kamAlt) * f + 2) return true;
       }
       return false;
+    }
+
+    /**
+     * Hvilke punktskilt som skal tegnes i opptaket.
+     *
+     * Avstand og synsfelt er billige å regne på, men de fanger ikke opp
+     * punkter som ligger BAK EN RYGG — de er i synsretningen og innenfor
+     * rekkevidde, men fjellet står i veien. Her prøves sikta fra kameraet
+     * til punktet mot terrengmodellen.
+     *
+     * Dette koster for mye til å gjøres for hvert bilde, så svaret
+     * mellomlagres og friskes opp med jevne mellomrom. Et skilt som
+     * kommer til syne noen hundredels sekund «for seint» er umulig å se,
+     * mens ett som står og blafrer bak en fjellside er svært synlig.
+     */
+    function oppdaterSkiltSynlighet(kamera, nå) {
+      if (!kamera) return;
+      if (nå - sistSkiltSjekk < SKILT_SJEKK_MS) return;
+      sistSkiltSjekk = nå;
+
+      var harTerreng = false;
+      try { harTerreng = !!(map.getTerrain && map.getTerrain()); } catch (e) { /* nei */ }
+
+      var kamLL = null, kamAlt = 0;
+      if (harTerreng) {
+        try {
+          var fc = map.getFreeCameraOptions();
+          kamLL = fc.position.toLngLat();
+          kamAlt = fc.position.toAltitude();
+        } catch (e) { harTerreng = false; }
+      }
+
+      for (var j = 0; j < veipunkter.length; j++) {
+        var w = veipunkter[j];
+        if (w.vis_ikon === false) { skiltSynlig[j] = false; continue; }
+
+        // Billige testene først: for langt unna, eller utenfor synsfeltet
+        if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) {
+          skiltSynlig[j] = false;
+          continue;
+        }
+        if (Math.abs(vinkelDiff(kamera.kurs, kurs(kamera, { lat: w.lat, lon: w.lon })))
+            > SKILT_SYNSFELT) {
+          skiltSynlig[j] = false;
+          continue;
+        }
+        if (!harTerreng || !kamLL) { skiltSynlig[j] = true; continue; }
+
+        // Står terrenget i veien? Punktet regnes fra bakkenivået der det
+        // ligger, med et par meter på så selve skiltstanga ikke «graves ned».
+        var bakke = map.queryTerrainElevation({ lng: w.lon, lat: w.lat });
+        if (bakke == null) { skiltSynlig[j] = true; continue; }
+        skiltSynlig[j] = !skjultAvTerreng(
+          kamLL, kamAlt, { lng: w.lon, lat: w.lat }, bakke + 2, SKILT_PRØVER);
+      }
     }
 
     function høydeVed(p) {
@@ -1207,7 +1270,9 @@ var KULFlyby = (function () {
      *  `sk` er skalafaktoren fra kartets CSS-piksler til lerretet. */
     function tegnOverleggPåLerret(ctx, sk, bredde, høyde) {
       var p = posVed(orbit ? avstander[orbit.wpt.idx] : s);
-      tegnVeipunktSkilt(ctx, sk, bredde, høyde, kameraSted());
+      var kamera = kameraSted();
+      oppdaterSkiltSynlighet(kamera, performance.now());
+      tegnVeipunktSkilt(ctx, sk, bredde, høyde, kamera);
       tegnLøperprikk(ctx, sk, p);
       tegnAvlesning(ctx, sk, høyde);
       if (toastNå) tegnToast(ctx, sk, bredde);
@@ -1367,18 +1432,10 @@ var KULFlyby = (function () {
         var w = veipunkter[j];
         if (w.vis_ikon === false) continue;
 
-        // Punkter BAK kameraet må lukes ut før vi projiserer dem.
-        // map.project() gir en gyldig koordinat også for dem, men den er
-        // speilvendt og lander typisk øverst i bildet — derfor samlet alle
-        // punktene seg i toppen. MapLibres egne markører gjør denne
-        // sorteringen selv, så skjermen har alltid sett riktig ut; her må
-        // vi gjøre den for hånd. Vi luker samtidig ut punkter så langt
-        // unna at skiltet uansett bare ville stått og flimret i horisonten.
-        if (kamera) {
-          if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) continue;
-          var mot = kurs(kamera, { lat: w.lat, lon: w.lon });
-          if (Math.abs(vinkelDiff(kamera.kurs, mot)) > SKILT_SYNSFELT) continue;
-        }
+        // Er punktet bak kameraet, for langt unna, eller bak en fjellrygg?
+        // Svaret er regnet ut i oppdaterSkiltSynlighet og mellomlagret der.
+        // (Uten kameraposisjon vet vi ingenting og tegner alt, som før.)
+        if (kamera && skiltSynlig[j] === false) continue;
 
         var pt;
         try { pt = tilLerret([w.lon, w.lat], s); } catch (e) { continue; }
