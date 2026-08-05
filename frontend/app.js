@@ -3586,12 +3586,20 @@ async function utførVideoPublisering() {
     lenke.textContent = data.url;
     lenke.href = data.url;
     document.getElementById('video-publish-embed').value = data.iframe;
+    // Husk adressenavnet, så løypepubliseringen fyller det inn av seg selv.
+    // Uten dette måtte man huske navnet fra denne dialogen og skrive det
+    // inn i en annen — en felle som er lett å gå i, og som bare gir seg
+    // til kjenne ved at 🎬-knappen mangler på den publiserte løypa.
+    const eventSlug = document.getElementById('video-publish-event').value.trim().toLowerCase();
+    if (!editorState.adressenavn || editorState.adressenavn === eventSlug) {
+      editorState.video = videoSlug;
+    }
     document.getElementById('video-publish-hint').textContent =
-      'Vil du at løypekartet skal lenke til videoen, skriv «' + videoSlug +
-      '» i feltet «Lenke til flyover-video» når du publiserer løypa på nytt.';
+      'Publiser løypa på nytt for å få 🎬-knappen på løypekartet — feltet ' +
+      '«Lenke til flyover-video» er nå fylt ut med «' + videoSlug + '».';
     document.getElementById('video-publish-result').classList.remove('hidden');
     if (data.advarsel) toast(data.advarsel, 'error');
-    else toast('Videoen er publisert');
+    else toast('Videoen er publisert — publiser løypa på nytt for å lenke til den');
   } catch (feil) {
     toast(feil.message, 'error');
   } finally {
