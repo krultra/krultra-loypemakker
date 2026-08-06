@@ -160,6 +160,13 @@ var KULFlyby = (function () {
   var PERIM_TAU = 0.75;      // hvor mykt kartet henter inn avviket
   var ORBIT_SEK = 11.0;      // full runde rundt et punkt ved 1× fart
   var ORBIT_VENT_MS = 2500;  // maks venting på fliser før runden settes i gang
+
+  // Innspillingsmodus får bedre tid. En video ses mange ganger og skal
+  // tåle det; at innspillingen tar litt lenger tid merkes bare én gang.
+  var OPPTAK_FART = 0.6;         // andel av vanlig framdrift
+  var OPPTAK_KAMERA_TAU = 0.6;   // mot KAMERA_TAU ellers — roligere dreining
+  var OPPTAK_ORBIT_MULT = 1.6;   // lengre runde rundt hvert punkt
+  var OPPTAK_VENT_MS = 5000;     // og lengre tålmodighet på fliser først
   var ORBIT_PITCH = 55;      // kameraet senkes til dette under runden
   // Publiserte løyper er alt forenklet ved publisering (de lengste ligger
   // rundt 3–4000 punkter), så taket her skal ikke slå inn på dem i det
@@ -880,29 +887,30 @@ var KULFlyby = (function () {
         } catch (e) { harTerreng = false; }
       }
 
-      for (var j = 0; j < veipunkter.length; j++) {
-        var w = veipunkter[j];
-        if (w.vis_ikon === false) { skiltSynlig[j] = false; continue; }
+      // Bare punktet vi faktisk tegner er verdt å regne på — terreng-
+      // oppslagene koster, og alle de andre skiltene er skjult uansett.
+      var j = nesteSkilt();
+      if (j < 0) return;
+      var w = veipunkter[j];
 
-        // Billige testene først: for langt unna, eller utenfor synsfeltet
-        if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) {
-          skiltSynlig[j] = false;
-          continue;
-        }
-        if (Math.abs(vinkelDiff(kamera.kurs, kurs(kamera, { lat: w.lat, lon: w.lon })))
-            > SKILT_SYNSFELT) {
-          skiltSynlig[j] = false;
-          continue;
-        }
-        if (!harTerreng || !kamLL) { skiltSynlig[j] = true; continue; }
-
-        // Står terrenget i veien? Punktet regnes fra bakkenivået der det
-        // ligger, med et par meter på så selve skiltstanga ikke «graves ned».
-        var bakke = map.queryTerrainElevation({ lng: w.lon, lat: w.lat });
-        if (bakke == null) { skiltSynlig[j] = true; continue; }
-        skiltSynlig[j] = !skjultAvTerreng(
-          kamLL, kamAlt, { lng: w.lon, lat: w.lat }, bakke + 2, SKILT_PRØVER);
+      // Billige testene først: for langt unna, eller utenfor synsfeltet
+      if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) {
+        skiltSynlig[j] = false;
+        return;
       }
+      if (Math.abs(vinkelDiff(kamera.kurs, kurs(kamera, { lat: w.lat, lon: w.lon })))
+          > SKILT_SYNSFELT) {
+        skiltSynlig[j] = false;
+        return;
+      }
+      if (!harTerreng || !kamLL) { skiltSynlig[j] = true; return; }
+
+      // Står terrenget i veien? Punktet regnes fra bakkenivået der det
+      // ligger, med et par meter på så selve skiltstanga ikke «graves ned».
+      var bakke = map.queryTerrainElevation({ lng: w.lon, lat: w.lat });
+      if (bakke == null) { skiltSynlig[j] = true; return; }
+      skiltSynlig[j] = !skjultAvTerreng(
+        kamLL, kamAlt, { lng: w.lon, lat: w.lat }, bakke + 2, SKILT_PRØVER);
     }
 
     function høydeVed(p) {
@@ -936,7 +944,8 @@ var KULFlyby = (function () {
           if (orbit.venter) {
             // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
             orbit.ventet += dt * 1000;
-            if (map.areTilesLoaded() || orbit.ventet >= ORBIT_VENT_MS) {
+            var frist = opptak ? OPPTAK_VENT_MS : ORBIT_VENT_MS;
+            if (map.areTilesLoaded() || orbit.ventet >= frist) {
               orbit.venter = false;
             }
           } else {
@@ -947,7 +956,10 @@ var KULFlyby = (function () {
             if (a >= 1) avsluttOrbit();
           }
         } else {
-          s += (totalKm / varighet) * fart * dt;
+          // Under innspilling går turen roligere. Da rekker kartflisene å
+          // komme inn før kameraet har svingt videre, og hvert bilde som
+          // eventuelt faller bort betyr mindre for den ferdige videoen.
+          s += (totalKm / varighet) * fart * (opptak ? OPPTAK_FART : 1) * dt;
           if (s >= totalKm) {
             s = totalKm;
             settSpiller(false);
@@ -961,6 +973,7 @@ var KULFlyby = (function () {
 
       glideKamera(dt);
       sjekkKlaring(posVed(orbit ? avstander[orbit.wpt.idx] : s), nå);
+      oppdaterMarkørSynlighet();
       tegn(false, dt);
 
       if (opptak) {
@@ -977,7 +990,9 @@ var KULFlyby = (function () {
 
     /** Glid kameraverdiene mot måltallene sine (eksponentiell demping). */
     function glideKamera(dt) {
-      var a = 1 - Math.exp(-dt / KAMERA_TAU);
+      // Roligere kamerabevegelser mens vi spiller inn: brå dreining er
+      // det som oftest etterlater flater uten fliser i videoen.
+      var a = 1 - Math.exp(-dt / (opptak ? OPPTAK_KAMERA_TAU : KAMERA_TAU));
       kam.zoom += (kam.zoomMål - kam.zoom) * a;
       kam.pitch += (kam.pitchMål - kam.pitch) * a;
       kam.dreie += (kam.dreieMål - kam.dreie) * a;
@@ -1156,9 +1171,68 @@ var KULFlyby = (function () {
             visKort(wpt);
           });
         })(w);
-        wptMarkører.push(new maplibregl.Marker({
-          element: el, anchor: 'bottom', subpixelPositioning: true,
-        }).setLngLat([w.lon, w.lat]).addTo(map));
+        wptMarkører.push({
+          j: j,
+          el: el,
+          mark: new maplibregl.Marker({
+            element: el, anchor: 'bottom', subpixelPositioning: true,
+          }).setLngLat([w.lon, w.lat]).addTo(map),
+        });
+      }
+    }
+
+    /**
+     * Hvilket punkt som skal vises: DET NESTE vi er på vei mot.
+     *
+     * Tidligere tegnet vi alle punktene og prøvde å luke bort dem som
+     * ikke skulle synes. Det holdt ikke: punkter langt bortenfor
+     * horisonten projiseres over horisontlinja og ble hengende i lufta,
+     * og med mye himmel i bildet ble det påfallende. Ett skilt om gangen
+     * er både enklere å få riktig og lettere å lese — man ser hva som
+     * kommer, ikke en skog av navn.
+     *
+     * Under runden rundt et punkt er det punktet vi ser på.
+     */
+    /**
+     * Hvor i løypa et punkt «hører hjemme» når vi skal finne det neste.
+     *
+     * I en rundløype ligger mål på samme sted som start, og ved
+     * publisering festes punktet til nærmeste sporpunkt — altså helt i
+     * begynnelsen. Uten dette ville målet blitt annonsert idet man satte
+     * av gårde, og ingenting vist når man faktisk kom i mål. Et punkt
+     * merket «mål» hører til slutten av løypa, uansett hvor på sporet
+     * koordinatene traff.
+     */
+    function effektivIdx(w) {
+      var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
+      return (typer.indexOf('maal') >= 0) ? n - 1 : w.idx;
+    }
+
+    function nesteSkilt() {
+      if (orbit) {
+        for (var k = 0; k < veipunkter.length; k++) {
+          if (veipunkter[k] === orbit.wpt) return k;
+        }
+      }
+      var idx = posVed(s).idx;
+      var beste = -1, besteIdx = Infinity;
+      for (var j = 0; j < veipunkter.length; j++) {
+        var w = veipunkter[j];
+        if (w.vis_ikon === false) continue;
+        var e = effektivIdx(w);
+        if (e > idx && e < besteIdx) { besteIdx = e; beste = j; }
+      }
+      return beste;
+    }
+
+    /** Vis bare markøren for det neste punktet (skjul resten). */
+    var sistViste = -2;
+    function oppdaterMarkørSynlighet() {
+      var mål = nesteSkilt();
+      if (mål === sistViste) return;
+      sistViste = mål;
+      for (var i = 0; i < wptMarkører.length; i++) {
+        wptMarkører[i].el.style.display = (wptMarkører[i].j === mål) ? '' : 'none';
       }
     }
 
@@ -1194,7 +1268,8 @@ var KULFlyby = (function () {
         pitchFør: kam.pitchMål,
         // Runden går raskere ved høy fart, men ikke proporsjonalt — ved 8×
         // ville en firedels runde blitt for kjapp til at flisene henger med.
-        varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)),
+        varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)) *
+          (opptak ? OPPTAK_ORBIT_MULT : 1),
       };
       kam.orbitVinkel = 0;
       // Senk kameraet litt under runden: da ser vi mer ned på stedet og
@@ -1428,9 +1503,11 @@ var KULFlyby = (function () {
     }
 
     function tegnVeipunktSkilt(ctx, s, bredde, høyde, kamera) {
+      // Bare det neste punktet tegnes — samme regel som på skjermen.
+      var kun = nesteSkilt();
       for (var j = 0; j < veipunkter.length; j++) {
         var w = veipunkter[j];
-        if (w.vis_ikon === false) continue;
+        if (w.vis_ikon === false || j !== kun) continue;
 
         // Er punktet bak kameraet, for langt unna, eller bak en fjellrygg?
         // Svaret er regnet ut i oppdaterSkiltSynlighet og mellomlagret der.
@@ -1978,7 +2055,7 @@ var KULFlyby = (function () {
       clearTimeout(toastTimer);
       document.removeEventListener('keydown', påTast);
       window.removeEventListener('resize', påResize);
-      for (var j = 0; j < wptMarkører.length; j++) wptMarkører[j].remove();
+      for (var j = 0; j < wptMarkører.length; j++) wptMarkører[j].mark.remove();
       løperMark.remove();
       try { map.remove(); } catch (e) { /* kartet kan alt være borte */ }
       ui.rot.remove();
