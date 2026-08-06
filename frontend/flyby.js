@@ -80,6 +80,7 @@ var KULFlyby = (function () {
       taOppTittel: 'Spill inn en video av flyoveren slik du kjører den — ' +
         'kamerabevegelser og pauser blir med',
       opptakFeil: 'Kunne ikke starte opptaket.',
+      venterKart: 'venter på kartet …',
       videoKlar: 'Videoen er klar', videonavn: 'Navn',
       lastNed: '⤓ Last ned', lagreIKul: 'Lagre i KUL',
       lagrer: 'Lagrer …', lagret: 'Lagret i KUL.',
@@ -107,6 +108,7 @@ var KULFlyby = (function () {
       taOppTittel: 'Record a video of the flyover as you run it — ' +
         'camera moves and pauses are included',
       opptakFeil: 'Could not start recording.',
+      venterKart: 'waiting for the map …',
       videoKlar: 'Your video is ready', videonavn: 'Name',
       lastNed: '⤓ Download', lagreIKul: 'Save in KUL',
       lagrer: 'Saving …', lagret: 'Saved in KUL.',
@@ -167,6 +169,10 @@ var KULFlyby = (function () {
   var OPPTAK_KAMERA_TAU = 0.6;   // mot KAMERA_TAU ellers — roligere dreining
   var OPPTAK_ORBIT_MULT = 1.6;   // lengre runde rundt hvert punkt
   var OPPTAK_VENT_MS = 5000;     // og lengre tålmodighet på fliser først
+  // Hvor lenge framdriften kan stå frosset og vente på fliser før vi gir
+  // opp og går videre. Sikkerhetsventil mot å bli stående for evig når
+  // nettet er nede — ikke en kvalitetsavveining.
+  var OPPTAK_MAKS_HOLD_MS = 15000;
   var ORBIT_PITCH = 55;      // kameraet senkes til dette under runden
   // Publiserte løyper er alt forenklet ved publisering (de lengste ligger
   // rundt 3–4000 punkter), så taket her skal ikke slå inn på dem i det
@@ -370,7 +376,8 @@ var KULFlyby = (function () {
         '<div class="fb-toast"></div>' +
         '<div class="fb-kort fb-skjult"></div>' +
         '<div class="fb-rec fb-skjult"><span class="fb-rec-prikk"></span>' +
-          '<span class="fb-rec-tid">0:00</span></div>' +
+          '<span class="fb-rec-tid">0:00</span>' +
+          '<span class="fb-rec-status"></span></div>' +
         '<div class="fb-video fb-skjult"></div>' +
         '<div class="fb-avlesning">' +
           '<div class="fb-celle"><span class="fb-navn2">' + escHtml(t('distanse')) +
@@ -419,6 +426,7 @@ var KULFlyby = (function () {
       opptak: rot.querySelector('.fb-opptak'),
       rec: rot.querySelector('.fb-rec'),
       recTid: rot.querySelector('.fb-rec-tid'),
+      recStatus: rot.querySelector('.fb-rec-status'),
       video: rot.querySelector('.fb-video'),
     };
     ui.laster.textContent = t('laster');
@@ -505,6 +513,7 @@ var KULFlyby = (function () {
     var sistKlaring = 0;       // når vi sist sjekket terrenget
     var skiltSynlig = {};      // veipunktindeks → skal skiltet tegnes?
     var sistSkiltSjekk = 0;
+    var flisHold = 0;          // hvor lenge innspillingen har ventet på fliser
 
     // ---- Kartet ----
     var map = new maplibregl.Map({
@@ -937,9 +946,42 @@ var KULFlyby = (function () {
       var dt = begrens((nå - sistTid) / 1000, 0, 0.1);
       sistTid = nå;
 
+      // Under innspilling fryses framdriften helt til kartflisene er inne.
+      //
+      // En video ses mange ganger, og et hull i bakken er irriterende hver
+      // eneste gang. Innspillingen er derimot en engangsjobb. Derfor lar
+      // vi heller turen stå stille et øyeblikk enn å fly videre over
+      // terreng som ikke er tegnet ferdig. Opptakeren settes samtidig på
+      // vent, så ventetida klippes helt ut av fila — den som ser videoen
+      // merker ingenting, og bildene som er med er alltid komplette.
+      //
+      // Sikkerhetsventil: gir flisene aldri opp (nettet er nede, eller vi
+      // er utenfor dekningen til flistjenesten), går vi videre likevel
+      // etter en stund, så en innspilling aldri kan bli stående for evig.
+      var venterFliser = false;
+      if (opptak) {
+        // Bare mens turen faktisk går. Pauser brukeren selv, skal
+        // opptaket rulle videre (det er en bevisst pause i videoen), og
+        // et flis-hold fra før må da slippes — ellers ble opptakeren
+        // stående på vent for godt.
+        if (spiller && klar) {
+          var flisKlare = true;
+          try { flisKlare = map.areTilesLoaded(); } catch (e) { flisKlare = true; }
+          if (flisKlare) {
+            flisHold = 0;
+          } else {
+            flisHold += dt * 1000;
+            venterFliser = flisHold < OPPTAK_MAKS_HOLD_MS;
+          }
+        }
+        opptak.hold('fliser', venterFliser);
+        ui.rec.classList.toggle('fb-rec-venter', venterFliser);
+        ui.recStatus.textContent = venterFliser ? t('venterKart') : '';
+      }
+
       // Pause fryser ALT, også en pågående runde rundt et punkt — da
       // fortsetter runden der den slapp når man spiller av igjen.
-      if (spiller && klar) {
+      if (spiller && klar && !venterFliser) {
         if (orbit) {
           if (orbit.venter) {
             // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
@@ -1801,9 +1843,11 @@ var KULFlyby = (function () {
       }
       nullstill();
       settSpiller(true);
+      flisHold = 0;
       ui.opptak.textContent = t('stoppOpptak');
       ui.opptak.classList.add('fb-tar-opp');
-      ui.rec.classList.remove('fb-skjult');
+      ui.rec.classList.remove('fb-skjult', 'fb-rec-venter');
+      ui.recStatus.textContent = '';
     }
 
     /** Avslutt opptaket og vis resultatet. */

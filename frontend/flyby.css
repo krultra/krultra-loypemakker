@@ -454,6 +454,25 @@ body.kul-flyby-aapen { overflow: hidden; }
   animation: fb-blink 1.4s ease-in-out infinite;
 }
 
+/* Mens innspillingen står og venter på kartfliser: gult, ikke rødt, og
+   prikken slutter å blinke — da ser man at det er et bevisst opphold og
+   at opptaket ikke ruller videre. */
+.kul-flyby .fb-rec.fb-rec-venter {
+  border-color: #b45309;
+  color: #fde68a;
+}
+
+.kul-flyby .fb-rec.fb-rec-venter .fb-rec-prikk {
+  background: #f59e0b;
+  animation: none;
+}
+
+.kul-flyby .fb-rec-status {
+  font-size: 11.5px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+
 @keyframes fb-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.25; }

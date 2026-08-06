@@ -62,7 +62,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 35
+BACKEND_VERSJON = 36
 
 
 @router.get("/health")

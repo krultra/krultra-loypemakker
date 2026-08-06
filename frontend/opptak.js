@@ -101,13 +101,37 @@ var KULOpptak = (function () {
     };
     this.opptaker.start(1000);   // samle data i biter på ett sekund
 
+    // Grunner til at opptaket står på vent akkurat nå. Det er flere av
+    // dem — vinduet kan være skjult samtidig som kartfliser lastes — så
+    // vi teller dem i stedet for å ha én av/på-bryter. Opptaket går
+    // videre først når SISTE grunn er borte.
+    this._hold = {};
+
     // Skjult vindu → hold tida ute av fila (se toppkommentaren)
     this._påSynlighet = function () {
       if (meg.stoppet) return;
-      if (document.hidden) meg.pause(); else meg.fortsett();
+      meg.hold('skjult', document.hidden);
     };
     document.addEventListener('visibilitychange', this._påSynlighet);
   }
+
+  /**
+   * Sett opptaket på vent av en navngitt grunn (eller fjern grunnen).
+   * Ventetida klippes helt ut av den ferdige fila, så et opphold mens
+   * kartflisene kommer inn blir ikke synlig for den som ser videoen.
+   */
+  Opptak.prototype.hold = function (grunn, på) {
+    if (this.stoppet) return;
+    if (på) this._hold[grunn] = true;
+    else delete this._hold[grunn];
+    if (Object.keys(this._hold).length) this.pause();
+    else this.fortsett();
+  };
+
+  /** Står opptaket på vent nå? */
+  Opptak.prototype.venter = function () {
+    return Object.keys(this._hold).length > 0;
+  };
 
   /**
    * Tegn ett bilde: himmel i bunnen, så kartet, så overlegget oppå.
