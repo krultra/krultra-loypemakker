@@ -17,43 +17,55 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
-## 3.2.0 — 4. august 2026
+## 4.0.0 — 6. august 2026
 
-- **3D fly-by:** se en simulert gjennomkjøring av løypa i 3D-terreng, der
-  kameraet flyter bak markøren som en drone som følger en løper. Underveis
-  vises distanse, høyde og høydemeter. Spill av/pause, fart 1×–8×,
+**Flyover og video** — to store nye funksjoner. Detaljer i
+[docs/versjon-4.0.0.md](docs/versjon-4.0.0.md).
+
+- **Flyover:** se løypa som en gjennomkjøring i 3D-terreng, der kameraet
+  flyter bak markøren som en drone som følger en løper. Underveis vises
+  distanse, høyde og høydemeter. Spill av/pause, fart 0,5×–8×,
   framdriftslinje og veksling mellom satellittbilde (standard) og
   Kartverkets kart.
-  - **I verktøyet:** knappen **«▶ Fly-by»** i kartverktøylinja (gruppa 3D).
-  - **I publiserte løypevisninger:** knappen **«▶ 3D»** øverst, så også
-    deltakerne kan fly gjennom løypa.
+  - **I verktøyet:** knappen **«▶ Flyover»** i kartverktøylinja (gruppa 3D).
+  - **I publiserte løypevisninger:** knappen **«▶ Flyover»** øverst, så også
+    deltakerne kan fly gjennom løypa. Krever republisering.
   - **Runde rundt hvert interessepunkt:** dronen stopper og tar en full
-    360°-runde rundt punktet før turen fortsetter. Kan skrus av med
-    «Stopp ved punkter».
-  - **Klikkbare punkter:** klikk på navneskiltet for pause og et detaljkort
-    med tjenester, beskrivelse, høyde, distanse og høydemeter — og lenke til
-    **arenakartet** når punktet har ett (åpnes i ny fane, så fly-byen står
-    urørt bak). Klikk utenfor, så fortsetter turen.
+    360°-runde før turen fortsetter, med myke overganger inn og ut. Kan
+    skrus av med «Stopp ved punkter».
+  - **Bare det neste punktet vises**, med navneskilt som svever over stedet
+    og skjules når terrenget står i veien.
+  - **Klikkbare punkter:** klikk på skiltet for pause og et detaljkort med
+    tjenester, beskrivelse, høyde, distanse og høydemeter — og lenke til
+    arenakartet når punktet har ett.
   - **Styr kameraet underveis:** dra for å svinge og vippe, rull eller knip
     for å zoome — like godt under avspilling som i pause.
-  - **Klikk på kartet** for å pause og fortsette, i tillegg til knappen og
-    mellomromstasten.
-  - Farten starter på **0,5×** (rolig nok til å se seg om), og kan settes
-    opp til 8×.
   - **Rolig kamera:** kameraet står stille så lenge løypa videre er godt
-    innenfor utsnittet, og korrigerer bare når den er på vei ut — som en
-    dronefører som holder bildet i ro i stedet for å følge hver sving.
-  - **Kameraet går aldri under bakken**, og med «Hold løperen synlig» heves
-    det også når terrenget kommer mellom kameraet og løperen. Din egen
-    kameravinkel legges tilbake så snart utsikten er fri.
-  - Løypa foran løperen tegnes rød (skiller seg fra veier og stier i
-    satellittbildet); tilbakelagt del har løypas egen farge.
-  - Fly-byen venter til landskapet er ferdig lastet før den starter.
-  - Terrengformen kommer fra åpne globale høydedata; høydene i selve løypa
-    er fortsatt Kartverkets tall. 3D-biblioteket lastes først når noen
-    faktisk åpner en fly-by, så vanlig visning er like rask som før.
-  - *Merk:* allerede publiserte løyper får knappen når de **republiseres**.
-  - Detaljer: [docs/versjon-3.2.0.md](docs/versjon-3.2.0.md)
+    innenfor utsnittet, og korrigerer bare når den er på vei ut. Prikken får
+    flyte fritt innenfor en indre perimeter, så bildet ikke er naglet fast.
+  - **Kameraet går aldri under bakken**, og kan valgfritt heves når terrenget
+    kommer mellom det og løperen.
+
+- **Videoeksport:** bygg en ferdig MP4 av flyoveren slik du kjørte den, med
+  kamerabevegelsene dine. Videoen bygges **bilde for bilde** med eksakte
+  tidsstempler (WebCodecs, H.264), ikke som et sanntidsopptak — derfor har
+  fila helt jevn bildeavstand, uansett hvor lenge et bilde måtte vente på
+  kartfliser.
+  - **Lagres i KUL** i et nytt videobibliotek med avspilling, omdøping og
+    sletting.
+  - **Publiseres** som egen side under løypa (`<løype>/video/`) med
+    språkvelger og ferdig iframe-snutt.
+  - **🎬-knapp i løypekartet** når løypa er publisert med lenke til videoen.
+
+- **Arenakart og video åpnes i samme vindu** som løypevisningen, så
+  ingenting bryter ut av en innbygd iframe. Arenakartet har fått en
+  «← Tilbake»-knapp.
+- **Versjonene vises i topplinja** («versjon 4.0.0 · b39»), der b-tallet er
+  backend slik den kjører. Tooltipen viser alle asset-versjonene, så det er
+  mulig å se om en omstart faktisk tok.
+- **Publisering sjekker at alle viewer-filene finnes** på målet, ikke bare
+  én av dem, så en voksende asset-pakke ikke etterlater manglende filer.
+
 
 ## 3.1.0 — 30. juli 2026
 

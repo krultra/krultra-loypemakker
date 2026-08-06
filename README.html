@@ -124,11 +124,14 @@ også kommersielt — så lenge opphavsrettsnotisen følger med.</p>
    sluttbrukerne <strong>laste ned løypa som GPX-fil</strong>.</p>
 </li>
 <li>
-<p><strong>Vise løypa i 3D — «fly-by».</strong> Se en simulert gjennomkjøring der
-   kameraet flyter bak en markør gjennom løypa, som en drone etter en
-   løper — med distanse, høyde og høydemeter underveis, og varsling når
-   du passerer et interessepunkt. Finnes både i verktøyet og i de
-   publiserte visningene, så deltakerne kan fly gjennom løypa selv.</p>
+<p><strong>Fly gjennom løypa i 3D — og lage video av det.</strong> <strong>Flyover</strong> viser
+   løypa som en gjennomkjøring i 3D-terreng, der kameraet flyter bak en
+   markør som en drone etter en løper — med distanse, høyde og høydemeter
+   underveis. Du styrer kameraet mens det spilles av, og dronen tar en
+   runde rundt hvert interessepunkt. Ta opp turen som en <strong>MP4-video</strong>,
+   lagre den i KUL, og publiser den på egen nettadresse med
+   innbyggingskode — eller lenk til den fra løypekartet. Flyoveren finnes
+   også i de publiserte visningene, så deltakerne kan fly gjennom løypa selv.</p>
 </li>
 <li>
 <p><strong>Lage arenakart.</strong> Ta et oversiktsbilde av arena-/sekretariatsområdet,
@@ -172,9 +175,14 @@ får du en fil du sender til <code>post@krultra.no</code>.</p>
 <ul>
 <li><strong>Backend:</strong> Python + FastAPI, kjører lokalt på <code>127.0.0.1</code> (ingen data
   forlater maskinen din).</li>
-<li><strong>Frontend:</strong> ren HTML/CSS/JavaScript med Leaflet-kart — ingen byggesteg,
-  ingen npm.</li>
-<li><strong>Kart og høyde:</strong> Kartverkets åpne tjenester (WMTS + høydedata-API).</li>
+<li><strong>Frontend:</strong> ren HTML/CSS/JavaScript med Leaflet-kart (2D) og MapLibre GL
+  (3D) — ingen byggesteg, ingen npm. Bibliotekene ligger i
+  <code>frontend/vendor/</code>, og 3D-delen lastes først når noen åpner en Flyover.</li>
+<li><strong>Kart og høyde:</strong> Kartverkets åpne tjenester (WMTS + høydedata-API).
+  3D-terrenget formes av åpne globale høydefliser (Terrarium/AWS Open Data);
+  høydene i selve løypa er fortsatt Kartverkets tall.</li>
+<li><strong>Video:</strong> bygges bilde for bilde i nettleseren med WebCodecs (H.264) og
+  pakkes i MP4 — ingen serverkoding, ingen eksterne tjenester.</li>
 <li><strong>Tester:</strong> <code>python -m pytest</code> (fra prosjektmappa med <code>.venv</code> aktivert).</li>
 </ul>
 <p>Koden er organisert i <code>backend/</code> (server + GPX-logikk), <code>frontend/</code> (alt du

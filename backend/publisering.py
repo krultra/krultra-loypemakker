@@ -35,7 +35,7 @@ from .models import Point, Waypoint
 # blir malen ny mens versjonsnummeret er gammelt — og publiseringen peker
 # på en assets-mappe som mangler de nye filene. Versjonssjekken mot
 # /api/health er det som fanger opp nettopp det.
-ASSET_VERSJON = 24
+ASSET_VERSJON = 25
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"

@@ -29,11 +29,14 @@ konto, ingen abonnement.
    Visningene støtter **norsk og engelsk** med språkvelger, og lar
    sluttbrukerne **laste ned løypa som GPX-fil**.
 
-4. **Vise løypa i 3D — «fly-by».** Se en simulert gjennomkjøring der
-   kameraet flyter bak en markør gjennom løypa, som en drone etter en
-   løper — med distanse, høyde og høydemeter underveis, og varsling når
-   du passerer et interessepunkt. Finnes både i verktøyet og i de
-   publiserte visningene, så deltakerne kan fly gjennom løypa selv.
+4. **Fly gjennom løypa i 3D — og lage video av det.** **Flyover** viser
+   løypa som en gjennomkjøring i 3D-terreng, der kameraet flyter bak en
+   markør som en drone etter en løper — med distanse, høyde og høydemeter
+   underveis. Du styrer kameraet mens det spilles av, og dronen tar en
+   runde rundt hvert interessepunkt. Ta opp turen som en **MP4-video**,
+   lagre den i KUL, og publiser den på egen nettadresse med
+   innbyggingskode — eller lenk til den fra løypekartet. Flyoveren finnes
+   også i de publiserte visningene, så deltakerne kan fly gjennom løypa selv.
 
 5. **Lage arenakart.** Ta et oversiktsbilde av arena-/sekretariatsområdet,
    tegn inn **områder og punkter** (sekretariat, servering, sanitær,
@@ -81,9 +84,14 @@ får du en fil du sender til `post@krultra.no`.
 
 - **Backend:** Python + FastAPI, kjører lokalt på `127.0.0.1` (ingen data
   forlater maskinen din).
-- **Frontend:** ren HTML/CSS/JavaScript med Leaflet-kart — ingen byggesteg,
-  ingen npm.
+- **Frontend:** ren HTML/CSS/JavaScript med Leaflet-kart (2D) og MapLibre GL
+  (3D) — ingen byggesteg, ingen npm. Bibliotekene ligger i
+  `frontend/vendor/`, og 3D-delen lastes først når noen åpner en Flyover.
 - **Kart og høyde:** Kartverkets åpne tjenester (WMTS + høydedata-API).
+  3D-terrenget formes av åpne globale høydefliser (Terrarium/AWS Open Data);
+  høydene i selve løypa er fortsatt Kartverkets tall.
+- **Video:** bygges bilde for bilde i nettleseren med WebCodecs (H.264) og
+  pakkes i MP4 — ingen serverkoding, ingen eksterne tjenester.
 - **Tester:** `python -m pytest` (fra prosjektmappa med `.venv` aktivert).
 
 Koden er organisert i `backend/` (server + GPX-logikk), `frontend/` (alt du

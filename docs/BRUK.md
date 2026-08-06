@@ -53,13 +53,12 @@ farten øker jo lenger du holder.
   **tykkelse**) og interessepunkter som bilde. Bruk **«Velg utsnitt»** og
   dra opp et rektangel på kartet for å eksportere bare det området.
 
-## 3D fly-by: se en gjennomkjøring av løypa
+## Flyover: fly gjennom løypa i 3D
 
-**«▶ Fly-by»** (gruppa **3D** i kartverktøylinja) viser løypa som en
-simulert gjennomkjøring: en markør beveger seg gjennom løypa, og kameraet
-flyter bak den som en drone som følger etter en løper. Underveis vises
-distanse, høyde og høydemeter, og du får en varsling hver gang du
-passerer et interessepunkt.
+**«▶ Flyover»** (gruppa **3D** i kartverktøylinja) viser løypa som en
+gjennomkjøring i 3D-terreng: en markør beveger seg gjennom løypa, og
+kameraet flyter bak den som en drone som følger etter en løper. Underveis
+vises distanse, høyde og høydemeter.
 
 - **Spill av / Pause** — knappen, mellomromstasten, eller bare **klikk på
   3D-kartet**. **↺** starter på nytt.
@@ -69,13 +68,18 @@ passerer et interessepunkt.
   altså det dobbelte ved 0,5×.
 - **Kart / Satellitt** bytter hva som drapes over terrenget. Satellittbilde
   er standard, siden det er der 3D-terrenget kommer best til sin rett.
-- **Esc** lukker fly-byen.
+- **Esc** lukker flyoveren.
 
 **Styr kameraet mens det spilles av.** Dra med musa for å svinge kameraet
-rundt løperen (sidelengs) og vippe det opp og ned (opp/ned). Rull for å
-zoome — eller knip med to fingre på berøringsskjerm. Alt dette virker like
-godt under avspilling som i pause. Selve retningen følger løypa; du legger
-din egen vinkel oppå.
+rundt løperen og vippe det opp og ned. Rull for å zoome — eller knip med
+to fingre på berøringsskjerm. Alt dette virker like godt under avspilling
+som i pause. Selve retningen følger løypa; du legger din egen vinkel oppå.
+
+Kameraet er laget for å være rolig å se på: det står stille så lenge løypa
+videre ligger godt innenfor bildet, og korrigerer bare når den er på vei
+ut — omtrent som en dronefører som holder bildet i ro i stedet for å følge
+hver sving. Markøren får dessuten flyte fritt innenfor et område midt i
+bildet, så kartet ikke er naglet fast til den.
 
 **Stopp ved punkter.** Som standard stanser dronen ved hvert
 interessepunkt, står et lite øyeblikk i ro mens kartet rundt lastes
@@ -84,13 +88,13 @@ heller fly uavbrutt gjennom, skru av **«Stopp ved punkter»** øverst.
 Setter du avspillingen på pause midt i en runde, fortsetter den der den
 slapp når du spiller av igjen.
 
-**Klikk på et punkt** (navneskiltet i terrenget) for å sette avspillingen
+**Bare det neste punktet vises**, som et navneskilt som svever over stedet
+med en tynn strek ned til selve punktet. Skiltet skjules når terrenget
+står mellom det og kameraet. **Klikk på skiltet** for å sette avspillingen
 på pause og få opp detaljene: hvilke tjenester som finnes der,
 beskrivelsen, høyde over havet, distanse fra start og høydemeter. Har
-punktet et **arenakart** knyttet til seg, ligger det en lenke dit i kortet
-— den åpner arenakartet i en ny fane, så fly-byen fortsetter uforstyrret i
-fanen bak. Klikk utenfor kortet — eller trykk Esc — så fortsetter turen der
-den slapp.
+punktet et **arenakart** knyttet til seg, ligger det en lenke dit i kortet.
+Klikk utenfor kortet — eller trykk Esc — så fortsetter turen der den slapp.
 
 **Hold løperen synlig.** Kameraet passer alltid på å holde seg over
 bakken. Med denne innstillingen på heves det også når en kolle kommer
@@ -100,7 +104,7 @@ snart utsikten er fri igjen.
 Løypa **foran** løperen er rød, så den skiller seg fra veier og store
 stier i satellittbildet; delen som er **tilbakelagt** har løypas egen farge.
 
-Fly-byen venter til landskapet rundt løypa er ferdig lastet før den
+Flyoveren venter til landskapet rundt løypa er ferdig lastet før den
 starter, så turen ikke begynner i et halvferdig terreng.
 
 Krever at sporet har høydedata (hent gjerne **høyder fra Kartverket**
@@ -108,9 +112,49 @@ først), internett, og en nettleser med 3D-støtte (WebGL). Terrengformen
 kommer fra åpne globale høydedata, mens høydetallene som vises er
 Kartverkets.
 
-Publiserte løypevisninger har den samme fly-byen bak knappen **«▶ 3D»**,
-slik at deltakerne kan fly gjennom løypa selv. Allerede publiserte løyper
-får knappen når de republiseres.
+Publiserte løypevisninger har den samme flyoveren bak knappen
+**«▶ Flyover»**, slik at deltakerne kan fly gjennom løypa selv. Allerede
+publiserte løyper får knappen når de republiseres.
+
+## Video av flyoveren
+
+**⏺ Ta opp** nede i flyoveren spoler til start og bygger en videofil av
+hele gjennomkjøringen. Kamerabevegelsene du gjør underveis blir med, og
+det samme gjør pauser du selv tar. Når du når mål er fila ferdig, og en
+dialog viser videoen med lengde, oppløsning og størrelse — klar til
+**nedlasting** eller **lagring i KUL**.
+
+Videoen bygges **bilde for bilde**, ikke som et skjermopptak. For hvert
+bilde venter KUL til kartet er ferdig tegnet med alle fliser på plass, og
+gir bildet et eksakt tidsstempel. Det er derfor videoen blir jevn selv om
+maskinen bruker lang tid på et enkelt bilde. To praktiske følger:
+
+- **Eksporten tar lengre tid enn videoen varer.** Forhåndsvisningen går
+  rykkvis mens den jobber — det er normalt og påvirker ikke fila.
+  Prosenten i hjørnet viser hvor langt den er kommet.
+- **Skjuler du vinduet, stanser eksporten bare** og fortsetter når du er
+  tilbake. Fila blir nøyaktig den samme.
+
+Videoene havner i **videobiblioteket** i venstre kolonne, der de kan
+spilles av, døpes om, slettes og publiseres.
+
+### Publisere en video
+
+**«Publiser»** i videobiblioteket legger videoen ut som en egen liten side
+under løypa, f.eks. `loyper.krultra.no/mmc-100m/video/`. Sida har tittel,
+beskrivelse, språkvelger og en lenke tilbake til løypekartet, og du får en
+ferdig **iframe-snutt** til innliming på nettsida — akkurat som ved
+publisering av løyper.
+
+Vil du at løypekartet skal ha en **🎬-knapp** til videoen, fylles feltet
+**«Lenke til flyover-video»** i løypepubliseringen ut automatisk etter at
+videoen er publisert. Husk at **løypa må publiseres på nytt** for at
+knappen skal dukke opp.
+
+Videoeksport krever en nettleser med WebCodecs-støtte. Mangler den,
+skjules knappen. Alle nyere nettlesere på PC har det; på mobil er det mer
+ujevnt.
+
 
 ## Høydeprofil
 

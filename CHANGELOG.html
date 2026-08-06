@@ -105,43 +105,59 @@ for hver versjon ligger i <a href="docs/"><code>docs/</code></a>.</p>
 </ul>
 <p>Versjonene før 2.0.0 (under <strong>Utviklingshistorikk</strong> nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.</p>
-<h2 id="320-4-august-2026">3.2.0 — 4. august 2026</h2>
+<h2 id="400-6-august-2026">4.0.0 — 6. august 2026</h2>
+<p><strong>Flyover og video</strong> — to store nye funksjoner. Detaljer i
+<a href="docs/versjon-4.0.0.html">docs/versjon-4.0.0.md</a>.</p>
 <ul>
-<li><strong>3D fly-by:</strong> se en simulert gjennomkjøring av løypa i 3D-terreng, der
-  kameraet flyter bak markøren som en drone som følger en løper. Underveis
-  vises distanse, høyde og høydemeter. Spill av/pause, fart 1×–8×,
+<li><strong>Flyover:</strong> se løypa som en gjennomkjøring i 3D-terreng, der kameraet
+  flyter bak markøren som en drone som følger en løper. Underveis vises
+  distanse, høyde og høydemeter. Spill av/pause, fart 0,5×–8×,
   framdriftslinje og veksling mellom satellittbilde (standard) og
   Kartverkets kart.</li>
-<li><strong>I verktøyet:</strong> knappen <strong>«▶ Fly-by»</strong> i kartverktøylinja (gruppa 3D).</li>
-<li><strong>I publiserte løypevisninger:</strong> knappen <strong>«▶ 3D»</strong> øverst, så også
-    deltakerne kan fly gjennom løypa.</li>
+<li><strong>I verktøyet:</strong> knappen <strong>«▶ Flyover»</strong> i kartverktøylinja (gruppa 3D).</li>
+<li><strong>I publiserte løypevisninger:</strong> knappen <strong>«▶ Flyover»</strong> øverst, så også
+    deltakerne kan fly gjennom løypa. Krever republisering.</li>
 <li><strong>Runde rundt hvert interessepunkt:</strong> dronen stopper og tar en full
-    360°-runde rundt punktet før turen fortsetter. Kan skrus av med
-    «Stopp ved punkter».</li>
-<li><strong>Klikkbare punkter:</strong> klikk på navneskiltet for pause og et detaljkort
-    med tjenester, beskrivelse, høyde, distanse og høydemeter — og lenke til
-    <strong>arenakartet</strong> når punktet har ett (åpnes i ny fane, så fly-byen står
-    urørt bak). Klikk utenfor, så fortsetter turen.</li>
+    360°-runde før turen fortsetter, med myke overganger inn og ut. Kan
+    skrus av med «Stopp ved punkter».</li>
+<li><strong>Bare det neste punktet vises</strong>, med navneskilt som svever over stedet
+    og skjules når terrenget står i veien.</li>
+<li><strong>Klikkbare punkter:</strong> klikk på skiltet for pause og et detaljkort med
+    tjenester, beskrivelse, høyde, distanse og høydemeter — og lenke til
+    arenakartet når punktet har ett.</li>
 <li><strong>Styr kameraet underveis:</strong> dra for å svinge og vippe, rull eller knip
     for å zoome — like godt under avspilling som i pause.</li>
-<li><strong>Klikk på kartet</strong> for å pause og fortsette, i tillegg til knappen og
-    mellomromstasten.</li>
-<li>Farten starter på <strong>0,5×</strong> (rolig nok til å se seg om), og kan settes
-    opp til 8×.</li>
 <li><strong>Rolig kamera:</strong> kameraet står stille så lenge løypa videre er godt
-    innenfor utsnittet, og korrigerer bare når den er på vei ut — som en
-    dronefører som holder bildet i ro i stedet for å følge hver sving.</li>
-<li><strong>Kameraet går aldri under bakken</strong>, og med «Hold løperen synlig» heves
-    det også når terrenget kommer mellom kameraet og løperen. Din egen
-    kameravinkel legges tilbake så snart utsikten er fri.</li>
-<li>Løypa foran løperen tegnes rød (skiller seg fra veier og stier i
-    satellittbildet); tilbakelagt del har løypas egen farge.</li>
-<li>Fly-byen venter til landskapet er ferdig lastet før den starter.</li>
-<li>Terrengformen kommer fra åpne globale høydedata; høydene i selve løypa
-    er fortsatt Kartverkets tall. 3D-biblioteket lastes først når noen
-    faktisk åpner en fly-by, så vanlig visning er like rask som før.</li>
-<li><em>Merk:</em> allerede publiserte løyper får knappen når de <strong>republiseres</strong>.</li>
-<li>Detaljer: <a href="docs/versjon-3.2.0.html">docs/versjon-3.2.0.md</a></li>
+    innenfor utsnittet, og korrigerer bare når den er på vei ut. Prikken får
+    flyte fritt innenfor en indre perimeter, så bildet ikke er naglet fast.</li>
+<li>
+<p><strong>Kameraet går aldri under bakken</strong>, og kan valgfritt heves når terrenget
+    kommer mellom det og løperen.</p>
+</li>
+<li>
+<p><strong>Videoeksport:</strong> bygg en ferdig MP4 av flyoveren slik du kjørte den, med
+  kamerabevegelsene dine. Videoen bygges <strong>bilde for bilde</strong> med eksakte
+  tidsstempler (WebCodecs, H.264), ikke som et sanntidsopptak — derfor har
+  fila helt jevn bildeavstand, uansett hvor lenge et bilde måtte vente på
+  kartfliser.</p>
+</li>
+<li><strong>Lagres i KUL</strong> i et nytt videobibliotek med avspilling, omdøping og
+    sletting.</li>
+<li><strong>Publiseres</strong> som egen side under løypa (<code>&lt;løype&gt;/video/</code>) med
+    språkvelger og ferdig iframe-snutt.</li>
+<li>
+<p><strong>🎬-knapp i løypekartet</strong> når løypa er publisert med lenke til videoen.</p>
+</li>
+<li>
+<p><strong>Arenakart og video åpnes i samme vindu</strong> som løypevisningen, så
+  ingenting bryter ut av en innbygd iframe. Arenakartet har fått en
+  «← Tilbake»-knapp.</p>
+</li>
+<li><strong>Versjonene vises i topplinja</strong> («versjon 4.0.0 · b39»), der b-tallet er
+  backend slik den kjører. Tooltipen viser alle asset-versjonene, så det er
+  mulig å se om en omstart faktisk tok.</li>
+<li><strong>Publisering sjekker at alle viewer-filene finnes</strong> på målet, ikke bare
+  én av dem, så en voksende asset-pakke ikke etterlater manglende filer.</li>
 </ul>
 <h2 id="310-30-juli-2026">3.1.0 — 30. juli 2026</h2>
 <ul>
