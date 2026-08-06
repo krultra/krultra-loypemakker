@@ -169,6 +169,11 @@ var KULFlyby = (function () {
   // Dette er bare sikkerhetsventilen for fliser som aldri kommer.
   var OPPTAK_MAKS_HOLD_MS = 15000;
   var ORBIT_PITCH = 55;      // kameraet senkes til dette under runden
+  // Tidskonstanter for inn- og utgangen av runden. Bevisst mye tregere
+  // enn KAMERA_TAU (som styrer museinput): en overgang kameraet gjør av
+  // seg selv skal merkes som en rolig bevegelse, ikke som et bytte.
+  var ORBIT_PITCH_TAU = 1.6;   // vinkelen legger seg ned og opp igjen
+  var ORBIT_SENTER_TAU = 0.9;  // kamerapunktet glir inn mot stedet
   // Publiserte løyper er alt forenklet ved publisering (de lengste ligger
   // rundt 3–4000 punkter), så taket her skal ikke slå inn på dem i det
   // hele tatt — det er bare en sikring for rå spor i verktøyet, som kan ha
@@ -504,6 +509,10 @@ var KULFlyby = (function () {
       // under bakken eller fått en kolle mellom seg og løperen. Legges
       // tilbake av seg selv når terrenget tillater det igjen.
       korr: 0, korrMål: 0,
+      // Ekstra senking av vinkelen mens vi går runden rundt et punkt.
+      // Egen verdi med egen, langsom tidskonstant, så inn- og
+      // utgangen av runden blir myk.
+      orbitPitch: 0, orbitPitchMål: 0,
     };
     var sistKlaring = 0;       // når vi sist sjekket terrenget
     var skiltSynlig = {};      // veipunktindeks → skal skiltet tegnes?
@@ -753,7 +762,16 @@ var KULFlyby = (function () {
         return;
       }
       if (orbit) {
-        kamSenter = { lng: p.lon, lat: p.lat };
+        // Glid inn mot punktet i stedet for å hoppe dit. Dette gjør to
+        // ting på én gang: kameraet unngår et rykk i det runden starter,
+        // og siden løperen stopper brått mens kamerapunktet fortsetter å
+        // gli framover, får vi en naturlig oppbremsing inn mot stedet —
+        // uten å måtte regne ut bremselengde på forhånd.
+        var b = 1 - Math.exp(-dt / ORBIT_SENTER_TAU);
+        kamSenter = {
+          lng: kamSenter.lng + (p.lon - kamSenter.lng) * b,
+          lat: kamSenter.lat + (p.lat - kamSenter.lat) * b,
+        };
         return;
       }
 
@@ -987,6 +1005,11 @@ var KULFlyby = (function () {
       kam.pitch += (kam.pitchMål - kam.pitch) * a;
       kam.dreie += (kam.dreieMål - kam.dreie) * a;
       kam.korr += (kam.korrMål - kam.korr) * a;
+      // Runde-vinkelen har sin egen, mye tregere tidskonstant. Den skal
+      // oppleves som at kameraet legger seg rolig ned mot stedet, ikke
+      // som at det skifter innstilling.
+      kam.orbitPitch += (kam.orbitPitchMål - kam.orbitPitch) *
+        (1 - Math.exp(-dt / ORBIT_PITCH_TAU));
     }
 
     /**
@@ -1035,7 +1058,7 @@ var KULFlyby = (function () {
         lon: kamSenter.lng, lat: kamSenter.lat,
         bearing: (kursNå == null ? 0 : kursNå) + kam.dreie + kam.orbitVinkel,
         zoom: kam.zoom,
-        pitch: begrens(kam.pitch - kam.korr, MIN_PITCH, MAKS_PITCH),
+        pitch: begrens(kam.pitch - kam.korr - kam.orbitPitch, MIN_PITCH, MAKS_PITCH),
       };
       if (hopp || !sistKamera || endret(sistKamera, nyKam)) {
         map.jumpTo({
@@ -1255,7 +1278,6 @@ var KULFlyby = (function () {
     function startOrbit(w) {
       orbit = {
         wpt: w, tid: 0, venter: true, ventet: 0,
-        pitchFør: kam.pitchMål,
         // Runden går raskere ved høy fart, men ikke proporsjonalt — ved 8×
         // ville en firedels runde blitt for kjapp til at flisene henger med.
         varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)),
@@ -1264,15 +1286,22 @@ var KULFlyby = (function () {
       // Senk kameraet litt under runden: da ser vi mer ned på stedet og
       // mindre langt utover, som både kler et sjekkpunkt og krever langt
       // færre fjerne fliser — hovedgrunnen til tomme flater under svingen.
-      kam.pitchMål = Math.min(kam.pitchMål, ORBIT_PITCH);
+      //
+      // Dette er et EGET tillegg, ikke en endring av brukerens vinkel.
+      // Før satte vi pitchMål direkte, og da gled endringen på plass med
+      // tidskonstanten som er laget for museinput — altså på et par
+      // tiendeler. Et sprang på over ti grader så da ut som et hopp.
+      // Tillegget her glir over halvannet sekund, og brukeren kan dra i
+      // vinkelen underveis uten at de to slåss om samme verdi.
+      kam.orbitPitchMål = Math.max(0, kam.pitchMål - ORBIT_PITCH);
       s = avstander[w.idx];
       visToast(w);
     }
 
     function avsluttOrbit() {
-      if (orbit) kam.pitchMål = orbit.pitchFør;
       orbit = null;
       kam.orbitVinkel = 0;
+      kam.orbitPitchMål = 0;      // vinkelen glir tilbake like mykt
       skjulToast();
       if (s >= totalKm) { settSpiller(false); ferdigTekst(); }
     }
