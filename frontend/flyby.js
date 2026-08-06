@@ -80,7 +80,7 @@ var KULFlyby = (function () {
       taOppTittel: 'Spill inn en video av flyoveren slik du kjører den — ' +
         'kamerabevegelser og pauser blir med',
       opptakFeil: 'Kunne ikke starte opptaket.',
-      venterKart: 'venter på kartet …',
+      venterKart: 'venter på kartet …', koderFerdig: 'gjør ferdig videoen …',
       videoKlar: 'Videoen er klar', videonavn: 'Navn',
       lastNed: '⤓ Last ned', lagreIKul: 'Lagre i KUL',
       lagrer: 'Lagrer …', lagret: 'Lagret i KUL.',
@@ -108,7 +108,7 @@ var KULFlyby = (function () {
       taOppTittel: 'Record a video of the flyover as you run it — ' +
         'camera moves and pauses are included',
       opptakFeil: 'Could not start recording.',
-      venterKart: 'waiting for the map …',
+      venterKart: 'waiting for the map …', koderFerdig: 'finishing the video …',
       videoKlar: 'Your video is ready', videonavn: 'Name',
       lastNed: '⤓ Download', lagreIKul: 'Save in KUL',
       lagrer: 'Saving …', lagret: 'Saved in KUL.',
@@ -163,15 +163,10 @@ var KULFlyby = (function () {
   var ORBIT_SEK = 11.0;      // full runde rundt et punkt ved 1× fart
   var ORBIT_VENT_MS = 2500;  // maks venting på fliser før runden settes i gang
 
-  // Innspillingsmodus får bedre tid. En video ses mange ganger og skal
-  // tåle det; at innspillingen tar litt lenger tid merkes bare én gang.
-  var OPPTAK_FART = 0.6;         // andel av vanlig framdrift
-  var OPPTAK_KAMERA_TAU = 0.6;   // mot KAMERA_TAU ellers — roligere dreining
-  var OPPTAK_ORBIT_MULT = 1.6;   // lengre runde rundt hvert punkt
-  var OPPTAK_VENT_MS = 5000;     // og lengre tålmodighet på fliser først
-  // Hvor lenge framdriften kan stå frosset og vente på fliser før vi gir
-  // opp og går videre. Sikkerhetsventil mot å bli stående for evig når
-  // nettet er nede — ikke en kvalitetsavveining.
+  // Eksporten trenger ikke lenger å gå saktere enn vanlig avspilling:
+  // hvert bilde venter uansett på at kartet er ferdig, og tidsstemplene
+  // settes av bildetelleren. Farten du velger er den videoen får.
+  // Dette er bare sikkerhetsventilen for fliser som aldri kommer.
   var OPPTAK_MAKS_HOLD_MS = 15000;
   var ORBIT_PITCH = 55;      // kameraet senkes til dette under runden
   // Publiserte løyper er alt forenklet ved publisering (de lengste ligger
@@ -513,7 +508,6 @@ var KULFlyby = (function () {
     var sistKlaring = 0;       // når vi sist sjekket terrenget
     var skiltSynlig = {};      // veipunktindeks → skal skiltet tegnes?
     var sistSkiltSjekk = 0;
-    var flisHold = 0;          // hvor lenge innspillingen har ventet på fliser
 
     // ---- Kartet ----
     var map = new maplibregl.Map({
@@ -621,18 +615,6 @@ var KULFlyby = (function () {
     map.on('error', function (e) {
       // Enkeltfliser som ikke lastes skal ikke velte visningen; logg stille.
       if (window.console && console.debug) console.debug('flyby:', e && e.error);
-    });
-
-    // Videoopptaket MÅ fanges her, ikke rett etter jumpTo i løkka.
-    // jumpTo endrer transformen med en gang, men MapLibre tegner først på
-    // sin egen animasjonsramme. Fanget vi bildet rett etter jumpTo, fikk vi
-    // FORRIGE bildes kart sammen med skjermposisjoner regnet fra den NYE
-    // transformen — og da skled punktskiltene i forhold til kartet. Avviket
-    // vokste med avstanden, siden en liten dreining flytter fjerne punkter
-    // mye mer på skjermen enn nære. I 'render' er lerretets innhold og
-    // map.project() garantert samme transform.
-    map.on('render', function () {
-      if (opptak) opptak.bilde(tegnOverleggPåLerret);
     });
 
     map.on('load', function () {
@@ -943,98 +925,64 @@ var KULFlyby = (function () {
 
     function løkke(nå) {
       if (!instans || instans.ødelagt) return;
+      // Mens det eksporteres er det eksportløkka som driver tida. Denne
+      // løkka holder seg da unna, så de to ikke flytter på scenen hver
+      // for seg — men den holdes i live for å tegne skjermbildet.
+      if (opptak) { rafId = requestAnimationFrame(løkke); return; }
       var dt = begrens((nå - sistTid) / 1000, 0, 0.1);
       sistTid = nå;
 
-      // Under innspilling fryses framdriften helt til kartflisene er inne.
-      //
-      // En video ses mange ganger, og et hull i bakken er irriterende hver
-      // eneste gang. Innspillingen er derimot en engangsjobb. Derfor lar
-      // vi heller turen stå stille et øyeblikk enn å fly videre over
-      // terreng som ikke er tegnet ferdig. Opptakeren settes samtidig på
-      // vent, så ventetida klippes helt ut av fila — den som ser videoen
-      // merker ingenting, og bildene som er med er alltid komplette.
-      //
-      // Sikkerhetsventil: gir flisene aldri opp (nettet er nede, eller vi
-      // er utenfor dekningen til flistjenesten), går vi videre likevel
-      // etter en stund, så en innspilling aldri kan bli stående for evig.
-      var venterFliser = false;
-      if (opptak) {
-        // Bare mens turen faktisk går. Pauser brukeren selv, skal
-        // opptaket rulle videre (det er en bevisst pause i videoen), og
-        // et flis-hold fra før må da slippes — ellers ble opptakeren
-        // stående på vent for godt.
-        if (spiller && klar) {
-          var flisKlare = true;
-          try { flisKlare = map.areTilesLoaded(); } catch (e) { flisKlare = true; }
-          if (flisKlare) {
-            flisHold = 0;
-          } else {
-            flisHold += dt * 1000;
-            venterFliser = flisHold < OPPTAK_MAKS_HOLD_MS;
-          }
-        }
-        opptak.hold('fliser', venterFliser);
-        ui.rec.classList.toggle('fb-rec-venter', venterFliser);
-        ui.recStatus.textContent = venterFliser ? t('venterKart') : '';
-      }
-
       // Pause fryser ALT, også en pågående runde rundt et punkt — da
       // fortsetter runden der den slapp når man spiller av igjen.
-      if (spiller && klar && !venterFliser) {
-        if (orbit) {
-          if (orbit.venter) {
-            // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
-            orbit.ventet += dt * 1000;
-            var frist = opptak ? OPPTAK_VENT_MS : ORBIT_VENT_MS;
-            if (map.areTilesLoaded() || orbit.ventet >= frist) {
-              orbit.venter = false;
-            }
-          } else {
-            orbit.tid += dt;
-            var a = begrens(orbit.tid / orbit.varighet, 0, 1);
-            // Mykt i gang og mykt ut igjen, så runden ikke rykker til
-            kam.orbitVinkel = 360 * (a * a * (3 - 2 * a));
-            if (a >= 1) avsluttOrbit();
+      if (spiller && klar) stegFram(dt);
+      tegnScene(dt, nå);
+      rafId = requestAnimationFrame(løkke);
+    }
+
+    /**
+     * Flytt turen ett tidssteg framover. Skilt fra selve tegninga fordi
+     * eksporten driver den med et FAST tidssteg (1/fps) i stedet for med
+     * klokka — det er dette som gir videoen helt jevn bildeavstand.
+     */
+    function stegFram(dt) {
+      if (orbit) {
+        if (orbit.venter) {
+          // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
+          orbit.ventet += dt * 1000;
+          if (map.areTilesLoaded() || orbit.ventet >= ORBIT_VENT_MS) {
+            orbit.venter = false;
           }
         } else {
-          // Under innspilling går turen roligere. Da rekker kartflisene å
-          // komme inn før kameraet har svingt videre, og hvert bilde som
-          // eventuelt faller bort betyr mindre for den ferdige videoen.
-          s += (totalKm / varighet) * fart * (opptak ? OPPTAK_FART : 1) * dt;
-          if (s >= totalKm) {
-            s = totalKm;
-            settSpiller(false);
-            ferdigTekst();
-            // Kom vi i mål mens vi tok opp, er videoen ferdig
-            if (opptak) stoppOpptak();
-          }
-          sjekkVeipunkt();
+          orbit.tid += dt;
+          var a = begrens(orbit.tid / orbit.varighet, 0, 1);
+          // Mykt i gang og mykt ut igjen, så runden ikke rykker til
+          kam.orbitVinkel = 360 * (a * a * (3 - 2 * a));
+          if (a >= 1) avsluttOrbit();
         }
+        return;
       }
+      s += (totalKm / varighet) * fart * dt;
+      if (s >= totalKm) {
+        s = totalKm;
+        settSpiller(false);
+        ferdigTekst();
+      }
+      sjekkVeipunkt();
+    }
 
+    /** Oppdater kamera og tegn scenen slik den ser ut akkurat nå. */
+    function tegnScene(dt, nå) {
       glideKamera(dt);
       sjekkKlaring(posVed(orbit ? avstander[orbit.wpt.idx] : s), nå);
       oppdaterMarkørSynlighet();
       tegn(false, dt);
-
-      if (opptak) {
-        // Selve opptaket skjer i 'render'-hendelsen (se map.on('render')
-        // nedenfor). Her ber vi bare kartet om å tegne dette bildet, slik
-        // at det også blir spilt inn når kameraet står stille — for
-        // eksempel mens et punktkort er oppe.
-        map.triggerRepaint();
-        ui.recTid.textContent = tidTekst(opptak.varighet());
-      }
-
-      rafId = requestAnimationFrame(løkke);
     }
 
     /** Glid kameraverdiene mot måltallene sine (eksponentiell demping). */
     function glideKamera(dt) {
       // Roligere kamerabevegelser mens vi spiller inn: brå dreining er
       // det som oftest etterlater flater uten fliser i videoen.
-      var a = 1 - Math.exp(-dt / (opptak ? OPPTAK_KAMERA_TAU : KAMERA_TAU));
+      var a = 1 - Math.exp(-dt / KAMERA_TAU);
       kam.zoom += (kam.zoomMål - kam.zoom) * a;
       kam.pitch += (kam.pitchMål - kam.pitch) * a;
       kam.dreie += (kam.dreieMål - kam.dreie) * a;
@@ -1310,8 +1258,7 @@ var KULFlyby = (function () {
         pitchFør: kam.pitchMål,
         // Runden går raskere ved høy fart, men ikke proporsjonalt — ved 8×
         // ville en firedels runde blitt for kjapp til at flisene henger med.
-        varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)) *
-          (opptak ? OPPTAK_ORBIT_MULT : 1),
+        varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)),
       };
       kam.orbitVinkel = 0;
       // Senk kameraet litt under runden: da ser vi mer ned på stedet og
@@ -1831,35 +1778,113 @@ var KULFlyby = (function () {
       return typeof KULOpptak !== 'undefined' && KULOpptak.tilgjengelig();
     }
 
-    /** Start opptak: spol til start, sett i gang, og spill inn derfra. */
-    function startOpptak() {
-      if (opptak || !klar) return;
-      var lerret = map.getCanvas();
-      try {
-        opptak = KULOpptak.start({ kartCanvas: lerret });
-      } catch (feil) {
-        alert(t('opptakFeil') + ' (' + feil.message + ')');
-        return;
-      }
-      nullstill();
-      settSpiller(true);
-      flisHold = 0;
-      ui.opptak.textContent = t('stoppOpptak');
-      ui.opptak.classList.add('fb-tar-opp');
-      ui.rec.classList.remove('fb-skjult', 'fb-rec-venter');
-      ui.recStatus.textContent = '';
+    /**
+     * Vent til kartet har tegnet ferdig med alle fliser på plass.
+     *
+     * «idle» betyr nettopp dette hos MapLibre: alle fliser lastet,
+     * ingenting som toner, kameraet i ro. Siden eksporten setter kameraet
+     * én gang per bilde og så venter, er det akkurat det signalet vi
+     * trenger. Fristen er en sikkerhetsventil for fliser som aldri kommer
+     * (nett nede, eller utenfor dekningen til flistjenesten) — da tar vi
+     * bildet som det er i stedet for å bli stående for evig.
+     */
+    function ventPåKart() {
+      return new Promise(function (ok) {
+        var gjort = false;
+        var frist = setTimeout(fullfør, OPPTAK_MAKS_HOLD_MS);
+        function fullfør() {
+          if (gjort) return;
+          gjort = true;
+          clearTimeout(frist);
+          map.off('idle', fullfør);
+          ok();
+        }
+        map.on('idle', fullfør);
+        map.triggerRepaint();
+      });
     }
 
-    /** Avslutt opptaket og vis resultatet. */
+    /**
+     * Eksportløkka: ett bilde av gangen, med FAST tidssteg.
+     *
+     * Her er poenget med hele omarbeidingen. Turen flyttes 1/fps sekund
+     * fram, kameraet settes, og så venter vi så lenge som nødvendig på at
+     * kartet er ferdig tegnet før bildet kodes. Hvor lang tid det tar
+     * spiller ingen rolle for resultatet: bilde n havner på n/fps sekunder
+     * i fila uansett. Derfor blir videoen helt jevn selv om maskinen
+     * bruker et halvt sekund på et bilde midt i en sving.
+     */
+    function eksportLøkke() {
+      if (!opptak || !instans || instans.ødelagt) return;
+      if (s >= totalKm) { stoppOpptak(); return; }
+      if (!spiller) {
+        // Brukeren har pauset. Pausen skal med i videoen — den er
+        // bevisst — men her må vi holde igjen med klokka. Ellers ville
+        // eksporten fylt på med stillbilder så fort maskinen klarte å
+        // kode dem, og et lite opphold blitt til minutter med video.
+        setTimeout(function () { taBildeOgFortsett(false); }, 1000 / KULOpptak.fps);
+        return;
+      }
+      taBildeOgFortsett(true);
+    }
+
+    function taBildeOgFortsett(gåFram) {
+      var dt = 1 / KULOpptak.fps;
+      if (gåFram) stegFram(dt);
+      tegnScene(dt, performance.now());
+      ventPåKart()
+        .then(function () {
+          if (!opptak) return;
+          return opptak.skrivBilde(tegnOverleggPåLerret);
+        })
+        .then(function () {
+          if (!opptak) return;
+          ui.recTid.textContent = tidTekst(opptak.varighet());
+          ui.recStatus.textContent =
+            Math.round((s / totalKm) * 100) + ' %';
+          // Slipp tråden mellom bildene, så knappene svarer
+          setTimeout(eksportLøkke, 0);
+        })
+        .catch(function () { stoppOpptak(); });
+    }
+
+    /** Start eksport: spol til start, og bygg videoen bilde for bilde. */
+    function startOpptak() {
+      if (opptak || !klar) return;
+      ui.opptak.disabled = true;
+      KULOpptak.start({ kartCanvas: map.getCanvas() })
+        .then(function (o) {
+          ui.opptak.disabled = false;
+          if (!o) { alert(t('opptakFeil')); return; }
+          opptak = o;
+          nullstill();
+          settSpiller(true);
+          ui.opptak.textContent = t('stoppOpptak');
+          ui.opptak.classList.add('fb-tar-opp');
+          ui.rec.classList.remove('fb-skjult');
+          ui.rec.classList.add('fb-rec-venter');   // rolig, ikke blinkende
+          ui.recStatus.textContent = '0 %';
+          eksportLøkke();
+        })
+        .catch(function (feil) {
+          ui.opptak.disabled = false;
+          alert(t('opptakFeil') + ' (' + (feil && feil.message) + ')');
+        });
+    }
+
+    /** Avslutt eksporten og vis resultatet. */
     function stoppOpptak() {
       if (!opptak) return;
       var o = opptak;
       opptak = null;
       ui.opptak.textContent = t('taOpp');
       ui.opptak.classList.remove('fb-tar-opp');
-      ui.rec.classList.add('fb-skjult');
+      ui.recStatus.textContent = t('koderFerdig');
       settSpiller(false);
+      // Løkka i bakgrunnen tar over tegninga igjen
       o.stopp().then(function (res) {
+        ui.rec.classList.add('fb-skjult');
+        ui.rec.classList.remove('fb-rec-venter');
         if (res && res.blob && res.blob.size) visVideo(res);
       });
     }

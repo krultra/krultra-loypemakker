@@ -1,230 +1,226 @@
 /* ============================================================
-   Videoopptak av en flyover.
+   Videoopptak av en flyover — bilde for bilde.
 
-   Tar opp flyoveren slik den faktisk kjøres — med kamerabevegelsene
-   brukeren gjør underveis og pausene hun selv velger å ta.
+   HVORFOR DETTE IKKE ER ET «OPPTAK» I VANLIG FORSTAND
 
-   To ting er verdt å vite om hvordan dette virker:
+   Første utgave brukte canvas.captureStream() + MediaRecorder, altså
+   opptak i sanntid. Det gir dårlig video her, av tre grunner som alle
+   henger sammen med at videoens tid da følger klokka på veggen:
 
-   1) OPPTAKET FANGER IKKE HTML-LAGENE. `captureStream()` på kartets
-      WebGL-lerret gir terreng og rutelinjer, men løperprikken,
-      punktskiltene og avlesningen er vanlige HTML-elementer OPPÅ
-      kartet — de finnes ikke i lerretet. Derfor tegner vi hvert bilde
-      inn i et eget sammensetningslerret: først kartet, så overlegget
-      på nytt med canvas-tegning. Det er dette lerretet som spilles inn.
+     - Bruker ett bilde lengre enn 1/30 sekund å tegne — og det gjør det
+       stadig, når kartfliser lastes eller terrenget bygges om — blir
+       bildet enten hoppet over eller stående dobbelt. Resultatet er
+       hakking som ikke lar seg jevne ut i etterkant.
+     - MediaRecorder.pause()/resume() klipper riktignok bort ventetid,
+       men etterlater et lite rykk i tidslinja ved hvert klipp.
+     - Selv uten alt dette blir bildeavstanden ujevn, fordi den styres av
+       når nettleseren rakk å levere hvert bilde.
 
-   2) VI HOLDER «USYNLIG»-STOPPENE UTE. Når vinduet blir helt skjult av
-      et annet program, slutter nettleseren å tegne, og avspillingen
-      fryser av seg selv. Uten tiltak ville MediaRecorder likevel spilt
-      inn den frosne tida som stillbilde. Vi setter derfor opptaket på
-      pause ved `visibilitychange` og fortsetter når vinduet er synlig
-      igjen — pause() og resume() klipper tida helt ut av fila.
+   Her kobles videoens tid HELT fra klokka. Kalleren ber om ett bilde av
+   gangen, og hvert bilde får et eksakt tidsstempel: bilde n ligger på
+   n/fps sekunder, uansett om det tok to millisekunder eller to sekunder
+   å få det ferdig tegnet. Da kan vi vente så lenge vi vil på at
+   kartflisene er inne, uten at det setter spor i den ferdige fila.
 
-   Brukerens EGNE pauser tas med, slik at et bevisst opphold der man
-   dreier kameraet rundt et sted blir liggende i videoen.
+   Bildene kodes med WebCodecs (VideoEncoder) og pakkes i en MP4 med
+   mp4-muxer. Resultatet er en fil med helt jevn bildeavstand — det er
+   dette som skiller en video som ser proff ut fra en som ser ut som en
+   skjermopptak.
+
+   Sidegevinst: skjuler man vinduet, slutter nettleseren å tegne og
+   eksporten står bare stille til vinduet er synlig igjen. Siden tida i
+   videoen telles i bilder og ikke i sekunder, blir fila nøyaktig den
+   samme.
    ============================================================ */
 'use strict';
 
 var KULOpptak = (function () {
 
-  // Formater i prioritert rekkefølge. MP4/H.264 først: den spilles av
-  // overalt, også på iPhone, som er viktig når videoen skal deles.
-  // WebM er reserve for nettlesere uten MP4-opptak.
-  var FORMATER = [
-    'video/mp4;codecs=avc1.42E01E',
-    'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
+  var FPS = 30;
+  var MAKS_BREDDE = 1920;
+  var BITRATE = 12000000;      // ~12 Mbit/s — romslig for 1080p30
+  var NØKKELBILDE_SEK = 2;     // nøkkelbilde annethvert sekund
+  var MAKS_KØ = 12;            // demmer opp for at koderen henger etter
+
+  // Kodeker i prioritert rekkefølge. H.264 først (spilles av overalt,
+  // også på iPhone); VP9 i WebM som reserve.
+  var KODEKER = [
+    { codec: 'avc1.640028', mime: 'video/mp4', muxer: 'avc', endelse: 'mp4' },
+    { codec: 'avc1.42003E', mime: 'video/mp4', muxer: 'avc', endelse: 'mp4' },
+    { codec: 'vp09.00.10.08', mime: 'video/mp4', muxer: 'vp9', endelse: 'mp4' },
   ];
 
-  var MAKS_BREDDE = 1920;    // demmer opp for filstørrelsen på store skjermer
-  var BILDER_PER_SEK = 30;
-  var BITRATE = 8000000;     // ~8 Mbit/s — god kvalitet på 1080p
-
-  /** Kan nettleseren spille inn i det hele tatt? */
+  /** Har nettleseren det som skal til for bilde-for-bilde-koding? */
   function tilgjengelig() {
-    return typeof MediaRecorder !== 'undefined' &&
-      typeof HTMLCanvasElement.prototype.captureStream === 'function' &&
-      !!velgFormat();
+    return typeof VideoEncoder !== 'undefined' &&
+      typeof VideoFrame !== 'undefined' &&
+      typeof window.Mp4Muxer !== 'undefined';
   }
 
-  function velgFormat() {
-    for (var i = 0; i < FORMATER.length; i++) {
-      try {
-        if (MediaRecorder.isTypeSupported(FORMATER[i])) return FORMATER[i];
-      } catch (e) { /* prøv neste */ }
+  /** Finn første kodek nettleseren faktisk kan bruke i denne størrelsen. */
+  function velgKodek(bredde, høyde) {
+    var i = 0;
+    function prøv() {
+      if (i >= KODEKER.length) return Promise.resolve(null);
+      var k = KODEKER[i++];
+      return VideoEncoder.isConfigSupported({
+        codec: k.codec, width: bredde, height: høyde,
+        bitrate: BITRATE, framerate: FPS,
+      }).then(function (res) {
+        return (res && res.supported) ? k : prøv();
+      }).catch(prøv);
     }
-    return null;
+    return prøv();
   }
 
-  /** Filendelsen som passer formatet vi spiller inn i. */
-  function endelseFor(mime) {
-    return (mime || '').indexOf('mp4') >= 0 ? 'mp4' : 'webm';
-  }
+  function Opptak(opts, kodek) {
+    this.kartCanvas = opts.kartCanvas;
+    this.fps = opts.fps || FPS;
+    this.kodek = kodek;
+    this.bilder = 0;
+    this.stoppet = false;
+    this.feil = null;
 
-  function Opptak(opts) {
-    var kartCanvas = opts.kartCanvas;
-
-    // Sammensetningslerretet: samme bildeforhold som kartet, men aldri
-    // bredere enn MAKS_BREDDE. Partall på begge sider — enkelte
-    // H.264-kodere avviser ulike tall.
-    var kilde = { b: kartCanvas.width, h: kartCanvas.height };
+    var kilde = { b: this.kartCanvas.width, h: this.kartCanvas.height };
     var skala = Math.min(1, MAKS_BREDDE / kilde.b);
+    // Partall på begge sider — H.264 krever det
     this.bredde = Math.max(2, Math.round(kilde.b * skala / 2) * 2);
     this.høyde = Math.max(2, Math.round(kilde.h * skala / 2) * 2);
 
     this.lerret = document.createElement('canvas');
     this.lerret.width = this.bredde;
     this.lerret.height = this.høyde;
-    this.ctx = this.lerret.getContext('2d');
-    this.kartCanvas = kartCanvas;
+    this.ctx = this.lerret.getContext('2d', { alpha: false });
+    this.overleggSkala = this.bredde / (this.kartCanvas.clientWidth || kilde.b);
 
-    // Fra kartets CSS-piksler (det map.project() gir) til lerretet vårt
-    this.overleggSkala = this.bredde / (kartCanvas.clientWidth || kilde.b);
-
-    this.mime = velgFormat();
-    this.biter = [];
-    this.startTid = performance.now();
-    this.pausetMs = 0;
-    this._pausetFra = 0;
-    this.stoppet = false;
-
-    var strøm = this.lerret.captureStream(BILDER_PER_SEK);
-    this.opptaker = new MediaRecorder(strøm, {
-      mimeType: this.mime,
-      videoBitsPerSecond: opts.bitrate || BITRATE,
+    this.muxer = new window.Mp4Muxer.Muxer({
+      target: new window.Mp4Muxer.ArrayBufferTarget(),
+      video: { codec: kodek.muxer, width: this.bredde, height: this.høyde },
+      // Alt holdes i minnet og skrives i riktig rekkefølge til slutt, så
+      // fila kan spilles av med en gang den lastes ned (moov først).
+      fastStart: 'in-memory',
     });
+
     var meg = this;
-    this.opptaker.ondataavailable = function (e) {
-      if (e.data && e.data.size) meg.biter.push(e.data);
-    };
-    this.opptaker.start(1000);   // samle data i biter på ett sekund
+    this.koder = new VideoEncoder({
+      output: function (chunk, meta) { meg.muxer.addVideoChunk(chunk, meta); },
+      error: function (e) { meg.feil = e; },
+    });
+    this.koder.configure({
+      codec: kodek.codec,
+      width: this.bredde,
+      height: this.høyde,
+      bitrate: opts.bitrate || BITRATE,
+      framerate: this.fps,
+      latencyMode: 'quality',
+    });
 
-    // Grunner til at opptaket står på vent akkurat nå. Det er flere av
-    // dem — vinduet kan være skjult samtidig som kartfliser lastes — så
-    // vi teller dem i stedet for å ha én av/på-bryter. Opptaket går
-    // videre først når SISTE grunn er borte.
-    this._hold = {};
-
-    // Skjult vindu → hold tida ute av fila (se toppkommentaren)
-    this._påSynlighet = function () {
-      if (meg.stoppet) return;
-      meg.hold('skjult', document.hidden);
-    };
-    document.addEventListener('visibilitychange', this._påSynlighet);
+    // Himmelen males under kartet: kartlerretet er gjennomsiktig over
+    // horisonten, så uten dette ville videoen manglet himmel og hvert
+    // bilde ville blitt liggende oppå det forrige.
+    this._himmel = this.ctx.createLinearGradient(0, 0, 0, this.høyde);
+    this._himmel.addColorStop(0, '#1e3a8a');
+    this._himmel.addColorStop(0.42, '#3b82f6');
+    this._himmel.addColorStop(0.68, '#93c5fd');
+    this._himmel.addColorStop(1, '#dbeafe');
   }
 
   /**
-   * Sett opptaket på vent av en navngitt grunn (eller fjern grunnen).
-   * Ventetida klippes helt ut av den ferdige fila, så et opphold mens
-   * kartflisene kommer inn blir ikke synlig for den som ser videoen.
+   * Sett sammen og kod ETT bilde. Bildet får tidsstempelet det skal ha i
+   * den ferdige videoen, uavhengig av hvor lang tid det tok å lage.
+   * Returnerer et løfte som venter hvis koderen henger etter.
    */
-  Opptak.prototype.hold = function (grunn, på) {
-    if (this.stoppet) return;
-    if (på) this._hold[grunn] = true;
-    else delete this._hold[grunn];
-    if (Object.keys(this._hold).length) this.pause();
-    else this.fortsett();
-  };
-
-  /** Står opptaket på vent nå? */
-  Opptak.prototype.venter = function () {
-    return Object.keys(this._hold).length > 0;
-  };
-
-  /**
-   * Tegn ett bilde: himmel i bunnen, så kartet, så overlegget oppå.
-   *
-   * Himmelen MÅ tegnes her. Kartlerretet er gjennomsiktig over
-   * horisonten — det er nettopp derfor CSS-himmelen synes gjennom det på
-   * skjermen — så et `drawImage` alene ville verken gitt videoen en
-   * himmel eller viska ut forrige bilde. Uten dette blir alt som tegnes
-   * i himmelområdet liggende bilde etter bilde, og toppen av videoen
-   * gror igjen med gamle ledestreker.
-   */
-  Opptak.prototype.bilde = function (tegnOverlegg) {
-    if (this.stoppet || this.opptaker.state !== 'recording') return;
+  Opptak.prototype.skrivBilde = function (tegnOverlegg) {
+    if (this.stoppet || this.feil) return Promise.resolve();
     var ctx = this.ctx;
-    if (!this._himmel) {
-      this._himmel = ctx.createLinearGradient(0, 0, 0, this.høyde);
-      this._himmel.addColorStop(0, '#1e3a8a');
-      this._himmel.addColorStop(0.42, '#3b82f6');
-      this._himmel.addColorStop(0.68, '#93c5fd');
-      this._himmel.addColorStop(1, '#dbeafe');
-    }
+
     ctx.fillStyle = this._himmel;
     ctx.fillRect(0, 0, this.bredde, this.høyde);
     try {
       ctx.drawImage(this.kartCanvas, 0, 0, this.bredde, this.høyde);
     } catch (e) {
-      return;   // lerretet var ikke klart dette bildet
+      return Promise.resolve();     // lerretet var ikke klart
     }
     if (tegnOverlegg) {
       ctx.save();
       try { tegnOverlegg(ctx, this.overleggSkala, this.bredde, this.høyde); }
-      catch (e) { /* et overleggsdetalj skal aldri velte opptaket */ }
+      catch (e) { /* et overleggsdetalj skal aldri velte eksporten */ }
       ctx.restore();
     }
-  };
 
-  Opptak.prototype.pause = function () {
-    if (this.stoppet || this.opptaker.state !== 'recording') return;
-    this.opptaker.pause();
-    this._pausetFra = performance.now();
-  };
-
-  Opptak.prototype.fortsett = function () {
-    if (this.stoppet || this.opptaker.state !== 'paused') return;
-    this.opptaker.resume();
-    if (this._pausetFra) {
-      this.pausetMs += performance.now() - this._pausetFra;
-      this._pausetFra = 0;
+    var n = this.bilder++;
+    var varighetUs = Math.round(1e6 / this.fps);
+    var ramme = new VideoFrame(this.lerret, {
+      timestamp: Math.round(n * 1e6 / this.fps),
+      duration: varighetUs,
+    });
+    try {
+      this.koder.encode(ramme, { keyFrame: n % (this.fps * NØKKELBILDE_SEK) === 0 });
+    } finally {
+      ramme.close();
     }
+
+    // Motstrøms bremsing: har koderen mange bilder til gode, venter vi
+    // heller enn å fylle opp minnet.
+    if (this.koder.encodeQueueSize > MAKS_KØ) {
+      var meg = this;
+      return new Promise(function (ok) {
+        var sjekk = function () {
+          if (meg.stoppet || meg.koder.encodeQueueSize <= MAKS_KØ / 2) ok();
+          else setTimeout(sjekk, 8);
+        };
+        sjekk();
+      });
+    }
+    return Promise.resolve();
   };
 
-  /** Hvor lang videoen er blitt så langt (sekunder, uten skjult tid). */
+  /** Videoens lengde så langt (sekunder) — telt i bilder, ikke i klokketid. */
   Opptak.prototype.varighet = function () {
-    var pauset = this.pausetMs +
-      (this._pausetFra ? performance.now() - this._pausetFra : 0);
-    return Math.max(0, (performance.now() - this.startTid - pauset) / 1000);
+    return this.bilder / this.fps;
   };
 
-  /** Avslutt og få fila. */
+  /** Avslutt kodingen og få den ferdige fila. */
   Opptak.prototype.stopp = function () {
     var meg = this;
-    return new Promise(function (ok) {
-      if (meg.stoppet) return ok(null);
-      meg.stoppet = true;
-      document.removeEventListener('visibilitychange', meg._påSynlighet);
-      var varighet = meg.varighet();
-      meg.opptaker.onstop = function () {
-        ok({
-          blob: new Blob(meg.biter, { type: meg.mime }),
-          mime: meg.mime,
-          endelse: endelseFor(meg.mime),
-          varighet: varighet,
+    if (this.stoppet) return Promise.resolve(null);
+    this.stoppet = true;
+    if (!this.bilder) return Promise.resolve(null);
+    return this.koder.flush()
+      .then(function () {
+        meg.muxer.finalize();
+        var buffer = meg.muxer.target.buffer;
+        return {
+          blob: new Blob([buffer], { type: meg.kodek.mime }),
+          mime: meg.kodek.mime,
+          endelse: meg.kodek.endelse,
+          varighet: meg.bilder / meg.fps,
           bredde: meg.bredde,
           høyde: meg.høyde,
-        });
-      };
-      try {
-        if (meg.opptaker.state === 'paused') meg.opptaker.resume();
-        meg.opptaker.stop();
-      } catch (e) {
-        ok({
-          blob: new Blob(meg.biter, { type: meg.mime }), mime: meg.mime,
-          endelse: endelseFor(meg.mime), varighet: varighet,
-          bredde: meg.bredde, høyde: meg.høyde,
-        });
-      }
-    });
+          bilder: meg.bilder,
+        };
+      })
+      .catch(function () { return null; })
+      .then(function (res) {
+        try { meg.koder.close(); } catch (e) { /* alt lukket */ }
+        return res;
+      });
   };
 
   return {
     tilgjengelig: tilgjengelig,
-    velgFormat: velgFormat,
-    endelseFor: endelseFor,
-    start: function (opts) { return new Opptak(opts); },
+    fps: FPS,
+    /** Klargjør et opptak. Løftet gir null hvis ingen kodek passer. */
+    start: function (opts) {
+      if (!tilgjengelig()) return Promise.resolve(null);
+      // Målene må regnes ut her også, siden kodeken velges ut fra dem
+      var kilde = opts.kartCanvas;
+      var skala = Math.min(1, MAKS_BREDDE / kilde.width);
+      var b = Math.max(2, Math.round(kilde.width * skala / 2) * 2);
+      var h = Math.max(2, Math.round(kilde.height * skala / 2) * 2);
+      return velgKodek(b, h).then(function (kodek) {
+        return kodek ? new Opptak(opts, kodek) : null;
+      });
+    },
   };
 })();

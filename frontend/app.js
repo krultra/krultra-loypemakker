@@ -24,7 +24,7 @@
 // å virke (dvs. alt som rører backend/), og ellers ved merkbare endringer.
 // Da kan man se på skjermen om omstarten faktisk tok — hold det i takt med
 // BACKEND_VERSJON i backend/routes.py.
-const APP_VERSJON = '3.2.4';
+const APP_VERSJON = '3.3.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -4757,7 +4757,7 @@ oppdaterVideobibliotek();   // feiler stille på eldre server uten videostøtte
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 36;
+const FORVENTET_BACKEND = 37;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {
