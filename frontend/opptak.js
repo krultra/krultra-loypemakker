@@ -27,6 +27,18 @@
    dette som skiller en video som ser proff ut fra en som ser ut som en
    skjermopptak.
 
+   FLERE SPOR I SAMME OPPTAK
+
+   Ett opptak kan skrive flere videofiler samtidig. Kartbildet — den
+   dyre delen, med flislasting og 3D-tegning — lages bare én gang og
+   kopieres inn i hvert spor. Derfor koster spor nummer to lite mer enn
+   selve kodingen. Det brukes til to ting:
+
+     * to oppløsninger: en full fil og en lett nettversjon, så en video
+       som bygges inn i en liten ramme eller åpnes på mobil slipper å
+       laste ned en hel 1080p-fil
+     * to språk: kartet er det samme, bare teksten i bildet er ulik
+
    Sidegevinst: skjuler man vinduet, slutter nettleseren å tegne og
    eksporten står bare stille til vinduet er synlig igjen. Siden tida i
    videoen telles i bilder og ikke i sekunder, blir fila nøyaktig den
@@ -38,7 +50,11 @@ var KULOpptak = (function () {
 
   var FPS = 30;
   var MAKS_BREDDE = 1920;
-  var BITRATE = 12000000;      // ~12 Mbit/s — romslig for 1080p30
+  // ~12 Mbit/s ved 1080p. Mindre spor får forholdsmessig mindre — bitrate
+  // per piksel er det som avgjør hvordan videoen ser ut, ikke tallet i seg
+  // selv. Gulvet hindrer at en liten nettversjon blir klumpete.
+  var BITRATE_1080 = 12000000;
+  var MIN_BITRATE = 1500000;
   var NØKKELBILDE_SEK = 2;     // nøkkelbilde annethvert sekund
   var MAKS_KØ = 12;            // demmer opp for at koderen henger etter
 
@@ -57,6 +73,20 @@ var KULOpptak = (function () {
       typeof window.Mp4Muxer !== 'undefined';
   }
 
+  /** Partall på begge sider — H.264 krever det. */
+  function målFor(kilde, maksBredde) {
+    var skala = Math.min(1, (maksBredde || MAKS_BREDDE) / Math.max(1, kilde.b));
+    return {
+      bredde: Math.max(2, Math.round(kilde.b * skala / 2) * 2),
+      høyde: Math.max(2, Math.round(kilde.h * skala / 2) * 2),
+    };
+  }
+
+  function bitrateFor(bredde, høyde) {
+    var forhold = (bredde * høyde) / (1920 * 1080);
+    return Math.max(MIN_BITRATE, Math.round(BITRATE_1080 * forhold));
+  }
+
   /** Finn første kodek nettleseren faktisk kan bruke i denne størrelsen. */
   function velgKodek(bredde, høyde) {
     var i = 0;
@@ -65,7 +95,7 @@ var KULOpptak = (function () {
       var k = KODEKER[i++];
       return VideoEncoder.isConfigSupported({
         codec: k.codec, width: bredde, height: høyde,
-        bitrate: BITRATE, framerate: FPS,
+        bitrate: bitrateFor(bredde, høyde), framerate: FPS,
       }).then(function (res) {
         return (res && res.supported) ? k : prøv();
       }).catch(prøv);
@@ -73,25 +103,25 @@ var KULOpptak = (function () {
     return prøv();
   }
 
-  function Opptak(opts, kodek) {
-    this.kartCanvas = opts.kartCanvas;
-    this.fps = opts.fps || FPS;
+  /**
+   * Ett spor: eget lerret, egen koder og egen MP4-fil.
+   * `nøkkel` er kallerens eget merkelapp-objekt (språk, størrelse …) og
+   * følger med tilbake i resultatet.
+   */
+  function Spor(opptak, oppsett, kodek, kilde) {
+    var mål = målFor(kilde, oppsett.maksBredde);
+    this.nøkkel = oppsett.nøkkel || {};
+    this.bredde = mål.bredde;
+    this.høyde = mål.høyde;
     this.kodek = kodek;
-    this.bilder = 0;
-    this.stoppet = false;
-    this.feil = null;
-
-    var kilde = { b: this.kartCanvas.width, h: this.kartCanvas.height };
-    var skala = Math.min(1, MAKS_BREDDE / kilde.b);
-    // Partall på begge sider — H.264 krever det
-    this.bredde = Math.max(2, Math.round(kilde.b * skala / 2) * 2);
-    this.høyde = Math.max(2, Math.round(kilde.h * skala / 2) * 2);
 
     this.lerret = document.createElement('canvas');
     this.lerret.width = this.bredde;
     this.lerret.height = this.høyde;
     this.ctx = this.lerret.getContext('2d', { alpha: false });
-    this.overleggSkala = this.bredde / (this.kartCanvas.clientWidth || kilde.b);
+    // Overlegget måles i kartets CSS-piksler (det map.project() gir).
+    // Skalaen tar oss derfra til dette sporets oppløsning.
+    this.overleggSkala = this.bredde / (kilde.cssB || kilde.b);
 
     this.muxer = new window.Mp4Muxer.Muxer({
       target: new window.Mp4Muxer.ArrayBufferTarget(),
@@ -104,69 +134,104 @@ var KULOpptak = (function () {
     var meg = this;
     this.koder = new VideoEncoder({
       output: function (chunk, meta) { meg.muxer.addVideoChunk(chunk, meta); },
-      error: function (e) { meg.feil = e; },
+      error: function (e) { opptak.feil = e; },
     });
     this.koder.configure({
       codec: kodek.codec,
       width: this.bredde,
       height: this.høyde,
-      bitrate: opts.bitrate || BITRATE,
-      framerate: this.fps,
+      bitrate: oppsett.bitrate || bitrateFor(this.bredde, this.høyde),
+      framerate: opptak.fps,
       latencyMode: 'quality',
     });
 
     // Himmelen males under kartet: kartlerretet er gjennomsiktig over
     // horisonten, så uten dette ville videoen manglet himmel og hvert
     // bilde ville blitt liggende oppå det forrige.
-    this._himmel = this.ctx.createLinearGradient(0, 0, 0, this.høyde);
-    this._himmel.addColorStop(0, '#1e3a8a');
-    this._himmel.addColorStop(0.42, '#3b82f6');
-    this._himmel.addColorStop(0.68, '#93c5fd');
-    this._himmel.addColorStop(1, '#dbeafe');
+    this.himmel = this.ctx.createLinearGradient(0, 0, 0, this.høyde);
+    this.himmel.addColorStop(0, '#1e3a8a');
+    this.himmel.addColorStop(0.42, '#3b82f6');
+    this.himmel.addColorStop(0.68, '#93c5fd');
+    this.himmel.addColorStop(1, '#dbeafe');
+  }
+
+  function Opptak(opts, kodek) {
+    this.kartCanvas = opts.kartCanvas;
+    this.fps = opts.fps || FPS;
+    this.bilder = 0;
+    this.stoppet = false;
+    this.feil = null;
+
+    var kilde = {
+      b: this.kartCanvas.width,
+      h: this.kartCanvas.height,
+      cssB: this.kartCanvas.clientWidth || this.kartCanvas.width,
+    };
+    this.kildeBredde = kilde.b;
+    this.kildeHøyde = kilde.h;
+
+    var meg = this;
+    this.spor = (opts.spor || [{}]).map(function (oppsett) {
+      return new Spor(meg, oppsett, kodek, kilde);
+    });
   }
 
   /**
-   * Sett sammen og kod ETT bilde. Bildet får tidsstempelet det skal ha i
-   * den ferdige videoen, uavhengig av hvor lang tid det tok å lage.
-   * Returnerer et løfte som venter hvis koderen henger etter.
+   * Sett sammen og kod ETT bilde i hvert spor. Bildet får tidsstempelet
+   * det skal ha i den ferdige videoen, uavhengig av hvor lang tid det tok
+   * å lage. Returnerer et løfte som venter hvis en koder henger etter.
+   *
+   * `tegnOverlegg(ctx, skala, bredde, høyde, nøkkel)` kalles én gang per
+   * spor — det er her kalleren tegner tekst på det språket sporet skal ha.
    */
   Opptak.prototype.skrivBilde = function (tegnOverlegg) {
     if (this.stoppet || this.feil) return Promise.resolve();
-    var ctx = this.ctx;
-
-    ctx.fillStyle = this._himmel;
-    ctx.fillRect(0, 0, this.bredde, this.høyde);
-    try {
-      ctx.drawImage(this.kartCanvas, 0, 0, this.bredde, this.høyde);
-    } catch (e) {
-      return Promise.resolve();     // lerretet var ikke klart
-    }
-    if (tegnOverlegg) {
-      ctx.save();
-      try { tegnOverlegg(ctx, this.overleggSkala, this.bredde, this.høyde); }
-      catch (e) { /* et overleggsdetalj skal aldri velte eksporten */ }
-      ctx.restore();
-    }
 
     var n = this.bilder++;
+    var tid = Math.round(n * 1e6 / this.fps);
     var varighetUs = Math.round(1e6 / this.fps);
-    var ramme = new VideoFrame(this.lerret, {
-      timestamp: Math.round(n * 1e6 / this.fps),
-      duration: varighetUs,
-    });
-    try {
-      this.koder.encode(ramme, { keyFrame: n % (this.fps * NØKKELBILDE_SEK) === 0 });
-    } finally {
-      ramme.close();
+    var nøkkel = n % (this.fps * NØKKELBILDE_SEK) === 0;
+    var maksKø = 0;
+
+    for (var i = 0; i < this.spor.length; i++) {
+      var sp = this.spor[i];
+      var ctx = sp.ctx;
+      ctx.fillStyle = sp.himmel;
+      ctx.fillRect(0, 0, sp.bredde, sp.høyde);
+      try {
+        ctx.drawImage(this.kartCanvas, 0, 0, sp.bredde, sp.høyde);
+      } catch (e) {
+        this.bilder--;                 // lerretet var ikke klart
+        return Promise.resolve();
+      }
+      if (tegnOverlegg) {
+        ctx.save();
+        try {
+          tegnOverlegg(ctx, sp.overleggSkala, sp.bredde, sp.høyde, sp.nøkkel);
+        } catch (e) { /* et overleggsdetalj skal aldri velte eksporten */ }
+        ctx.restore();
+      }
+
+      var ramme = new VideoFrame(sp.lerret, { timestamp: tid, duration: varighetUs });
+      try {
+        sp.koder.encode(ramme, { keyFrame: nøkkel });
+      } finally {
+        ramme.close();
+      }
+      maksKø = Math.max(maksKø, sp.koder.encodeQueueSize);
     }
 
-    // Motstrøms bremsing: har koderen mange bilder til gode, venter vi
+    // Motstrøms bremsing: har en koder mange bilder til gode, venter vi
     // heller enn å fylle opp minnet.
-    if (this.koder.encodeQueueSize > MAKS_KØ) {
+    if (maksKø > MAKS_KØ) {
       var meg = this;
       return new Promise(function (ok) {
         var sjekk = function () {
-          if (meg.stoppet || meg.koder.encodeQueueSize <= MAKS_KØ / 2) ok();
+          var kø = 0;
+          for (var j = 0; j < meg.spor.length; j++) {
+            kø = Math.max(kø, meg.spor[j].koder.encodeQueueSize);
+          }
+          if (meg.stoppet || kø <= MAKS_KØ / 2) ok();
           else setTimeout(sjekk, 8);
         };
         sjekk();
@@ -180,46 +245,65 @@ var KULOpptak = (function () {
     return this.bilder / this.fps;
   };
 
-  /** Avslutt kodingen og få den ferdige fila. */
+  /** Avslutt kodingen og få de ferdige filene (én per spor). */
   Opptak.prototype.stopp = function () {
     var meg = this;
-    if (this.stoppet) return Promise.resolve(null);
+    if (this.stoppet) return Promise.resolve([]);
     this.stoppet = true;
-    if (!this.bilder) return Promise.resolve(null);
-    return this.koder.flush()
-      .then(function () {
-        meg.muxer.finalize();
-        var buffer = meg.muxer.target.buffer;
-        return {
-          blob: new Blob([buffer], { type: meg.kodek.mime }),
-          mime: meg.kodek.mime,
-          endelse: meg.kodek.endelse,
-          varighet: meg.bilder / meg.fps,
-          bredde: meg.bredde,
-          høyde: meg.høyde,
-          bilder: meg.bilder,
-        };
-      })
-      .catch(function () { return null; })
-      .then(function (res) {
-        try { meg.koder.close(); } catch (e) { /* alt lukket */ }
-        return res;
-      });
+    if (!this.bilder) return Promise.resolve([]);
+
+    return Promise.all(this.spor.map(function (sp) {
+      return sp.koder.flush()
+        .then(function () {
+          sp.muxer.finalize();
+          return {
+            nøkkel: sp.nøkkel,
+            blob: new Blob([sp.muxer.target.buffer], { type: sp.kodek.mime }),
+            mime: sp.kodek.mime,
+            endelse: sp.kodek.endelse,
+            varighet: meg.bilder / meg.fps,
+            bredde: sp.bredde,
+            høyde: sp.høyde,
+            bilder: meg.bilder,
+          };
+        })
+        .catch(function () { return null; })
+        .then(function (res) {
+          try { sp.koder.close(); } catch (e) { /* alt lukket */ }
+          return res;
+        });
+    })).then(function (liste) {
+      return liste.filter(function (r) { return r && r.blob && r.blob.size; });
+    });
   };
 
   return {
     tilgjengelig: tilgjengelig,
     fps: FPS,
-    /** Klargjør et opptak. Løftet gir null hvis ingen kodek passer. */
+    maksBredde: MAKS_BREDDE,
+    // Gjøres tilgjengelig så grensesnittet kan vise hvor stor fila blir,
+    // uten å gjette på tallene koderen faktisk får.
+    målFor: målFor,
+    bitrateFor: bitrateFor,
+    /**
+     * Klargjør et opptak.
+     *   kartCanvas  WebGL-lerretet kartet tegnes i
+     *   spor        [{ nøkkel, maksBredde }] — ett element per fil som
+     *               skal lages. Utelatt = ett spor på inntil 1920 px.
+     * Løftet gir null hvis ingen kodek passer.
+     */
     start: function (opts) {
       if (!tilgjengelig()) return Promise.resolve(null);
-      // Målene må regnes ut her også, siden kodeken velges ut fra dem
-      var kilde = opts.kartCanvas;
-      var skala = Math.min(1, MAKS_BREDDE / kilde.width);
-      var b = Math.max(2, Math.round(kilde.width * skala / 2) * 2);
-      var h = Math.max(2, Math.round(kilde.height * skala / 2) * 2);
-      return velgKodek(b, h).then(function (kodek) {
-        return kodek ? new Opptak(opts, kodek) : null;
+      var spor = (opts.spor && opts.spor.length) ? opts.spor : [{}];
+      var kilde = { b: opts.kartCanvas.width, h: opts.kartCanvas.height };
+      // Kodeken velges ut fra det STØRSTE sporet: klarer nettleseren det,
+      // klarer den de mindre også.
+      var størst = spor.reduce(function (best, s) {
+        var m = målFor(kilde, s.maksBredde);
+        return (!best || m.bredde > best.bredde) ? m : best;
+      }, null);
+      return velgKodek(størst.bredde, størst.høyde).then(function (kodek) {
+        return kodek ? new Opptak(Object.assign({}, opts, { spor: spor }), kodek) : null;
       });
     },
   };

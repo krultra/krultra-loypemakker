@@ -27,7 +27,7 @@ from . import publisering, video_lagring
 
 # Økes når video-viewer-koden (viewer/video.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte videoer.
-VIDEO_ASSET_VERSJON = 1
+VIDEO_ASSET_VERSJON = 2
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -61,21 +61,31 @@ def _har_video_assets(skriver, versjon: int) -> bool:
     return True
 
 
-def bygg_video_data(video: dict, filnavn: str, tittel: str, beskrivelse=None,
-                    standard_sprak=None, oversettelser=None,
+def bygg_video_data(video: dict, varianter: "list[dict]", tittel: str,
+                    beskrivelse=None, standard_sprak=None, oversettelser=None,
                     loype_url=None, link=None) -> dict:
-    """Opplysningene som bakes inn i index.html og leses av video.js."""
+    """Opplysningene som bakes inn i index.html og leses av video.js.
+
+    `varianter` er [{fil, mime, bredde, hoyde, storrelse}] i synkende
+    størrelse — den første er også standardvalget. video.js velger ut fra
+    hvor stor skjermen faktisk er, siden en vanlig MP4 ellers lastes ned i
+    full oppløsning uansett hvor liten avspilleren er.
+    """
+    hoved = varianter[0]
     return {
-        "versjon": 1,
+        "versjon": 2,
         "generert": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "navn": tittel or video.get("navn") or "Flyover",
         "beskrivelse": beskrivelse or None,
         "standard_sprak": standard_sprak or "no",
         "oversettelser": oversettelser or None,
-        "fil": filnavn,
-        "mime": video.get("mime") or "video/mp4",
-        "bredde": video.get("bredde"),
-        "hoyde": video.get("hoyde"),
+        # Toppnivåfeltene beskriver hovedvarianten. En eldre video.js som
+        # ikke kjenner `varianter` spiller da av akkurat som før.
+        "fil": hoved["fil"],
+        "mime": hoved.get("mime") or "video/mp4",
+        "bredde": hoved.get("bredde"),
+        "hoyde": hoved.get("hoyde"),
+        "varianter": varianter,
         "varighet": video.get("varighet"),
         # Relativ lenke tilbake til løypevisningen (ett nivå opp)
         "loype_url": loype_url or None,
@@ -95,7 +105,7 @@ def _index_html(data: dict) -> bytes:
 
 
 def _skriv_til(mål: dict, event_slug: str, video_slug: str,
-               innhold: bytes, filnavn: str, data: dict) -> None:
+               filer: "list[tuple[str, bytes]]", data: dict) -> None:
     """Skriv assets (ved behov) + videofilene til ETT konkret mål."""
     skriver = publisering.lag_skriver(mål)
     try:
@@ -106,7 +116,8 @@ def _skriv_til(mål: dict, event_slug: str, video_slug: str,
 
         mappe = "{}/{}".format(event_slug, video_slug)
         skriver.skriv("{}/index.html".format(mappe), _index_html(data))
-        skriver.skriv("{}/{}".format(mappe, filnavn), innhold)
+        for filnavn, innhold in filer:
+            skriver.skriv("{}/{}".format(mappe, filnavn), innhold)
     finally:
         skriver.lukk()
 
@@ -144,19 +155,35 @@ def publiser_video(målnavn: str, event_slug: str, video_slug: str, video_id: st
     video = video_lagring.hent(video_id)
     if not video:
         raise ValueError("Fant ingen video med id {}".format(video_id))
-    sti = video_lagring.sti_for(video_id)
-    innhold = sti.read_bytes()
 
-    # Filnavnet på nett holdes fast og enkelt, uavhengig av visningsnavnet
-    filnavn = "flyover{}".format(sti.suffix)
+    # Alle oppløsningene legges ut, største først. Filnavnene på nett
+    # holdes faste og enkle, uavhengig av visningsnavnet.
+    filer = []
+    varianter = []
+    for var in sorted(video_lagring.varianter_for(video),
+                      key=lambda v: -(v.get("bredde") or 0)):
+        sti = video_lagring.sti_for(video_id, var.get("merke"))
+        innhold = sti.read_bytes()
+        merke = var.get("merke") or "full"
+        filnavn = "flyover{}{}".format(
+            "" if merke == "full" else "-" + merke, sti.suffix)
+        filer.append((filnavn, innhold))
+        varianter.append({
+            "fil": filnavn,
+            "mime": var.get("mime") or "video/mp4",
+            "bredde": var.get("bredde"),
+            "hoyde": var.get("hoyde"),
+            "storrelse": len(innhold),
+        })
+
     data = bygg_video_data(
-        video, filnavn, tittel, beskrivelse, standard_sprak, oversettelser,
+        video, varianter, tittel, beskrivelse, standard_sprak, oversettelser,
         loype_url="../", link=link,
     )
 
     res = publisering.kjør_publisering(
         målnavn,
-        lambda mål: _skriv_til(mål, event_slug, video_slug, innhold, filnavn, data),
+        lambda mål: _skriv_til(mål, event_slug, video_slug, filer, data),
     )
     return _resultat(res["base_mål"], event_slug, video_slug,
                      data["navn"], res["advarsel"], standard_sprak or "no")

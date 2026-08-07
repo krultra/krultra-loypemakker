@@ -118,11 +118,70 @@ publiserte løyper får knappen når de republiseres.
 
 ## Video av flyoveren
 
-**⏺ Ta opp** nede i flyoveren spoler til start og bygger en videofil av
-hele gjennomkjøringen. Kamerabevegelsene du gjør underveis blir med, og
-det samme gjør pauser du selv tar. Når du når mål er fila ferdig, og en
-dialog viser videoen med lengde, oppløsning og størrelse — klar til
-**nedlasting** eller **lagring i KUL**.
+**⏺ Ta opp** nede i flyoveren åpner **opptaksmanuset** — panelet der du
+bestemmer hvordan videoen skal bli. Derfra starter du opptaket, som spoler
+til start og bygger en videofil av hele gjennomkjøringen. Når manuset er
+kjørt ferdig, viser en dialog videoen med lengde, filer og størrelse —
+klar til **nedlasting** eller **lagring i KUL**.
+
+### Opptaksmanuset
+
+Panelet (også tilgjengelig med **⚙ Manus** i topplinja) har fire faner:
+
+- **Kamera** — velg steder i løypa og sett kameravinkel, retning, zoom og
+  fart for hvert av dem. Mellom punktene glir kameraet og farten mykt
+  over. Still kameraet slik du vil ha det på kartet og trykk **＋ Legg til
+  her**, så fanges stillingen. Fart 0 gir full stopp med den varigheten du
+  velger. Punktene vises som nummererte merker på kartet — klikk for å
+  redigere, dra for å flytte. Øverst velger du også hvor mye terrenget får
+  overstyre kameravinkelen: flyoveren hever normalt kameraet (ved å senke
+  vinkelen) når bakken eller en kolle er i veien, og det kan dempe en bratt
+  vinkel du har bedt om.
+- **Sjekkpunkter** — for hvert punkt: om markøren skal vises (og hvor langt
+  unna den toner inn), om kameraet skal ta en 360, og om vi skal stoppe og
+  vise detaljkortet. Punkter du skjuler hoppes helt over.
+- **Start & slutt** — plakat med løypenavn, egen undertekst og
+  lengde/høydemeter; ventetid før løypa starter eller etter mål; og et
+  oversiktsbilde av hele traseen.
+- **Språk & video** — norsk, engelsk eller begge, og oppløsning/nettversjon
+  (se under).
+
+**▶ Forhåndsvis** kjører manuset i sanntid uten å lage video, så du ser
+hva du får før du bruker tid på opptaket — mellomrom pauser, framgangslinja
+og piltastene spoler, ↺ starter forfra og Esc avslutter. **Lagre manus** lagrer det
+sammen med løypa, så du kan justere en detalj og ta opp på nytt. (Krever
+at løypa er lagret som segment — et nylig innlastet GPX-spor har ingen id
+å henge manuset på.)
+
+Uten kamerapunkter oppfører opptaket seg som før: dronen følger løperen
+med de innstillingene du har på skjermen.
+
+Full beskrivelse i [versjon 4.1.0](versjon-4.1.0.md).
+
+### Størrelse på videofila
+
+Videoen kan ikke bli skarpere enn kartflaten den spilles inn fra. Vil du
+ha full HD, må vinduet være minst **1920 piksler bredt** når du starter
+opptaket — gjør det gjerne større, eller trykk **F11** for full skjerm.
+Fanen **Språk & video** i manuset viser hvor mange piksler flaten faktisk
+er, og advarer hvis den er for liten.
+
+I tillegg til hovedfila lages en lettere **nettversjon** (standard
+1280 px) i samme opptak. Grunnen er at en vanlig MP4 ikke tilpasser seg
+avspilleren: uten nettversjonen ville en video i en liten ramme på mobil
+lastet ned hele 1080p-fila. Ved publisering legges begge ut, og videosida
+henter den minste som er stor nok for skjermen.
+
+### Språk
+
+Øverst i fanen **Språk & video** krysser du av for norsk, engelsk eller
+begge. Velger du begge, spilles de inn samtidig — kartet tegnes bare én
+gang, og teksten legges på i begge språk. Du får da to videoer i
+biblioteket, én per språk, som publiseres hver for seg.
+
+Den engelske teksten hentes fra oversettelsene på interessepunktene, fra de
+engelske plakatfeltene under «Start & slutt», og fra faste ord som
+oversettes av seg selv. Mangler en oversettelse, brukes den norske teksten.
 
 Videoen bygges **bilde for bilde**, ikke som et skjermopptak. For hvert
 bilde venter KUL til kartet er ferdig tegnet med alle fliser på plass, og
@@ -136,7 +195,9 @@ maskinen bruker lang tid på et enkelt bilde. To praktiske følger:
   tilbake. Fila blir nøyaktig den samme.
 
 Videoene havner i **videobiblioteket** i venstre kolonne, der de kan
-spilles av, døpes om, slettes og publiseres.
+spilles av (**▶**, åpner i egen fane), lastes ned (**⤓**), døpes om,
+slettes og publiseres. Raden viser lengde, oppløsning, størrelse og
+hvilke utgaver som finnes.
 
 ### Publisere en video
 

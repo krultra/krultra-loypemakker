@@ -24,7 +24,7 @@
 // å virke (dvs. alt som rører backend/), og ellers ved merkbare endringer.
 // Da kan man se på skjermen om omstarten faktisk tok — hold det i takt med
 // BACKEND_VERSJON i backend/routes.py.
-const APP_VERSJON = '4.0.0';
+const APP_VERSJON = '4.1.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -3453,6 +3453,13 @@ function videoVarighet(sek) {
   return m + ':' + (r < 10 ? '0' : '') + r;
 }
 
+/** «+ nettversjon 1280», når opptaket også ga en lettere fil. */
+function videoVarianter(v) {
+  const ekstra = (v.varianter || []).filter((x) => x.merke !== 'full');
+  if (!ekstra.length) return null;
+  return '+ ' + ekstra.map((x) => 'nettversjon ' + (x.bredde || '?')).join(', ');
+}
+
 function tegnVideobibliotek() {
   const liste = document.getElementById('video-sidebar-list');
   const tom = document.getElementById('video-lib-empty');
@@ -3468,22 +3475,35 @@ function tegnVideobibliotek() {
   for (const v of videoBibliotek) {
     const rad = document.createElement('div');
     rad.className = 'wpt-lib-item';
-    const fakta = [videoVarighet(v.varighet), videoStørrelse(v.storrelse),
-      v.loype].filter(Boolean).join(' · ');
+    const fakta = [
+      videoVarighet(v.varighet),
+      v.bredde ? v.bredde + '×' + v.hoyde : null,
+      videoStørrelse(v.storrelse),
+      videoVarianter(v),
+      v.sprak && v.sprak !== 'no' ? v.sprak.toUpperCase() : null,
+      v.loype,
+    ].filter(Boolean).join(' · ');
     rad.innerHTML =
       '<div class="wpt-lib-tekst">' +
         '<span class="wpt-lib-navn"></span>' +
         '<span class="wpt-lib-meta"></span>' +
       '</div>' +
       '<div class="wpt-lib-knapper">' +
-        '<a class="btn btn-small" target="_blank" rel="noopener" title="Spill av videoen i egen fane">▶</a>' +
+        '<a class="btn btn-small" data-h="spill" target="_blank" rel="noopener" ' +
+          'title="Spill av videoen i egen fane">▶</a>' +
+        '<a class="btn btn-small" data-h="last" target="_blank" rel="noopener" ' +
+          'title="Last ned videofila">⤓</a>' +
         '<button class="btn btn-small" data-h="publiser" title="Publiser videoen på nett">Publiser</button>' +
         '<button class="btn btn-small" data-h="navn" title="Gi videoen et nytt navn">Endre</button>' +
         '<button class="btn btn-small btn-danger-subtle" data-h="slett" title="Slett videoen">Slett</button>' +
       '</div>';
     rad.querySelector('.wpt-lib-navn').textContent = v.navn;
     rad.querySelector('.wpt-lib-meta').textContent = fakta;
-    rad.querySelector('a').href = '/api/videos/' + v.id + '/fil';
+    // «Spill av» ber serveren sende fila inline; uten det setter
+    // FileResponse Content-Disposition: attachment, og videoen havner i
+    // nedlastingsmappa i stedet for i en avspiller.
+    rad.querySelector('[data-h="spill"]').href = '/api/videos/' + v.id + '/fil?inline=1';
+    rad.querySelector('[data-h="last"]').href = '/api/videos/' + v.id + '/fil';
     rad.querySelector('[data-h="publiser"]').addEventListener(
       'click', () => åpneVideoPublisering(v));
     rad.querySelector('[data-h="navn"]').addEventListener(
@@ -4477,41 +4497,99 @@ function åpneFlybyEditor() {
       Object.assign({}, w, { idx: nærmesteSporIndeks(w) }));
   }
 
-  KULFlyby.åpne({
-    punkter,
-    avstander: kilde.avstander,
-    oppAkk,
-    nedAkk,
-    veipunkter,
-    stil: { rutefarge: kartEksport.farge, tykkelse: kartEksport.tykkelse },
-    navn: kilde.navn || 'Løype',
-    lang: 'no',
-    lagreVideo: lagreFlyoverVideo,
+  // Opptaksmanuset hører til løypa. Er sporet lagret som et segment,
+  // ligger manuset på serveren; ellers finnes det ikke noe stabilt sted
+  // å henge det på, og flyoveren starter med standardinnstillingene.
+  const segmentId = (editorState.kilde && editorState.kilde.type === 'segment' &&
+    punkter === editorState.punkter) ? editorState.kilde.id : null;
+
+  hentFlyoverManus(segmentId).then((manus) => {
+    KULFlyby.åpne({
+      punkter,
+      avstander: kilde.avstander,
+      oppAkk,
+      nedAkk,
+      veipunkter,
+      stil: { rutefarge: kartEksport.farge, tykkelse: kartEksport.tykkelse },
+      navn: kilde.navn || 'Løype',
+      lang: 'no',
+      manus,
+      lagreVideo: lagreFlyoverVideo,
+      lagreManus: segmentId
+        ? (m) => lagreFlyoverManus(segmentId, m)
+        : null,
+    });
   });
 }
 
-/** Legg en ferdig innspilt flyover-video i KUL sitt videobibliotek. */
-async function lagreFlyoverVideo(res, navn) {
-  const skjema = new FormData();
-  // Filnavnet her betyr lite — serveren gir videoen sin egen id — men
-  // endelsen må stemme med formatet nettleseren spilte inn i.
-  skjema.append('file', res.blob, 'flyover.' + res.endelse);
-  skjema.append('navn', navn);
-  skjema.append('varighet', String(Math.round(res.varighet * 10) / 10));
-  skjema.append('bredde', String(res.bredde));
-  skjema.append('hoyde', String(res.høyde));
-  const kilde = profilKilde();
-  if (kilde && kilde.navn) skjema.append('loype', kilde.navn);
-
-  const svar = await fetch('/api/videos', { method: 'POST', body: skjema });
-  if (!svar.ok) {
-    const feil = await svar.json().catch(() => ({}));
-    throw new Error(feil.detail || ('HTTP ' + svar.status));
+/** Hent opptaksmanuset for et segment. Feiler stille — manus er valgfritt. */
+async function hentFlyoverManus(segmentId) {
+  if (!segmentId) return null;
+  try {
+    const res = await api('/api/segments/' + segmentId + '/manus');
+    return (await res.json()).manus || null;
+  } catch (feil) {
+    return null;
   }
-  const video = await svar.json();
-  toast('Videoen «' + video.navn + '» er lagret i KUL.', 'success');
-  oppdaterVideobibliotek();   // vis den med én gang i biblioteket
-  return video;
+}
+
+async function lagreFlyoverManus(segmentId, manus) {
+  await api('/api/segments/' + segmentId + '/manus', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ manus }),
+  });
+}
+
+/**
+ * Legg de ferdig innspilte flyover-videoene i KUL sitt videobibliotek.
+ *
+ * Ett opptak kan gi flere filer. De som bare skiller seg i OPPLØSNING
+ * er samme video og lagres som varianter av én oppføring; ulike SPRÅK
+ * er derimot ulike videoer, og får hver sin oppføring (og hver sin
+ * publisering senere).
+ */
+async function lagreFlyoverVideo(liste, navn) {
+  const perSpråk = new Map();
+  for (const res of liste) {
+    const språk = (res.nøkkel && res.nøkkel.lang) || 'no';
+    if (!perSpråk.has(språk)) perSpråk.set(språk, []);
+    perSpråk.get(språk).push(res);
+  }
+
+  const lagrede = [];
+  for (const [språk, filer] of perSpråk) {
+    // Størst først: hovedvarianten er den fulle oppløsningen
+    filer.sort((a, b) => b.bredde - a.bredde);
+    const skjema = new FormData();
+    const varianter = [];
+    for (const f of filer) {
+      const merke = (f.nøkkel && f.nøkkel.merke) || 'full';
+      // Filnavnet her betyr lite — serveren gir videoen sin egen id — men
+      // endelsen må stemme med formatet nettleseren spilte inn i.
+      skjema.append('files', f.blob, 'flyover-' + merke + '.' + f.endelse);
+      varianter.push({ merke, bredde: f.bredde, hoyde: f.høyde });
+    }
+    skjema.append('varianter', JSON.stringify(varianter));
+    skjema.append('navn', perSpråk.size > 1 ? navn + ' (' + språk.toUpperCase() + ')' : navn);
+    skjema.append('varighet', String(Math.round(filer[0].varighet * 10) / 10));
+    skjema.append('sprak', språk);
+    const kilde = profilKilde();
+    if (kilde && kilde.navn) skjema.append('loype', kilde.navn);
+
+    const svar = await fetch('/api/videos', { method: 'POST', body: skjema });
+    if (!svar.ok) {
+      const feil = await svar.json().catch(() => ({}));
+      throw new Error(feil.detail || ('HTTP ' + svar.status));
+    }
+    lagrede.push(await svar.json());
+  }
+
+  toast(lagrede.length === 1
+    ? 'Videoen «' + lagrede[0].navn + '» er lagret i KUL.'
+    : lagrede.length + ' videoer er lagret i KUL.', 'success');
+  oppdaterVideobibliotek();   // vis dem med én gang i biblioteket
+  return lagrede;
 }
 
 document.getElementById('btn-flyby').addEventListener('click', åpneFlybyEditor);
@@ -4757,7 +4835,7 @@ oppdaterVideobibliotek();   // feiler stille på eldre server uten videostøtte
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 39;
+const FORVENTET_BACKEND = 40;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

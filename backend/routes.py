@@ -5,9 +5,11 @@ det meste automatisk), kalle riktig funksjon i modulene ved siden av,
 og oversette Python-feil til fornuftige HTTP-svar (400/404) med
 forståelige norske feilmeldinger.
 """
+import json
 import re
 import urllib.parse
 from pathlib import Path
+from typing import List
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response
@@ -18,6 +20,7 @@ from . import (
     elevation,
     gpx_io,
     kontaktbibliotek,
+    manus_lagring,
     publisering,
     punktbibliotek,
     segment_ops,
@@ -62,7 +65,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 39
+BACKEND_VERSJON = 40
 
 
 @router.get("/health")
@@ -218,6 +221,24 @@ def oppdater_segment_waypoints(segment_id: str, req: UpdateWaypointsRequest):
         raise HTTPException(status_code=404, detail="Fant ikke segmentet")
 
 
+@router.get("/segments/{segment_id}/manus")
+def hent_manus(segment_id: str):
+    """Opptaksmanuset for en løype (null hvis det ikke er satt opp ennå)."""
+    try:
+        return {"manus": manus_lagring.les(segment_id)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.put("/segments/{segment_id}/manus")
+def lagre_manus(segment_id: str, req: dict):
+    """Lagre opptaksmanuset for en løype."""
+    try:
+        return {"manus": manus_lagring.skriv(segment_id, req.get("manus") or {})}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
 @router.delete("/segments/{segment_id}", status_code=204)
 def slett_segment(segment_id: str):
     """Slett et lagret segment fra biblioteket."""
@@ -225,6 +246,11 @@ def slett_segment(segment_id: str):
         storage.delete_segment(segment_id)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Fant ikke segmentet")
+    # Manuset hører til løypa og skal ikke bli liggende igjen
+    try:
+        manus_lagring.slett(segment_id)
+    except ValueError:
+        pass
 
 
 @router.post("/segments/merge", response_model=MergeResponse)
@@ -572,33 +598,70 @@ def liste_videoer():
 
 @router.post("/videos", status_code=201)
 async def lagre_video(
-    file: UploadFile = File(...),
+    files: List[UploadFile] = File(...),
     navn: str = Form(...),
     loype: str = Form(None),
     varighet: float = Form(None),
-    bredde: int = Form(None),
-    hoyde: int = Form(None),
+    sprak: str = Form(None),
+    varianter: str = Form(None),
 ):
-    innhold = await file.read()
+    """Ta imot ett opptak — én eller flere varianter av samme video.
+
+    Ett opptak kan gi flere filer: en full og en lettere nettversjon av
+    nøyaktig samme bilder. `varianter` er en JSON-liste som beskriver
+    filene i samme rekkefølge som de er lastet opp:
+        [{"merke": "full", "bredde": 1920, "hoyde": 1080}, ...]
+    """
+    try:
+        beskrivelser = json.loads(varianter) if varianter else []
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Ugyldig variantbeskrivelse")
+    if not isinstance(beskrivelser, list):
+        beskrivelser = []
+
+    samlet = []
+    for i, opplastet in enumerate(files):
+        b = beskrivelser[i] if i < len(beskrivelser) else {}
+        samlet.append({
+            "innhold": await opplastet.read(),
+            "mime": opplastet.content_type or "",
+            "merke": (b.get("merke") if isinstance(b, dict) else None) or
+                     ("full" if i == 0 else "v{}".format(i)),
+            "bredde": b.get("bredde") if isinstance(b, dict) else None,
+            "hoyde": b.get("hoyde") if isinstance(b, dict) else None,
+        })
     try:
         return video_lagring.lagre(
-            innhold, file.content_type or "", navn,
-            loype=loype, varighet=varighet, bredde=bredde, hoyde=hoyde,
+            samlet, navn, loype=loype, varighet=varighet, sprak=sprak,
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.get("/videos/{video_id}/fil")
-def hent_videofil(video_id: str):
-    """Selve videofila — brukes til avspilling og nedlasting i verktøyet."""
+def hent_videofil(video_id: str, variant: str = None, inline: int = 0):
+    """Selve videofila.
+
+    `variant` velger oppløsning («full» / «web»); ukjent verdi gir
+    hovedfila. `inline=1` ber nettleseren SPILLE AV fila i fanen i stedet
+    for å laste den ned — uten det setter FileResponse
+    Content-Disposition: attachment, og da havner videoen i
+    nedlastingsmappa i stedet for i en avspiller.
+    """
     try:
-        sti = video_lagring.sti_for(video_id)
+        sti = video_lagring.sti_for(video_id, variant)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
     v = video_lagring.hent(video_id)
+    var = video_lagring.variant(video_id, variant)
+    if inline:
+        return FileResponse(
+            sti, media_type=var.get("mime") or v.get("mime") or "video/mp4",
+            filename="{}.{}".format(v["navn"], sti.suffix.lstrip(".")),
+            content_disposition_type="inline",
+        )
     return FileResponse(
-        sti, media_type=v.get("mime") or "application/octet-stream",
+        sti, media_type=var.get("mime") or v.get("mime") or "application/octet-stream",
         filename="{}.{}".format(v["navn"], sti.suffix.lstrip(".")),
     )
 

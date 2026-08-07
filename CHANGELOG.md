@@ -17,6 +17,68 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 4.1.0 — 7. august 2026
+
+**Opptaksmanus** — du regisserer videoen på forhånd i stedet for å styre
+kameraet mens det spilles inn. Detaljer i
+[docs/versjon-4.1.0.md](docs/versjon-4.1.0.md).
+
+- **Nytt panel «⚙ Manus»** i flyoveren, som også dukker opp når du trykker
+  «⏺ Ta opp» — da får du sett over innstillingene før opptaket starter.
+  Manuset lagres sammen med løypa, så det kan justeres og gjenbrukes.
+- **Kamerapunkter:** velg steder i løypa og sett kameravinkel, retning
+  (følg løypa, eller en fast himmelretning), zoom og fart (0–8×) for hvert
+  av dem. Mellom punktene glir kameraet **og farten** mykt over. Overgangen
+  kan måles i rolighet, sekunder eller kilometer, og legges før punktet,
+  midt over det eller etter det. Vil to overganger bruke samme strekk,
+  deles det på midten, så begge beholder en overgang. Under hvert punkt
+  står det hva overgangen faktisk ble — i km og sekunder.
+  - **Punktene vises på kartet** som nummererte merker mens manuspanelet
+    er åpent: klikk for å redigere, dra for å flytte (punktet festes til
+    nærmeste sted på traseen). I panelet ligger de på en tidslinje og i en
+    liste der bare det valgte punktet er utfoldet.
+  - **Fart 0 = full stopp** med valgt varighet, med myk innbremsing inn.
+  - **Zoom helt ut til landsdelsnivå** (nedre grense senket fra 11 til 3), så
+    en video kan begynne med oversikten og zoome inn på løypa.
+  - **«Hent stillingen»:** dra kameraet dit du vil ha det og lagre det som et
+    kamerapunkt med ett klikk.
+- **Sjekkpunktvisning per punkt:** om markøren skal vises i det hele tatt,
+  hvor langt unna den dukker opp og hvor den er helt tydelig (gradvis
+  inntoning), om kameraet skal ta en 360 (med egen vinkel og rundetid), og
+  om vi skal stoppe og vise detaljkortet (1–15 sekunder). Punkter du skjuler
+  teller heller ikke som «neste punkt».
+- **Start- og sluttvisning:** plakat med løypenavn, egen undertekst og
+  lengde/høydemeter — halvgjennomsiktig, så løypa synes bak. Tittelen
+  fylles ut med løypenavnet, og sluttplakaten kan kopiere alt fra
+  startplakaten. I tillegg ventetid før løypa starter / etter mål, og et
+  oversiktsbilde av hele traseen med en rolig bevegelse.
+- **Terrenghensyn per manus:** kameraet heves ved å senke vinkelen, så en
+  bratt vinkel du ber om kan bli dempet i kupert terreng. Nå velger du selv
+  mellom «Hold løperen synlig», «Bare unngå bakken» og «Følg vinkelen
+  nøyaktig».
+- **Forhåndsvisning:** kjør manuset i sanntid uten å kode video, så du ser
+  hva du får før du bruker tid på opptaket. Mellomrom (eller klikk på
+  kartet) pauser til et fryst bilde, framgangslinja og piltastene spoler
+  fritt fram og tilbake, ↺ starter forfra, og Esc avslutter og legger alt
+  tilbake slik det var.
+- **Norsk og engelsk i samme opptak:** kartbildet tegnes én gang og teksten
+  legges på i begge språk, så du får to ferdige videoer i én runde. Mangler
+  en engelsk tekst, brukes den norske.
+
+**Videostørrelse**
+
+- **Anbefaling om vindusstørrelse:** panelet viser hvor mange piksler
+  kartflaten faktisk er, og advarer når den er under 1920 px bred — videoen
+  kan ikke bli skarpere enn flaten den spilles inn fra.
+- **Lettere nettversjon i samme opptak:** i tillegg til hovedfila lages en
+  nedskalert utgave (standard 1280 px). Ved publisering legges begge ut, og
+  videosiden henter den minste som er stor nok for skjermen. En vanlig MP4
+  tilpasser seg *ikke* avspilleren, så uten dette lastet en liten iframe på
+  mobil ned hele 1080p-fila.
+- **Videobiblioteket** viser oppløsning og hvilke utgaver som finnes, og har
+  nå både **▶** (spill av i egen fane) og **⤓** (last ned fila). Tidligere
+  lastet ▶-knappen ned videoen i stedet for å spille den av.
+
 ## 4.0.0 — 6. august 2026
 
 **Flyover og video** — to store nye funksjoner. Detaljer i

@@ -87,10 +87,41 @@ var beskr = lok('beskrivelse');
 var beskrEl = document.getElementById('beskrivelse');
 if (beskr) beskrEl.textContent = beskr; else beskrEl.remove();
 
+/**
+ * Velg hvilken oppløsning som skal hentes.
+ *
+ * En vanlig MP4 tilpasser seg IKKE avspilleren: er fila 1080p, lastes
+ * hele 1080p-fila ned selv om videoen vises i en liten iframe på en
+ * mobil. Ved publisering legges derfor flere utgaver av samme opptak ut,
+ * og her velges den minste som er stor nok for skjermen — regnet i
+ * FAKTISKE piksler (CSS-bredde × pikselforhold), for det er dét som
+ * avgjør om bildet ser skarpt ut.
+ *
+ * Valget tas før src settes, så det blir aldri to nedlastinger.
+ */
+function velgVariant() {
+  var liste = Array.isArray(data.varianter) ? data.varianter.slice() : [];
+  if (!liste.length) {
+    return { fil: data.fil, mime: data.mime, bredde: data.bredde, hoyde: data.hoyde };
+  }
+  liste.sort(function (a, b) { return (a.bredde || 0) - (b.bredde || 0); });
+  var behov = Math.round(
+    (window.innerWidth || 1280) * (window.devicePixelRatio || 1));
+  for (var i = 0; i < liste.length; i++) {
+    // 10 % slingringsmonn: en 1280-fil på en 1366 px bred flate ser fin
+    // ut, og er langt billigere enn å hente 1920.
+    if ((liste[i].bredde || 0) >= behov * 0.9) return liste[i];
+  }
+  return liste[liste.length - 1];
+}
+
 // ---- Selve videoen ----
 var spiller = document.getElementById('spiller');
-spiller.src = data.fil || '';
-if (data.mime) spiller.setAttribute('type', data.mime);
+var valgt = velgVariant();
+spiller.src = valgt.fil || data.fil || '';
+if (valgt.mime || data.mime) spiller.setAttribute('type', valgt.mime || data.mime);
+// Sideforholdet tas fra HOVEDvarianten: alle utgavene har samme
+// sideforhold, og da står plassen riktig uansett hvilken som ble valgt.
 if (data.bredde && data.hoyde) {
   // Riktig sideforhold fra første stund, så sida ikke hopper når
   // videoen er ferdig lastet

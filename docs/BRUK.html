@@ -196,11 +196,60 @@ Kartverkets.</p>
 <strong>«▶ Flyover»</strong>, slik at deltakerne kan fly gjennom løypa selv. Allerede
 publiserte løyper får knappen når de republiseres.</p>
 <h2 id="video-av-flyoveren">Video av flyoveren</h2>
-<p><strong>⏺ Ta opp</strong> nede i flyoveren spoler til start og bygger en videofil av
-hele gjennomkjøringen. Kamerabevegelsene du gjør underveis blir med, og
-det samme gjør pauser du selv tar. Når du når mål er fila ferdig, og en
-dialog viser videoen med lengde, oppløsning og størrelse — klar til
-<strong>nedlasting</strong> eller <strong>lagring i KUL</strong>.</p>
+<p><strong>⏺ Ta opp</strong> nede i flyoveren åpner <strong>opptaksmanuset</strong> — panelet der du
+bestemmer hvordan videoen skal bli. Derfra starter du opptaket, som spoler
+til start og bygger en videofil av hele gjennomkjøringen. Når manuset er
+kjørt ferdig, viser en dialog videoen med lengde, filer og størrelse —
+klar til <strong>nedlasting</strong> eller <strong>lagring i KUL</strong>.</p>
+<h3 id="opptaksmanuset">Opptaksmanuset</h3>
+<p>Panelet (også tilgjengelig med <strong>⚙ Manus</strong> i topplinja) har fire faner:</p>
+<ul>
+<li><strong>Kamera</strong> — velg steder i løypa og sett kameravinkel, retning, zoom og
+  fart for hvert av dem. Mellom punktene glir kameraet og farten mykt
+  over. Still kameraet slik du vil ha det på kartet og trykk <strong>＋ Legg til
+  her</strong>, så fanges stillingen. Fart 0 gir full stopp med den varigheten du
+  velger. Punktene vises som nummererte merker på kartet — klikk for å
+  redigere, dra for å flytte. Øverst velger du også hvor mye terrenget får
+  overstyre kameravinkelen: flyoveren hever normalt kameraet (ved å senke
+  vinkelen) når bakken eller en kolle er i veien, og det kan dempe en bratt
+  vinkel du har bedt om.</li>
+<li><strong>Sjekkpunkter</strong> — for hvert punkt: om markøren skal vises (og hvor langt
+  unna den toner inn), om kameraet skal ta en 360, og om vi skal stoppe og
+  vise detaljkortet. Punkter du skjuler hoppes helt over.</li>
+<li><strong>Start &amp; slutt</strong> — plakat med løypenavn, egen undertekst og
+  lengde/høydemeter; ventetid før løypa starter eller etter mål; og et
+  oversiktsbilde av hele traseen.</li>
+<li><strong>Språk &amp; video</strong> — norsk, engelsk eller begge, og oppløsning/nettversjon
+  (se under).</li>
+</ul>
+<p><strong>▶ Forhåndsvis</strong> kjører manuset i sanntid uten å lage video, så du ser
+hva du får før du bruker tid på opptaket — mellomrom pauser, framgangslinja
+og piltastene spoler, ↺ starter forfra og Esc avslutter. <strong>Lagre manus</strong> lagrer det
+sammen med løypa, så du kan justere en detalj og ta opp på nytt. (Krever
+at løypa er lagret som segment — et nylig innlastet GPX-spor har ingen id
+å henge manuset på.)</p>
+<p>Uten kamerapunkter oppfører opptaket seg som før: dronen følger løperen
+med de innstillingene du har på skjermen.</p>
+<p>Full beskrivelse i <a href="versjon-4.1.0.html">versjon 4.1.0</a>.</p>
+<h3 id="strrelse-pa-videofila">Størrelse på videofila</h3>
+<p>Videoen kan ikke bli skarpere enn kartflaten den spilles inn fra. Vil du
+ha full HD, må vinduet være minst <strong>1920 piksler bredt</strong> når du starter
+opptaket — gjør det gjerne større, eller trykk <strong>F11</strong> for full skjerm.
+Fanen <strong>Språk &amp; video</strong> i manuset viser hvor mange piksler flaten faktisk
+er, og advarer hvis den er for liten.</p>
+<p>I tillegg til hovedfila lages en lettere <strong>nettversjon</strong> (standard
+1280 px) i samme opptak. Grunnen er at en vanlig MP4 ikke tilpasser seg
+avspilleren: uten nettversjonen ville en video i en liten ramme på mobil
+lastet ned hele 1080p-fila. Ved publisering legges begge ut, og videosida
+henter den minste som er stor nok for skjermen.</p>
+<h3 id="sprak">Språk</h3>
+<p>Øverst i fanen <strong>Språk &amp; video</strong> krysser du av for norsk, engelsk eller
+begge. Velger du begge, spilles de inn samtidig — kartet tegnes bare én
+gang, og teksten legges på i begge språk. Du får da to videoer i
+biblioteket, én per språk, som publiseres hver for seg.</p>
+<p>Den engelske teksten hentes fra oversettelsene på interessepunktene, fra de
+engelske plakatfeltene under «Start &amp; slutt», og fra faste ord som
+oversettes av seg selv. Mangler en oversettelse, brukes den norske teksten.</p>
 <p>Videoen bygges <strong>bilde for bilde</strong>, ikke som et skjermopptak. For hvert
 bilde venter KUL til kartet er ferdig tegnet med alle fliser på plass, og
 gir bildet et eksakt tidsstempel. Det er derfor videoen blir jevn selv om
@@ -213,7 +262,9 @@ maskinen bruker lang tid på et enkelt bilde. To praktiske følger:</p>
   tilbake. Fila blir nøyaktig den samme.</li>
 </ul>
 <p>Videoene havner i <strong>videobiblioteket</strong> i venstre kolonne, der de kan
-spilles av, døpes om, slettes og publiseres.</p>
+spilles av (<strong>▶</strong>, åpner i egen fane), lastes ned (<strong>⤓</strong>), døpes om,
+slettes og publiseres. Raden viser lengde, oppløsning, størrelse og
+hvilke utgaver som finnes.</p>
 <h3 id="publisere-en-video">Publisere en video</h3>
 <p><strong>«Publiser»</strong> i videobiblioteket legger videoen ut som en egen liten side
 under løypa, f.eks. <code>loyper.krultra.no/mmc-100m/video/</code>. Sida har tittel,

@@ -105,6 +105,67 @@ for hver versjon ligger i <a href="docs/"><code>docs/</code></a>.</p>
 </ul>
 <p>Versjonene før 2.0.0 (under <strong>Utviklingshistorikk</strong> nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.</p>
+<h2 id="410-7-august-2026">4.1.0 — 7. august 2026</h2>
+<p><strong>Opptaksmanus</strong> — du regisserer videoen på forhånd i stedet for å styre
+kameraet mens det spilles inn. Detaljer i
+<a href="docs/versjon-4.1.0.html">docs/versjon-4.1.0.md</a>.</p>
+<ul>
+<li><strong>Nytt panel «⚙ Manus»</strong> i flyoveren, som også dukker opp når du trykker
+  «⏺ Ta opp» — da får du sett over innstillingene før opptaket starter.
+  Manuset lagres sammen med løypa, så det kan justeres og gjenbrukes.</li>
+<li><strong>Kamerapunkter:</strong> velg steder i løypa og sett kameravinkel, retning
+  (følg løypa, eller en fast himmelretning), zoom og fart (0–8×) for hvert
+  av dem. Mellom punktene glir kameraet <strong>og farten</strong> mykt over. Overgangen
+  kan måles i rolighet, sekunder eller kilometer, og legges før punktet,
+  midt over det eller etter det. Vil to overganger bruke samme strekk,
+  deles det på midten, så begge beholder en overgang. Under hvert punkt
+  står det hva overgangen faktisk ble — i km og sekunder.</li>
+<li><strong>Punktene vises på kartet</strong> som nummererte merker mens manuspanelet
+    er åpent: klikk for å redigere, dra for å flytte (punktet festes til
+    nærmeste sted på traseen). I panelet ligger de på en tidslinje og i en
+    liste der bare det valgte punktet er utfoldet.</li>
+<li><strong>Fart 0 = full stopp</strong> med valgt varighet, med myk innbremsing inn.</li>
+<li><strong>Zoom helt ut til landsdelsnivå</strong> (nedre grense senket fra 11 til 3), så
+    en video kan begynne med oversikten og zoome inn på løypa.</li>
+<li><strong>«Hent stillingen»:</strong> dra kameraet dit du vil ha det og lagre det som et
+    kamerapunkt med ett klikk.</li>
+<li><strong>Sjekkpunktvisning per punkt:</strong> om markøren skal vises i det hele tatt,
+  hvor langt unna den dukker opp og hvor den er helt tydelig (gradvis
+  inntoning), om kameraet skal ta en 360 (med egen vinkel og rundetid), og
+  om vi skal stoppe og vise detaljkortet (1–15 sekunder). Punkter du skjuler
+  teller heller ikke som «neste punkt».</li>
+<li><strong>Start- og sluttvisning:</strong> plakat med løypenavn, egen undertekst og
+  lengde/høydemeter — halvgjennomsiktig, så løypa synes bak. Tittelen
+  fylles ut med løypenavnet, og sluttplakaten kan kopiere alt fra
+  startplakaten. I tillegg ventetid før løypa starter / etter mål, og et
+  oversiktsbilde av hele traseen med en rolig bevegelse.</li>
+<li><strong>Terrenghensyn per manus:</strong> kameraet heves ved å senke vinkelen, så en
+  bratt vinkel du ber om kan bli dempet i kupert terreng. Nå velger du selv
+  mellom «Hold løperen synlig», «Bare unngå bakken» og «Følg vinkelen
+  nøyaktig».</li>
+<li><strong>Forhåndsvisning:</strong> kjør manuset i sanntid uten å kode video, så du ser
+  hva du får før du bruker tid på opptaket. Mellomrom (eller klikk på
+  kartet) pauser til et fryst bilde, framgangslinja og piltastene spoler
+  fritt fram og tilbake, ↺ starter forfra, og Esc avslutter og legger alt
+  tilbake slik det var.</li>
+<li><strong>Norsk og engelsk i samme opptak:</strong> kartbildet tegnes én gang og teksten
+  legges på i begge språk, så du får to ferdige videoer i én runde. Mangler
+  en engelsk tekst, brukes den norske.</li>
+</ul>
+<p><strong>Videostørrelse</strong></p>
+<ul>
+<li><strong>Anbefaling om vindusstørrelse:</strong> panelet viser hvor mange piksler
+  kartflaten faktisk er, og advarer når den er under 1920 px bred — videoen
+  kan ikke bli skarpere enn flaten den spilles inn fra.</li>
+<li><strong>Lettere nettversjon i samme opptak:</strong> i tillegg til hovedfila lages en
+  nedskalert utgave (standard 1280 px). Ved publisering legges begge ut, og
+  videosiden henter den minste som er stor nok for skjermen. En vanlig MP4
+  tilpasser seg <em>ikke</em> avspilleren, så uten dette lastet en liten iframe på
+  mobil ned hele 1080p-fila.</li>
+<li><strong>Videobiblioteket</strong> viser oppløsning og hvilke utgaver som finnes, og har
+  nå både <strong>▶</strong> (spill av i egen fane) og <strong>⤓</strong> (last ned fila). Tidligere
+  lastet ▶-knappen ned videoen i stedet for å spille den av.</li>
+</ul>
 <h2 id="400-6-august-2026">4.0.0 — 6. august 2026</h2>
 <p><strong>Flyover og video</strong> — to store nye funksjoner. Detaljer i
 <a href="docs/versjon-4.0.0.html">docs/versjon-4.0.0.md</a>.</p>

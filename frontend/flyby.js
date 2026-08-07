@@ -88,6 +88,14 @@ var KULFlyby = (function () {
       distanseFraStart: 'Distanse fra start', fraForrige: 'Fra forrige punkt',
       hoydemeterFraStart: 'Høydemeter fra start', start: 'start',
       lukkKort: 'Lukk', klikkForMer: 'Klikk for detaljer',
+      manus: '⚙ Manus', manusTittel: 'Sett opp hvordan videoen skal spilles inn — ' +
+        'kamerapunkter, sjekkpunkter, start og slutt',
+      forhandsvis: 'Forhåndsviser manuset …', stoppForhand: '⏹ Stopp forhåndsvisning',
+      forhandsvisHjelp: 'Forhåndsviser. Mellomrom (eller klikk på kartet) ' +
+        'setter på pause, Esc stopper.',
+      kamerapunkt: 'Kamerapunkt', dragForFlytt: 'Klikk for å redigere · dra for å flytte',
+      lengde: 'Lengde', stigningFall: 'Stigning / fall',
+      filer: 'Filer', nettversjon: 'nettversjon', full: 'full',
     },
     en: {
       spill: 'Play', pause: 'Pause', omstart: 'Restart', lukk: 'Close',
@@ -116,6 +124,14 @@ var KULFlyby = (function () {
       distanseFraStart: 'Distance from start', fraForrige: 'From previous point',
       hoydemeterFraStart: 'Ascent/descent from start', start: 'start',
       lukkKort: 'Close', klikkForMer: 'Click for details',
+      manus: '⚙ Script', manusTittel: 'Set up how the video is recorded — ' +
+        'camera points, checkpoints, start and finish',
+      forhandsvis: 'Previewing the script …', stoppForhand: '⏹ Stop preview',
+      forhandsvisHjelp: 'Previewing. Space (or a click on the map) pauses, ' +
+        'Esc stops.',
+      kamerapunkt: 'Camera point', dragForFlytt: 'Click to edit · drag to move',
+      lengde: 'Length', stigningFall: 'Ascent / descent',
+      filer: 'Files', nettversjon: 'web version', full: 'full',
     },
   };
 
@@ -126,7 +142,10 @@ var KULFlyby = (function () {
   var MIN_VARIGHET = 90;     // korte løyper skal ikke suse forbi
   var MAKS_VARIGHET = 300;   // lange løyper skal ikke bli en evighet
   var START_ZOOM = 15.0;
-  var MIN_ZOOM = 11, MAKS_ZOOM = 18;
+  // Nedre grense er bevisst svært lav: et manus kan begynne med å vise
+  // hele landsdelen og zoome inn på løypa derfra. Terrengflisene finnes
+  // helt ut hit, så bildet blir ikke tomt.
+  var MIN_ZOOM = 3, MAKS_ZOOM = 18;
   var START_PITCH = 68;
   var MIN_PITCH = 15, MAKS_PITCH = 80;
   var OVERDRIVELSE = 1.3;    // terrengoverdrivelse — gir tydeligere relieff
@@ -324,7 +343,16 @@ var KULFlyby = (function () {
 
     var lang = TEKST[o.lang] ? o.lang : 'no';
     var t = function (n) { return TEKST[lang][n] || TEKST.no[n]; };
-    var lok = o.lok || function (obj, felt) { return obj ? obj[felt] : undefined; };
+    // `lok` slår opp innhold (navn, beskrivelse) i visningens språk.
+    // `lokFor` gjør det samme for et VALGT språk — det trengs når ett
+    // opptak lager både en norsk og en engelsk video av samme kartbilde.
+    o.lokFor = o.lokFor || function (l, obj, felt) {
+      if (!obj) return undefined;
+      var ov = obj.oversettelser && obj.oversettelser[l];
+      if (ov && ov[felt] != null && ov[felt] !== '') return ov[felt];
+      return obj[felt];
+    };
+    var lok = o.lok || function (obj, felt) { return o.lokFor(lang, obj, felt); };
     // Kalleren avgjør om (og hvordan) et punkt kan lenke til et arenakart
     o.arenaUrl = o.arenaUrl || function () { return null; };
 
@@ -365,6 +393,7 @@ var KULFlyby = (function () {
           '<label class="fb-bryter" title="' + escHtml(t('siktTittel')) + '">' +
             '<input type="checkbox" class="fb-sikt" checked>' +
             '<span>' + escHtml(t('sikt')) + '</span></label>' +
+          '<button type="button" class="fb-knapp fb-manus-knapp fb-skjult"></button>' +
           '<button type="button" class="fb-knapp fb-lag"></button>' +
           '<button type="button" class="fb-knapp fb-lukk" aria-label="' +
             escHtml(t('lukk')) + '" title="' + escHtml(t('lukk')) + '">✕</button>' +
@@ -373,6 +402,11 @@ var KULFlyby = (function () {
       '<div class="fb-scene">' +
         '<div class="fb-kart"></div>' +
         '<div class="fb-laster"></div>' +
+        '<div class="fb-splash fb-skjult"><div class="fb-splash-inn">' +
+          '<h2 class="fb-splash-tittel"></h2>' +
+          '<p class="fb-splash-under"></p>' +
+          '<p class="fb-splash-fakta"></p>' +
+        '</div></div>' +
         '<div class="fb-toast"></div>' +
         '<div class="fb-kort fb-skjult"></div>' +
         '<div class="fb-rec fb-skjult"><span class="fb-rec-prikk"></span>' +
@@ -428,6 +462,12 @@ var KULFlyby = (function () {
       recTid: rot.querySelector('.fb-rec-tid'),
       recStatus: rot.querySelector('.fb-rec-status'),
       video: rot.querySelector('.fb-video'),
+      manusKnapp: rot.querySelector('.fb-manus-knapp'),
+      splash: rot.querySelector('.fb-splash'),
+      splashTittel: rot.querySelector('.fb-splash-tittel'),
+      splashUnder: rot.querySelector('.fb-splash-under'),
+      splashFakta: rot.querySelector('.fb-splash-fakta'),
+      scene: rot.querySelector('.fb-scene'),
     };
     ui.laster.textContent = t('laster');
     ui.lag.textContent = t('kart');      // satellitt er standard → tilbyr «Kart»
@@ -455,6 +495,18 @@ var KULFlyby = (function () {
     var lagreVideo = o.lagreVideo || null;
     var rutefarge = stil.rutefarge || '#dc2626';
     var lokale = lang === 'en' ? 'en-GB' : 'nb-NO';
+
+    // ---- Språk i overlegget -------------------------------------------
+    // Ett opptak kan lage flere videoer av det SAMME kartbildet, med
+    // tekst på ulike språk. Derfor har alt som tegnes to innganger: én
+    // som følger visningens språk (skjermen), og én som følger språket
+    // sporet som tegnes akkurat nå skal ha. `tegneLang` settes av
+    // opptaket rett før hvert spor tegnes.
+    var tegneLang = lang;
+    function tFor(l, navn) { return (TEKST[l] && TEKST[l][navn]) || TEKST.no[navn]; }
+    function tT(navn) { return tFor(tegneLang, navn); }
+    function lokT(obj, felt) { return o.lokFor(tegneLang, obj, felt); }
+    function lokaleFor(l) { return l === 'en' ? 'en-GB' : 'nb-NO'; }
     var veipunkter = (o.veipunkter || [])
       .filter(function (w) { return w && w.idx != null; })
       .map(function (w) {
@@ -498,6 +550,21 @@ var KULFlyby = (function () {
     var kamSenter = null;      // {lng, lat} kameraet ser mot — henger etter løperen
     var kortWpt = null;        // veipunktet som vises i detaljkortet
     var kortFortsett = false;  // skal avspillingen gjenopptas når kortet lukkes?
+
+    // ---- Opptaksmanus -------------------------------------------------
+    // `manus` er brukerens innstillinger, `plan` er den kompilerte
+    // utgaven som slås opp per bilde. `eks` er selve TIDSLINJA: den
+    // finnes bare mens vi spiller inn eller forhåndsviser, og det er den
+    // som avgjør om kameraet styres av manuset eller av brukeren.
+    var manusMulig = (typeof KULManus !== 'undefined');
+    var manus = manusMulig ? KULManus.normaliser(o.manus) : null;
+    var plan = null;
+    var manusPanel = null;
+    var eks = null;
+    var oversikt = null;       // kameraet som viser hele løypa
+    var oversiktPadding = false;
+    var førManus = null;       // kamerastillingen før manuset tok over
+    var manusBearing = null;   // kurs manuset dikterer akkurat nå (grader)
 
     // Kameraet vårt: faktiske verdier glir mot «mål»-verdiene hvert bilde.
     var kam = {
@@ -822,6 +889,17 @@ var KULFlyby = (function () {
     function sjekkKlaring(p, nå) {
       if (nå - sistKlaring < KLARING_SJEKK_MS) return;
       sistKlaring = nå;
+
+      // Manuset kan slå korreksjonen HELT av. Kameravinkelen er en
+      // regi-beslutning, og en bratt vinkel du har bedt om skal ikke bli
+      // dempet i det stille av terrenget under. Da legges en eventuell
+      // korreksjon tilbake, og vinkelen blir nøyaktig den du satte.
+      var modus = (eks && plan && plan.terreng)
+        ? plan.terreng : (ui.sikt.checked ? 'sikt' : 'bakke');
+      if (modus === 'ingen') {
+        kam.korrMål = Math.max(0, kam.korrMål - KLARING_TILBAKE);
+        return;
+      }
       if (!map.getTerrain || !map.getTerrain()) return;
 
       var fc;
@@ -839,7 +917,7 @@ var KULFlyby = (function () {
         kamAlt < bakkeVedKamera + KLARING_M);
 
       // Valgfritt: er løperen gjemt bak en kolle, løfter vi oss over den
-      if (!trangt && ui.sikt && ui.sikt.checked) {
+      if (!trangt && modus === 'sikt') {
         var løperLL = { lng: p.lon, lat: p.lat };
         var løperBakke = map.queryTerrainElevation(løperLL);
         if (løperBakke != null && bakkeVedKamera != null) {
@@ -902,8 +980,10 @@ var KULFlyby = (function () {
       if (j < 0) return;
       var w = veipunkter[j];
 
-      // Billige testene først: for langt unna, eller utenfor synsfeltet
-      if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > SKILT_MAKS_KM) {
+      // Billige testene først: for langt unna, eller utenfor synsfeltet.
+      // Rekkevidden er punktets egen (manuset kan sette den per punkt),
+      // med et lite påslag så inntoningen rekker å begynne.
+      if (avstandKm(kamera, { lat: w.lat, lon: w.lon }) > cpFor(w).visKm + 1) {
         skiltSynlig[j] = false;
         return;
       }
@@ -953,7 +1033,15 @@ var KULFlyby = (function () {
       // Pause fryser ALT, også en pågående runde rundt et punkt — da
       // fortsetter runden der den slapp når man spiller av igjen.
       if (spiller && klar) stegFram(dt);
-      tegnScene(dt, nå);
+      // Under et manus skal pause være et FRYST BILDE. Kameraverdiene glir
+      // mot måltallene sine med tida, så uten et nullstilt tidssteg ville
+      // bildet fortsatt krøpet videre etter at tidslinja sto stille — det
+      // ser ut som om pausen ikke virker. Utenfor manus er det motsatt:
+      // der SKAL man kunne dra og zoome mens det står i pause.
+      tegnScene((eks && !spiller) ? 0 : dt, nå);
+      // Forhåndsvisning av et manus drives av denne løkka (opptaket har
+      // sin egen). Når tidslinja er ferdig, rydder vi opp her.
+      if (eks && eks.ferdig && !opptak) avsluttForhåndsvisning();
       rafId = requestAnimationFrame(løkke);
     }
 
@@ -963,22 +1051,8 @@ var KULFlyby = (function () {
      * klokka — det er dette som gir videoen helt jevn bildeavstand.
      */
     function stegFram(dt) {
-      if (orbit) {
-        if (orbit.venter) {
-          // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
-          orbit.ventet += dt * 1000;
-          if (map.areTilesLoaded() || orbit.ventet >= ORBIT_VENT_MS) {
-            orbit.venter = false;
-          }
-        } else {
-          orbit.tid += dt;
-          var a = begrens(orbit.tid / orbit.varighet, 0, 1);
-          // Mykt i gang og mykt ut igjen, så runden ikke rykker til
-          kam.orbitVinkel = 360 * (a * a * (3 - 2 * a));
-          if (a >= 1) avsluttOrbit();
-        }
-        return;
-      }
+      if (eks) { eksSteg(dt); return; }
+      if (orbit) { orbitSteg(dt); return; }
       s += (totalKm / varighet) * fart * dt;
       if (s >= totalKm) {
         s = totalKm;
@@ -988,11 +1062,132 @@ var KULFlyby = (function () {
       sjekkVeipunkt();
     }
 
+    /** Ett steg av runden rundt et punkt. Delt av vanlig avspilling og manus. */
+    function orbitSteg(dt) {
+      if (orbit.venter) {
+        // Stå stille til flisene rundt punktet er inne (eller vi gir opp)
+        orbit.ventet += dt * 1000;
+        if (map.areTilesLoaded() || orbit.ventet >= ORBIT_VENT_MS) {
+          orbit.venter = false;
+        }
+        return;
+      }
+      orbit.tid += dt;
+      var a = begrens(orbit.tid / orbit.varighet, 0, 1);
+      // Mykt i gang og mykt ut igjen, så runden ikke rykker til
+      kam.orbitVinkel = 360 * (a * a * (3 - 2 * a));
+      if (a >= 1) avsluttOrbit(true);
+    }
+
+    /**
+     * Ett steg på manusets tidslinje.
+     *
+     * Tidslinja har tre faser: en åpning der løypa ennå ikke har begynt,
+     * selve gjennomkjøringen, og en avslutning etter mål. Underveis kan
+     * den STÅ STILLE — under en runde rundt et punkt, mens et detaljkort
+     * vises, eller ved et kamerapunkt med fart null. Alle oppholdene
+     * teller video-tid uten å flytte løperen.
+     */
+    function eksSteg(dt) {
+      eks.t += dt;
+
+      if (orbit) { orbitSteg(dt); return; }
+
+      if (eks.fase === 'start') {
+        if (eks.t < plan.start.forsinkelse) return;
+        eks.fase = 'lop';
+      }
+
+      if (eks.fase === 'slutt') {
+        eks.sluttT += dt;
+        if (eks.sluttT >= plan.sluttVarighet()) eks.ferdig = true;
+        return;
+      }
+
+      if (eks.hold > 0) {
+        eks.hold -= dt;
+        if (eks.hold > 0) return;
+        eks.hold = 0;
+        if (eks.holdKort) { skjulKortStille(); eks.holdKort = false; }
+        if (eks.holdGulv) { eks.fartGulv = eks.holdGulv; eks.holdGulv = 0; }
+        return;
+      }
+
+      var f = (plan && plan.harKamera) ? plan.fartVed(s) : fart;
+      if (f == null) f = fart;
+      // Etter et planlagt stopp tvinger vi farten opp igjen til den
+      // interpolerte farten selv har tatt igjen gulvet. Uten det ville vi
+      // blitt stående i punktet vi nettopp forlot.
+      if (eks.fartGulv > 0) {
+        if (f >= eks.fartGulv) eks.fartGulv = 0;
+        else f = eks.fartGulv;
+      }
+
+      if (f < 0.06) {
+        var st = nesteStopp();
+        if (st) { begynnStopp(st); return; }
+        f = 0.06;                     // ingen planlagt stopp — ikke bli stående
+      }
+
+      s += (totalKm / varighet) * f * dt;
+      if (s > totalKm) s = totalKm;
+      sjekkVeipunkt();
+      if (orbit || eks.hold > 0) return;      // en hendelse tok over
+      if (s >= totalKm) { eks.fase = 'slutt'; eks.sluttT = 0; }
+    }
+
+    /** Første planlagte stoppet vi ennå ikke har tatt, ved eller foran oss. */
+    function nesteStopp() {
+      if (!plan) return null;
+      for (var i = 0; i < plan.stopp.length; i++) {
+        if (eks.stoppTatt[i]) continue;
+        if (plan.stopp[i].km >= s - 0.0005) return { i: i, st: plan.stopp[i] };
+      }
+      return null;
+    }
+
+    function begynnStopp(v) {
+      eks.stoppTatt[v.i] = true;
+      s = begrens(v.st.km, 0, totalKm);
+      sjekkVeipunkt();                       // punktet vi stoppet ved teller
+      eks.hold = Math.max(eks.hold, v.st.sek);
+      eks.holdGulv = v.st.etter;
+    }
+
+    /**
+     * Spol tidslinja til et sted i løypa.
+     *
+     * Mer enn å flytte løperen: alt som «har skjedd» må stemme med hvor vi
+     * havner. Stopp bak oss regnes som tatt (ellers ville vi stoppet der
+     * igjen på vei videre), pågående opphold avbrytes, og åpningsfasen
+     * regnes som ferdig så snart vi er forbi start.
+     */
+    function spolIEks(km) {
+      if (!eks) return;
+      if (orbit) avsluttOrbit(false);
+      skjulKortStille();
+      eks.hold = 0; eks.holdKort = false; eks.holdGulv = 0; eks.fartGulv = 0;
+      eks.fase = 'lop';
+      eks.sluttT = 0;
+      eks.ferdig = false;
+      eks.stoppTatt = {};
+      if (plan) {
+        for (var i = 0; i < plan.stopp.length; i++) {
+          if (plan.stopp[i].km < km - 0.0005) eks.stoppTatt[i] = true;
+        }
+        if (km > 0.0005) {
+          eks.t = Math.max(eks.t, plan.start.forsinkelse + 0.01);
+        }
+      }
+      spolTil(km);
+    }
+
     /** Oppdater kamera og tegn scenen slik den ser ut akkurat nå. */
     function tegnScene(dt, nå) {
       glideKamera(dt);
       sjekkKlaring(posVed(orbit ? avstander[orbit.wpt.idx] : s), nå);
       oppdaterMarkørSynlighet();
+      oppdaterSplash();
       tegn(false, dt);
     }
 
@@ -1052,14 +1247,34 @@ var KULFlyby = (function () {
 
       følgMykt(p, hopp, dt);
 
+      // Manuset overstyrer kameraet mens det spilles inn eller
+      // forhåndsvises. Verdiene settes DIREKTE (ikke bare som mål), fordi
+      // planen alt har jevnet ut overgangene sine selv — og fordi et
+      // «øyeblikkelig» klipp faktisk skal være øyeblikkelig.
+      manusBearing = null;
+      if (eks && plan && plan.harKamera) {
+        var kk = plan.kamera(km, kursNå);
+        if (kk) {
+          kam.zoom = kam.zoomMål = begrens(kk.zoom, MIN_ZOOM, MAKS_ZOOM);
+          kam.pitch = kam.pitchMål = begrens(kk.pitch, MIN_PITCH, MAKS_PITCH);
+          manusBearing = kk.bearing;
+        }
+      }
+      // Runden rundt et punkt skal treffe den vinkelen sjekkpunktet ber
+      // om, også når manuset flytter grunnvinkelen underveis.
+      if (orbit && orbit.cfg) kam.orbitPitchMål = kam.pitchMål - orbit.cfg.orbitPitch;
+
       // Bare flytt kartet når noe faktisk har endret seg — står fly-byen
       // i pause med kameraet i ro, er det ingen grunn til å tegne om.
+      var grunnKurs = (manusBearing != null)
+        ? manusBearing : ((kursNå == null ? 0 : kursNå) + kam.dreie);
       var nyKam = {
         lon: kamSenter.lng, lat: kamSenter.lat,
-        bearing: (kursNå == null ? 0 : kursNå) + kam.dreie + kam.orbitVinkel,
+        bearing: grunnKurs + kam.orbitVinkel,
         zoom: kam.zoom,
         pitch: begrens(kam.pitch - kam.korr - kam.orbitPitch, MIN_PITCH, MAKS_PITCH),
       };
+      leggPåOversikt(nyKam);
       if (hopp || !sistKamera || endret(sistKamera, nyKam)) {
         map.jumpTo({
           center: [nyKam.lon, nyKam.lat],
@@ -1103,39 +1318,245 @@ var KULFlyby = (function () {
       }
     }
 
-    function kmT(km) {
-      return (typeof fmtKm === 'function') ? fmtKm(km, lokale) : km.toFixed(2) + ' km';
+    function kmTFor(km, l) {
+      var lo = lokaleFor(l);
+      return (typeof fmtKm === 'function') ? fmtKm(km, lo) : km.toFixed(2) + ' km';
     }
+    function kmT(km) { return kmTFor(km, lang); }
+    function kmTT(km) { return kmTFor(km, tegneLang); }
 
-    // Siste avleste verdier. Holdes her fordi videoopptaket tegner den
-    // samme informasjonen på nytt inn i lerretet sitt (HTML-laget blir
-    // ikke med i et canvas-opptak).
-    var avlest = { dist: '', hoyde: '', hm: '', neste: '' };
+    // Siste avleste verdier — som RÅTALL, ikke ferdig tekst. Videoopptaket
+    // tegner den samme informasjonen på nytt inn i lerretet sitt (HTML-laget
+    // blir ikke med i et canvas-opptak), og skal den kunne komme på flere
+    // språk fra samme kartbilde, må formateringen skje ved tegning.
+    var avlest = { km: 0, høyde: null, opp: null, ned: null, neste: null, nesteKm: 0 };
 
     function oppdaterAvlesning(km, p) {
-      avlest.dist = kmT(km);
-      var h = høydeVed(p);
-      avlest.hoyde = h == null ? '–' : Math.round(h) + ' ' + t('moh');
-      var opp = akkVed(oppAkk, p), ned = akkVed(nedAkk, p);
-      avlest.hm = (opp == null) ? '–'
-        : '↑ ' + Math.round(opp) + ' · ↓ ' + Math.round(ned || 0) + ' m';
+      avlest.km = km;
+      avlest.høyde = høydeVed(p);
+      avlest.opp = akkVed(oppAkk, p);
+      avlest.ned = akkVed(nedAkk, p);
 
       var neste = null;
       for (var j = 0; j < veipunkter.length; j++) {
-        if (veipunkter[j].idx > p.idx) { neste = veipunkter[j]; break; }
+        var w = veipunkter[j];
+        if (!synligPunkt(w)) continue;
+        if (effektivIdx(w) > p.idx) { neste = w; break; }
       }
-      avlest.neste = neste
-        ? (lok(neste, 'name') || neste.name || '') +
-          ' · ' + Math.max(0, avstander[neste.idx] - km).toFixed(1) + ' km'
-        : t('mal') + ' · ' + Math.max(0, totalKm - km).toFixed(1) + ' km';
+      avlest.neste = neste;
+      avlest.nesteKm = Math.max(0, neste
+        ? avstander[effektivIdx(neste)] - km : totalKm - km);
 
-      ui.dist.textContent = avlest.dist;
-      ui.hoyde.textContent = avlest.hoyde;
-      ui.hm.textContent = avlest.hm;
-      ui.neste.textContent = avlest.neste;
+      var v = avlesning(lang);
+      ui.dist.textContent = v.dist;
+      ui.hoyde.textContent = v.hoyde;
+      ui.hm.textContent = v.hm;
+      ui.neste.textContent = v.neste;
+    }
+
+    /** Avlesningen formatert på ett bestemt språk. */
+    function avlesning(l) {
+      return {
+        dist: kmTFor(avlest.km, l),
+        hoyde: avlest.høyde == null ? '–'
+          : Math.round(avlest.høyde) + ' ' + tFor(l, 'moh'),
+        hm: avlest.opp == null ? '–'
+          : '↑ ' + Math.round(avlest.opp) + ' · ↓ ' + Math.round(avlest.ned || 0) + ' m',
+        neste: (avlest.neste
+          ? (o.lokFor(l, avlest.neste, 'name') || avlest.neste.name || '')
+          : tFor(l, 'mal')) + ' · ' + avlest.nesteKm.toFixed(1) + ' km',
+      };
     }
 
     function ferdigTekst() { ui.spill.textContent = t('omstart'); }
+
+    // ============================================================
+    // Manuset i drift: innstillinger, oversiktsbilde og plakat
+    // ============================================================
+
+    function byggPlan() {
+      if (manusMulig && manus) {
+        plan = KULManus.kompiler(manus, {
+          totalKm: totalKm,
+          varighet: varighet,
+          orbitStandard: ui.stopp.checked,
+        });
+        return;
+      }
+      // Uten manusmodulen finnes ingen innstillinger å følge. Tidslinja
+      // trenger likevel noe å slå opp i, så vi gir den en plan som sier
+      // «gjør akkurat som før»: ingen kamerastyring, ingen plakater.
+      plan = {
+        harKamera: false,
+        stopp: [],
+        kamera: function () { return null; },
+        fartVed: function () { return null; },
+        sjekkpunkt: function (w) { return cpStandard(w); },
+        start: { splash: false, forsinkelse: 0, oversikt: false, oversiktSek: 0, splashSek: 0 },
+        slutt: { splash: false, forsinkelse: 0, oversikt: false, oversiktSek: 0, splashSek: 0 },
+        sprak: [lang],
+        sluttVarighet: function () { return 0; },
+      };
+    }
+
+    /** Slik et sjekkpunkt oppfører seg uten manus — flyoverens gamle regler. */
+    function cpStandard(w) {
+      return {
+        vis: w.vis_ikon !== false,
+        visKm: SKILT_MAKS_KM, fullKm: SKILT_MAKS_KM,
+        orbit: ui.stopp.checked && w.vis_ikon !== false,
+        orbitPitch: ORBIT_PITCH, orbitSek: ORBIT_SEK,
+        kort: false, kortSek: 3,
+      };
+    }
+
+    /**
+     * Innstillingene for ett sjekkpunkt.
+     *
+     * Manuset gjelder bare mens tidslinja går (opptak eller
+     * forhåndsvisning). Ser man seg bare om i flyoveren, skal alt
+     * oppføre seg akkurat som før — ellers ville manuset stille og
+     * rolig endret den vanlige visningen også.
+     */
+    function cpFor(w) {
+      if (eks && plan) {
+        var d = plan.sjekkpunkt(w);
+        // Har løypa selv skjult ikonet, står det fast — manuset kan slå av
+        // et synlig punkt, men ikke slå på et løypa har gjemt bort.
+        if (w.vis_ikon === false) {
+          d = Object.assign({}, d, { vis: false });
+        }
+        return d;
+      }
+      return cpStandard(w);
+    }
+
+    /** Skal punktet i det hele tatt telle som «neste punkt»? */
+    function synligPunkt(w) { return cpFor(w).vis; }
+
+    /**
+     * Hvor tydelig skiltet skal være akkurat nå.
+     *
+     * Målt langs LØYPA, ikke i luftlinje: «to kilometer igjen til
+     * matstasjonen» er slik man tenker om en løype, og gir samme
+     * inntoning uansett hvordan terrenget svinger seg dit.
+     */
+    function skiltAlfa(w) {
+      var d = cpFor(w);
+      if (!d.vis) return 0;
+      var igjen = avstander[effektivIdx(w)] - (orbit ? avstander[orbit.wpt.idx] : s);
+      if (igjen <= d.fullKm) return 1;
+      if (igjen >= d.visKm) return 0;
+      return begrens((d.visKm - igjen) / Math.max(0.001, d.visKm - d.fullKm), 0, 1);
+    }
+
+    /** Kamerastillingen som viser hele løypa. Regnes ut én gang per opptak. */
+    function byggOversikt() {
+      oversikt = null;
+      try {
+        var b = new maplibregl.LngLatBounds(visKoord[0], visKoord[0]);
+        for (var i = 1; i < visKoord.length; i++) b.extend(visKoord[i]);
+        var cam = map.cameraForBounds(b, { padding: 40 });
+        if (cam && cam.center) {
+          oversikt = {
+            lon: cam.center.lng, lat: cam.center.lat,
+            // Litt ekstra luft: kameraet vippes ned etterpå, og et vippet
+            // bilde dekker mindre bakke enn et rett ovenfra.
+            zoom: begrens(cam.zoom - 0.7, MIN_ZOOM, MAKS_ZOOM),
+          };
+        }
+      } catch (e) { oversikt = null; }
+    }
+
+    /**
+     * Hvor mye oversiktsbildet skal veie akkurat nå (0–1).
+     * Ved start begynner vi der og glir NED til løypa; ved slutt trekker
+     * vi oss UT dit og blir stående til videoen er ferdig.
+     */
+    function oversiktVekt() {
+      if (!eks || !plan || !oversikt) return 0;
+      var TON = 2.0;                       // sekunder på overgangen
+      if (eks.fase === 'slutt') {
+        if (!plan.slutt.oversikt) return 0;
+        return begrens(eks.sluttT / TON, 0, 1);
+      }
+      if (!plan.start.oversikt || eks.t >= plan.start.oversiktSek) return 0;
+      return begrens((plan.start.oversiktSek - eks.t) / TON, 0, 1);
+    }
+
+    /**
+     * Bland oversiktsbildet inn i kamerastillingen.
+     *
+     * Bevegelsen er med vilje: et helt stillestående oversiktsbilde ser
+     * ut som om videoen har frosset. En rolig dreining på et par grader i
+     * sekundet, med et lite pust i zoomen, sier «dette er levende».
+     */
+    function leggPåOversikt(nyKam) {
+      var v = oversiktVekt();
+      if (v <= 0) {
+        if (oversiktPadding) { settPadding(); oversiktPadding = false; }
+        return;
+      }
+      var u = v * v * (3 - 2 * v);
+      var tid = (eks.fase === 'slutt') ? eks.sluttT : eks.t;
+      nyKam.lon += (oversikt.lon - nyKam.lon) * u;
+      nyKam.lat += (oversikt.lat - nyKam.lat) * u;
+      nyKam.zoom += (oversikt.zoom + 0.18 * Math.sin(tid * 0.4) - nyKam.zoom) * u;
+      nyKam.pitch += (38 - nyKam.pitch) * u;
+      nyKam.bearing += begrens(2.6 * tid, -30, 30) * u;
+
+      // Utsnittet er skjøvet ned mot nedre tredjedel når vi følger en
+      // løper. I oversikten skal løypa ligge midt i bildet.
+      var h = ui.kart.clientHeight || 400;
+      map.setPadding({ top: Math.round(h * 0.42 * (1 - u)), bottom: 0, left: 0, right: 0 });
+      oversiktPadding = true;
+    }
+
+    /** Plakaten som skal vises akkurat nå, med gjennomsikt. Null ellers. */
+    function splashNå() {
+      if (!eks || !plan) return null;
+      var INN = 0.6, UT = 0.8;
+      var d, tid;
+      if (eks.fase === 'slutt') { d = plan.slutt; tid = eks.sluttT; }
+      else { d = plan.start; tid = eks.t; }
+      if (!d.splash || tid > d.splashSek) return null;
+      return {
+        cfg: d,
+        alfa: begrens(tid / INN, 0, 1) * begrens((d.splashSek - tid) / UT, 0, 1),
+      };
+    }
+
+    /** Tekstene på plakaten, på ett bestemt språk (tomt = fall tilbake). */
+    function splashTekst(cfg, l) {
+      var tittel = (cfg.tittel && (cfg.tittel[l] || cfg.tittel.no)) || o.navn || '';
+      var under = (cfg.undertekst && (cfg.undertekst[l] || cfg.undertekst.no)) || '';
+      var opp = oppAkk ? Math.round(oppAkk[n - 1]) : null;
+      var ned = nedAkk ? Math.round(nedAkk[n - 1]) : null;
+      var fakta = [tFor(l, 'lengde') + ' ' + kmTFor(totalKm, l)];
+      if (opp != null) {
+        fakta.push(tFor(l, 'stigningFall') + ' ↑ ' + opp + ' m · ↓ ' + (ned || 0) + ' m');
+      }
+      return { tittel: tittel, under: under, fakta: fakta.join('   ·   ') };
+    }
+
+    /** Speil plakaten i HTML, så den også synes på skjermen under opptak. */
+    var sistSplash = null;
+    function oppdaterSplash() {
+      var sp = splashNå();
+      if (!sp) {
+        if (sistSplash) { ui.splash.classList.add('fb-skjult'); sistSplash = null; }
+        return;
+      }
+      if (sp.cfg !== sistSplash) {
+        var tx = splashTekst(sp.cfg, lang);
+        ui.splashTittel.textContent = tx.tittel;
+        ui.splashUnder.textContent = tx.under;
+        ui.splashFakta.textContent = tx.fakta;
+        ui.splash.classList.remove('fb-skjult');
+        sistSplash = sp.cfg;
+      }
+      ui.splash.style.opacity = String(sp.alfa);
+    }
 
     // ============================================================
     // Veipunkter: markører, runden rundt, og detaljkortet
@@ -1151,11 +1572,12 @@ var KULFlyby = (function () {
     }
 
     /** Navnet på en punkttype i valgt språk (engelsk faller tilbake til norsk). */
-    function typeNavn(nøkkel) {
+    function typeNavnFor(l, nøkkel) {
       var d = (typeof WPT_SYMBOLER !== 'undefined') ? WPT_SYMBOLER[nøkkel] : null;
       if (!d) return nøkkel;
-      return (lang === 'en' && d.navn_en) ? d.navn_en : d.navn;
+      return (l === 'en' && d.navn_en) ? d.navn_en : d.navn;
     }
+    function typeNavn(nøkkel) { return typeNavnFor(lang, nøkkel); }
 
     /**
      * Punktmerkene står et stykke OVER selve punktet, med en tynn strek
@@ -1231,26 +1653,39 @@ var KULFlyby = (function () {
       var beste = -1, besteIdx = Infinity;
       for (var j = 0; j < veipunkter.length; j++) {
         var w = veipunkter[j];
-        if (w.vis_ikon === false) continue;
+        if (!synligPunkt(w)) continue;
         var e = effektivIdx(w);
         if (e > idx && e < besteIdx) { besteIdx = e; beste = j; }
       }
       return beste;
     }
 
-    /** Vis bare markøren for det neste punktet (skjul resten). */
+    /**
+     * Vis bare markøren for det neste punktet (skjul resten), og ton den
+     * inn etter hvor nær vi er. Uten inntoning ville skiltet blinket fram
+     * i det man passerte en bestemt avstand; med den vokser det fram slik
+     * et veiskilt gjør når man nærmer seg.
+     */
     var sistViste = -2;
     function oppdaterMarkørSynlighet() {
       var mål = nesteSkilt();
-      if (mål === sistViste) return;
-      sistViste = mål;
-      for (var i = 0; i < wptMarkører.length; i++) {
-        wptMarkører[i].el.style.display = (wptMarkører[i].j === mål) ? '' : 'none';
+      if (mål !== sistViste) {
+        sistViste = mål;
+        for (var i = 0; i < wptMarkører.length; i++) {
+          wptMarkører[i].el.style.display = (wptMarkører[i].j === mål) ? '' : 'none';
+        }
+      }
+      if (mål < 0) return;
+      for (var q = 0; q < wptMarkører.length; q++) {
+        if (wptMarkører[q].j !== mål) continue;
+        wptMarkører[q].el.style.opacity = String(skiltAlfa(veipunkter[mål]));
+        return;
       }
     }
 
     /** Statistikk for et punkt på løypa (samme tall som i løypevisningen). */
-    function statistikkFor(idx) {
+    function statistikkFor(idx, l) {
+      l = l || lang;
       var forrige = null;
       for (var j = 0; j < veipunkter.length; j++) {
         var w = veipunkter[j];
@@ -1263,7 +1698,8 @@ var KULFlyby = (function () {
         høyde: høyder ? høyder[idx] : null,
         oppStart: oppAkk ? Math.round(oppAkk[idx]) : null,
         nedStart: nedAkk ? Math.round(nedAkk[idx]) : null,
-        forrigeNavn: forrige ? (lok(forrige, 'name') || forrige.name) : t('start'),
+        forrigeNavn: forrige
+          ? (o.lokFor(l, forrige, 'name') || forrige.name) : tFor(l, 'start'),
       };
     }
 
@@ -1275,12 +1711,17 @@ var KULFlyby = (function () {
      * svinger kameraet inn i områder som ennå ikke har fliser, og bakken
      * blir stående tom. Ventinga leses som en naturlig ankomst til stedet.
      */
-    function startOrbit(w) {
+    function startOrbit(w, cfg) {
+      cfg = cfg || cpFor(w);
       orbit = {
-        wpt: w, tid: 0, venter: true, ventet: 0,
-        // Runden går raskere ved høy fart, men ikke proporsjonalt — ved 8×
-        // ville en firedels runde blitt for kjapp til at flisene henger med.
-        varighet: ORBIT_SEK / Math.sqrt(Math.max(1, fart)),
+        wpt: w, cfg: cfg, tid: 0, venter: true, ventet: 0,
+        // Under et manus er rundetida akkurat den brukeren har bedt om —
+        // det er en regi-beslutning. I vanlig avspilling går runden
+        // raskere ved høy fart, men ikke proporsjonalt: ved 8× ville en
+        // firedels runde blitt for kjapp til at flisene henger med.
+        varighet: eks ? cfg.orbitSek : cfg.orbitSek / Math.sqrt(Math.max(1, fart)),
+        // Detaljkortet som eventuelt skal vises NÅR runden er ferdig
+        kort: (eks && cfg.kort) ? cfg : null,
       };
       kam.orbitVinkel = 0;
       // Senk kameraet litt under runden: da ser vi mer ned på stedet og
@@ -1293,17 +1734,26 @@ var KULFlyby = (function () {
       // tiendeler. Et sprang på over ti grader så da ut som et hopp.
       // Tillegget her glir over halvannet sekund, og brukeren kan dra i
       // vinkelen underveis uten at de to slåss om samme verdi.
-      kam.orbitPitchMål = Math.max(0, kam.pitchMål - ORBIT_PITCH);
+      kam.orbitPitchMål = kam.pitchMål - cfg.orbitPitch;
       s = avstander[w.idx];
       visToast(w);
     }
 
-    function avsluttOrbit() {
+    /** `naturlig` = runden gikk ferdig av seg selv (ikke avbrutt av spoling). */
+    function avsluttOrbit(naturlig) {
+      var kortEtter = (orbit && naturlig) ? orbit.kort : null;
+      var kortW = orbit ? orbit.wpt : null;
       orbit = null;
       kam.orbitVinkel = 0;
       kam.orbitPitchMål = 0;      // vinkelen glir tilbake like mykt
       skjulToast();
-      if (s >= totalKm) { settSpiller(false); ferdigTekst(); }
+      if (eks && kortEtter) {
+        visKortStille(kortW);
+        eks.hold = kortEtter.kortSek;
+        eks.holdKort = true;
+        return;
+      }
+      if (!eks && s >= totalKm) { settSpiller(false); ferdigTekst(); }
     }
 
     /** Sjekk om vi har passert et interessepunkt, og reager på det. */
@@ -1313,7 +1763,14 @@ var KULFlyby = (function () {
         var w = veipunkter[nesteWpt];
         nesteWpt++;
         if (w.idx === 0) continue;              // start trenger ingen stopp
-        if (ui.stopp.checked && w.vis_ikon !== false) { startOrbit(w); return; }
+        var cfg = cpFor(w);
+        if (cfg.orbit) { startOrbit(w, cfg); return; }
+        if (eks && cfg.kort) {                  // ingen runde, men vis kortet
+          visKortStille(w);
+          eks.hold = cfg.kortSek;
+          eks.holdKort = true;
+          return;
+        }
         visToast(w);                            // ellers bare en kort melding
       }
     }
@@ -1360,8 +1817,10 @@ var KULFlyby = (function () {
     }
 
     /** Tegn hele overlegget inn i opptakets lerret.
-     *  `sk` er skalafaktoren fra kartets CSS-piksler til lerretet. */
-    function tegnOverleggPåLerret(ctx, sk, bredde, høyde) {
+     *  `sk` er skalafaktoren fra kartets CSS-piksler til lerretet, og
+     *  `nøkkel` sier hvilket spor (og dermed hvilket språk) vi tegner nå. */
+    function tegnOverleggPåLerret(ctx, sk, bredde, høyde, nøkkel) {
+      tegneLang = (nøkkel && TEKST[nøkkel.lang]) ? nøkkel.lang : lang;
       var p = posVed(orbit ? avstander[orbit.wpt.idx] : s);
       var kamera = kameraSted();
       oppdaterSkiltSynlighet(kamera, performance.now());
@@ -1371,6 +1830,72 @@ var KULFlyby = (function () {
       if (toastNå) tegnToast(ctx, sk, bredde);
       // Åpner man et punktkort mens det spilles inn, skal det med i videoen
       if (kortWpt) tegnKort(ctx, sk, bredde, høyde);
+      var sp = splashNå();
+      if (sp) tegnSplash(ctx, sk, bredde, høyde, sp);
+      tegneLang = lang;
+    }
+
+    /**
+     * Plakaten ved start og slutt, tegnet i lerretet.
+     *
+     * Teksten må være lesbar over ALT — snødekt fjell, mørk skog, blank
+     * sjø. To virkemidler i lag: en tonet bunn som demper bildet der
+     * teksten står, og en skygge under hver bokstav. Da holder kontrasten
+     * uten at plakaten blir en ugjennomsiktig kasse — løypa skal fortsatt
+     * synes bak.
+     */
+    function tegnSplash(ctx, sk, bredde, høyde, sp) {
+      var tx = splashTekst(sp.cfg, tegneLang);
+      var a = sp.alfa;
+      ctx.save();
+      ctx.globalAlpha = a;
+
+      var bandH = høyde * 0.46;
+      var grad = ctx.createLinearGradient(0, høyde - bandH, 0, høyde);
+      grad.addColorStop(0, 'rgba(2,6,23,0)');
+      grad.addColorStop(0.45, 'rgba(2,6,23,0.45)');
+      grad.addColorStop(1, 'rgba(2,6,23,0.82)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, høyde - bandH, bredde, bandH);
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.shadowColor = 'rgba(0,0,0,0.85)';
+      ctx.shadowBlur = 10 * sk;
+      ctx.shadowOffsetY = 2 * sk;
+
+      var midt = bredde / 2;
+      var tittelPx = Math.min(46 * sk, bredde / 13);
+      var underPx = tittelPx * 0.44;
+      var faktaPx = tittelPx * 0.36;
+      var y = høyde - bandH * 0.30;
+
+      if (tx.fakta) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '600 ' + faktaPx + 'px ' + SKRIFT;
+        ctx.fillText(tx.fakta, midt, y);
+        y -= faktaPx * 1.9;
+      }
+      if (tx.under) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = underPx + 'px ' + SKRIFT;
+        var linjer = brytTekst(ctx, tx.under, bredde * 0.8);
+        for (var i = linjer.length - 1; i >= 0; i--) {
+          ctx.fillText(linjer[i], midt, y);
+          y -= underPx * 1.35;
+        }
+        y -= underPx * 0.35;
+      }
+      if (tx.tittel) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '700 ' + tittelPx + 'px ' + SKRIFT;
+        var tl = brytTekst(ctx, tx.tittel, bredde * 0.86);
+        for (var j = tl.length - 1; j >= 0; j--) {
+          ctx.fillText(tl[j], midt, y);
+          y -= tittelPx * 1.18;
+        }
+      }
+      ctx.restore();
     }
 
     /** Del en tekst i linjer som får plass innenfor `maksB`. */
@@ -1397,7 +1922,7 @@ var KULFlyby = (function () {
      */
     function tegnKort(ctx, sk, bredde, høyde) {
       var w = kortWpt;
-      var st = statistikkFor(w.idx);
+      var st = statistikkFor(w.idx, tegneLang);
       var boksB = Math.min(420 * sk, bredde * 0.92);
       var pad = 20 * sk;
       var innB = boksB - pad * 2;
@@ -1405,17 +1930,17 @@ var KULFlyby = (function () {
       var tittelPx = 18 * sk, brødPx = 13.5 * sk, tabellPx = 13 * sk;
       var chipPx = 12.5 * sk, ikonPx = 15 * sk;
 
-      var tittel = lok(w, 'name') || w.name || '';
+      var tittel = lokT(w, 'name') || w.name || '';
       var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
-      var beskr = lok(w, 'desc');
+      var beskr = lokT(w, 'desc');
 
       var rader = [
-        [t('distanseFraStart'), kmT(st.dist)],
-        [t('fraForrige') + ' (' + st.forrigeNavn + ')', kmT(st.distForrige)],
+        [tT('distanseFraStart'), kmTT(st.dist)],
+        [tT('fraForrige') + ' (' + st.forrigeNavn + ')', kmTT(st.distForrige)],
       ];
-      if (st.høyde != null) rader.push([t('hoyde'), Math.round(st.høyde) + ' ' + t('moh')]);
+      if (st.høyde != null) rader.push([tT('hoyde'), Math.round(st.høyde) + ' ' + tT('moh')]);
       if (st.oppStart != null) {
-        rader.push([t('hoydemeterFraStart'),
+        rader.push([tT('hoydemeterFraStart'),
           '↑ ' + st.oppStart + ' m · ↓ ' + st.nedStart + ' m']);
       }
 
@@ -1453,7 +1978,7 @@ var KULFlyby = (function () {
         var cx = x + pad;
         ctx.font = chipPx + 'px ' + SKRIFT;
         for (var q = 0; q < typer.length; q++) {
-          var etikett = typeNavn(typer[q]);
+          var etikett = typeNavnFor(tegneLang, typer[q]);
           var tekstB = ctx.measureText(etikett).width;
           var chipB = ikonPx + 6 * sk + tekstB + 16 * sk;
           if (cx + chipB > x + boksB - pad && cx > x + pad) break;  // én rad holder
@@ -1525,12 +2050,16 @@ var KULFlyby = (function () {
       var kun = nesteSkilt();
       for (var j = 0; j < veipunkter.length; j++) {
         var w = veipunkter[j];
-        if (w.vis_ikon === false || j !== kun) continue;
+        if (j !== kun) continue;
 
         // Er punktet bak kameraet, for langt unna, eller bak en fjellrygg?
         // Svaret er regnet ut i oppdaterSkiltSynlighet og mellomlagret der.
         // (Uten kameraposisjon vet vi ingenting og tegner alt, som før.)
         if (kamera && skiltSynlig[j] === false) continue;
+
+        // Samme inntoning som på skjermen — skiltet vokser fram etter hvert
+        var alfa = skiltAlfa(w);
+        if (alfa <= 0.01) continue;
 
         var pt;
         try { pt = tilLerret([w.lon, w.lat], s); } catch (e) { continue; }
@@ -1538,7 +2067,9 @@ var KULFlyby = (function () {
         if (pt.x < -400 * s || pt.x > bredde + 400 * s ||
             pt.y < -300 * s || pt.y > høyde + 200 * s) continue;
 
-        var navn = lok(w, 'name') || w.name || '';
+        ctx.save();
+        ctx.globalAlpha = alfa;
+        var navn = lokT(w, 'name') || w.name || '';
         var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
         var ikonPx = 15 * s;
         var tekstPx = 12 * s;
@@ -1596,6 +2127,7 @@ var KULFlyby = (function () {
           ctx.textBaseline = 'middle';
           ctx.fillText(navn, cx + gap, boksY + boksH / 2);
         }
+        ctx.restore();
       }
     }
 
@@ -1618,11 +2150,12 @@ var KULFlyby = (function () {
     }
 
     function tegnAvlesning(ctx, s, høyde) {
+      var v = avlesning(tegneLang);
       var celler = [
-        [t('distanse'), avlest.dist],
-        [t('hoyde'), avlest.hoyde],
-        [t('stigning'), avlest.hm],
-        [t('neste'), avlest.neste],
+        [tT('distanse'), v.dist],
+        [tT('hoyde'), v.hoyde],
+        [tT('stigning'), v.hm],
+        [tT('neste'), v.neste],
       ];
       var navnPx = 10.5 * s, verdiPx = 17 * s;
       var pad = 14 * s, radH = 34 * s;
@@ -1664,8 +2197,8 @@ var KULFlyby = (function () {
 
     function tegnToast(ctx, s, bredde) {
       var w = toastNå;
-      var navn = lok(w, 'name') || w.name || '';
-      var dist = kmT(avstander[w.idx]);
+      var navn = lokT(w, 'name') || w.name || '';
+      var dist = kmTT(avstander[w.idx]);
       var tekstPx = 15 * s, distPx = 13 * s, ikonPx = 18 * s;
       var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
       ctx.font = '600 ' + tekstPx + 'px ' + SKRIFT;
@@ -1708,11 +2241,26 @@ var KULFlyby = (function () {
     /** Detaljkortet for et punkt: pause + all informasjonen om stedet. */
     function visKort(w) {
       kortFortsett = spiller || !!orbit;
-      if (orbit) avsluttOrbit();
+      if (orbit) avsluttOrbit(false);
       settSpiller(false);
+      byggKort(w);
+    }
+
+    /**
+     * Kortet vist av MANUSET: ingen pause, ingen brukerhandling.
+     * Tidslinja holder igjen selv så lenge kortet skal stå, og kortet
+     * tegnes inn i videoen av tegnKort på vanlig måte.
+     */
+    function visKortStille(w) { byggKort(w); }
+    function skjulKortStille() {
+      kortWpt = null;
+      ui.kort.classList.add('fb-skjult');
+    }
+
+    function byggKort(w) {
       kortWpt = w;
 
-      var st = statistikkFor(w.idx);
+      var st = statistikkFor(w.idx, lang);
       var typer = (typeof wptTyper === 'function') ? wptTyper(w) : [];
       var typeRad = '';
       for (var q = 0; q < typer.length; q++) {
@@ -1763,7 +2311,9 @@ var KULFlyby = (function () {
       if (!kortWpt) return;
       kortWpt = null;
       ui.kort.classList.add('fb-skjult');
-      if (kortFortsett) settSpiller(true);
+      // Under opptak/forhåndsvisning er det tidslinja som bestemmer når
+      // det går videre — da skal ikke et klikk på ✕ sette den i gang.
+      if (kortFortsett && !eks) settSpiller(true);
       kortFortsett = false;
     }
 
@@ -1774,8 +2324,10 @@ var KULFlyby = (function () {
     function settSpiller(på) {
       if (på && !klar) return;               // vent til landskapet er lastet
       // Ferdig løype: start forfra. (Men ikke midt i en runde rundt
-      // målpunktet — da skal runden bare fortsette der den ble satt på pause.)
-      if (på && !orbit && s >= totalKm) nullstill();
+      // målpunktet — da skal runden bare fortsette der den ble satt på
+      // pause — og ikke mens en tidslinje går: der er «i mål» bare en
+      // fase, og sluttbildet skal spilles ferdig.)
+      if (på && !orbit && !eks && s >= totalKm) nullstill();
       spiller = på;
       ui.spill.textContent = på ? t('pause') : t('spill');
       ui.spill.classList.toggle('fb-spiller', på);
@@ -1783,13 +2335,21 @@ var KULFlyby = (function () {
 
     function nullstill() {
       s = 0; pekIdx = 0; kursNå = null; sistVisIdx = -1; nesteWpt = 0;
-      orbit = null; kam.orbitVinkel = 0;
+      orbit = null; kam.orbitVinkel = 0; kam.orbitPitchMål = 0;
+      skjulKortStille();
       skjulToast();
       tegn(true);
     }
 
+    /** Spol et stykke fram eller tilbake — også midt i en forhåndsvisning. */
+    function spolSteg(delta) {
+      if (opptak) return;
+      var km = begrens(s + delta, 0, totalKm);
+      if (eks) spolIEks(km); else spolTil(km);
+    }
+
     function spolTil(km) {
-      if (orbit) avsluttOrbit();
+      if (orbit) avsluttOrbit(false);
       s = begrens(km, 0, totalKm);
       var p = posVed(s);
       nesteWpt = 0;
@@ -1845,7 +2405,7 @@ var KULFlyby = (function () {
      */
     function eksportLøkke() {
       if (!opptak || !instans || instans.ødelagt) return;
-      if (s >= totalKm) { stoppOpptak(); return; }
+      if (!eks || eks.ferdig) { stoppOpptak(); return; }
       if (!spiller) {
         // Brukeren har pauset. Pausen skal med i videoen — den er
         // bevisst — men her må vi holde igjen med klokka. Ellers ville
@@ -1869,25 +2429,133 @@ var KULFlyby = (function () {
         .then(function () {
           if (!opptak) return;
           ui.recTid.textContent = tidTekst(opptak.varighet());
-          ui.recStatus.textContent =
-            Math.round((s / totalKm) * 100) + ' %';
+          ui.recStatus.textContent = framdriftTekst();
           // Slipp tråden mellom bildene, så knappene svarer
           setTimeout(eksportLøkke, 0);
         })
         .catch(function () { stoppOpptak(); });
     }
 
+    function framdriftTekst() {
+      if (eks && eks.fase === 'start') return '⏱ ' + t('start');
+      if (eks && eks.fase === 'slutt') return '100 %';
+      return Math.round((s / totalKm) * 100) + ' %';
+    }
+
+    // ---- Tidslinja: felles for forhåndsvisning og opptak ----
+
+    /**
+     * Sett tidslinja i gang fra begynnelsen.
+     *
+     * Manuset kompileres FØR nullstillingen, slik at sjekkpunktvalgene
+     * gjelder fra første bilde — og oversiktsbildet regnes ut mens
+     * kartet ennå står i ro.
+     */
+    function startTidslinje() {
+      byggPlan();
+      // Kamerastillingen brukeren hadde før manuset tok over. Manuset setter
+      // zoom og vinkel direkte, så uten dette ville en forhåndsvisning
+      // etterlate kameraet i siste kamerapunkts stilling.
+      if (!førManus) {
+        førManus = { zoom: kam.zoomMål, pitch: kam.pitchMål, dreie: kam.dreieMål };
+      }
+      eks = {
+        t: 0, fase: 'start', sluttT: 0, hold: 0, holdKort: false,
+        holdGulv: 0, fartGulv: 0, stoppTatt: {}, ferdig: false,
+      };
+      nullstill();
+      byggOversikt();
+      tegnKamerapunkter(kfSiste.liste, kfSiste.valgt);   // skjuler dem (eks er satt)
+      // Kameraet skal stå riktig alt på bilde nummer én, ikke gli dit
+      if (plan && plan.harKamera) {
+        var k0 = plan.kamera(0, kursNå);
+        if (k0) {
+          kam.zoom = kam.zoomMål = begrens(k0.zoom, MIN_ZOOM, MAKS_ZOOM);
+          kam.pitch = kam.pitchMål = begrens(k0.pitch, MIN_PITCH, MAKS_PITCH);
+        }
+      }
+      kam.dreie = kam.dreieMål = 0;
+      settSpiller(true);
+      tegn(true);
+    }
+
+    function avsluttTidslinje() {
+      eks = null;
+      manusBearing = null;
+      if (oversiktPadding) { settPadding(); oversiktPadding = false; }
+      oppdaterSplash();
+      settSpiller(false);
+    }
+
+    /** Kjør manuset uten å kode video — så man ser hva man får. */
+    function startForhåndsvisning() {
+      if (opptak || !klar) return;
+      startTidslinje();
+      ui.rec.classList.remove('fb-skjult');
+      ui.rec.classList.add('fb-rec-venter');
+      ui.recStatus.textContent = t('forhandsvis');
+      ui.opptak.textContent = t('stoppForhand');
+      ui.opptak.classList.add('fb-tar-opp');
+      if (manusPanel) {
+        manusPanel.status(t('forhandsvisHjelp'));
+        manusPanel.forhåndPå(true);
+      }
+    }
+
+    function avsluttForhåndsvisning() {
+      avsluttTidslinje();
+      // En avsluttet forhåndsvisning skal legge alt tilbake slik det var:
+      // løypa på start, og kameraet i den stillingen brukeren hadde før.
+      if (førManus) {
+        kam.zoom = kam.zoomMål = førManus.zoom;
+        kam.pitch = kam.pitchMål = førManus.pitch;
+        kam.dreie = kam.dreieMål = førManus.dreie;
+        førManus = null;
+      }
+      kam.korr = kam.korrMål = 0;
+      nullstill();
+      ui.rec.classList.add('fb-skjult');
+      ui.rec.classList.remove('fb-rec-venter');
+      ui.opptak.textContent = t('taOpp');
+      ui.opptak.classList.remove('fb-tar-opp');
+      if (manusPanel) {
+        manusPanel.status('');
+        manusPanel.forhåndPå(false);
+      }
+      tegnKamerapunkter(kfSiste.liste, kfSiste.valgt);
+      ferdigTekst();
+    }
+
+    /**
+     * Sporene opptaket skal skrive: ett per språk, og — hvis brukeren vil
+     * ha det — en lettere nettversjon i tillegg for hvert av dem.
+     */
+    function byggSpor() {
+      var maks = manus ? manus.maksBredde : KULOpptak.maksBredde;
+      var språk = (manus && manus.sprak && manus.sprak.length) ? manus.sprak : [lang];
+      var spor = [];
+      språk.forEach(function (l) {
+        spor.push({ nøkkel: { lang: l, merke: 'full' }, maksBredde: maks });
+        if (manus && manus.nettversjon) {
+          spor.push({
+            nøkkel: { lang: l, merke: 'web' },
+            maksBredde: Math.min(manus.nettBredde, maks),
+          });
+        }
+      });
+      return spor;
+    }
+
     /** Start eksport: spol til start, og bygg videoen bilde for bilde. */
     function startOpptak() {
       if (opptak || !klar) return;
       ui.opptak.disabled = true;
-      KULOpptak.start({ kartCanvas: map.getCanvas() })
-        .then(function (o) {
+      KULOpptak.start({ kartCanvas: map.getCanvas(), spor: byggSpor() })
+        .then(function (op) {
           ui.opptak.disabled = false;
-          if (!o) { alert(t('opptakFeil')); return; }
-          opptak = o;
-          nullstill();
-          settSpiller(true);
+          if (!op) { alert(t('opptakFeil')); return; }
+          opptak = op;
+          startTidslinje();
           ui.opptak.textContent = t('stoppOpptak');
           ui.opptak.classList.add('fb-tar-opp');
           ui.rec.classList.remove('fb-skjult');
@@ -1904,17 +2572,18 @@ var KULFlyby = (function () {
     /** Avslutt eksporten og vis resultatet. */
     function stoppOpptak() {
       if (!opptak) return;
-      var o = opptak;
+      var op = opptak;
       opptak = null;
       ui.opptak.textContent = t('taOpp');
       ui.opptak.classList.remove('fb-tar-opp');
       ui.recStatus.textContent = t('koderFerdig');
-      settSpiller(false);
+      avsluttTidslinje();
+      førManus = null;         // etter et opptak beholdes sluttstillingen
       // Løkka i bakgrunnen tar over tegninga igjen
-      o.stopp().then(function (res) {
+      op.stopp().then(function (liste) {
         ui.rec.classList.add('fb-skjult');
         ui.rec.classList.remove('fb-rec-venter');
-        if (res && res.blob && res.blob.size) visVideo(res);
+        if (liste && liste.length) visVideo(liste);
       });
     }
 
@@ -1923,24 +2592,46 @@ var KULFlyby = (function () {
       return m + ':' + (r < 10 ? '0' : '') + r;
     }
 
-    /** Forhåndsvisning av den ferdige videoen, med lagring og nedlasting. */
-    function visVideo(res) {
-      var url = URL.createObjectURL(res.blob);
-      var mb = (res.blob.size / (1024 * 1024)).toFixed(1);
+    /** Menneskelig navn på ett spor, f.eks. «NO · full» / «EN · nettversjon». */
+    function sporNavn(res) {
+      var deler = [];
+      if (res.nøkkel && res.nøkkel.lang) deler.push(res.nøkkel.lang.toUpperCase());
+      deler.push(res.nøkkel && res.nøkkel.merke === 'web' ? t('nettversjon') : t('full'));
+      return deler.join(' · ');
+    }
+
+    /**
+     * Forhåndsvisning av de ferdige videoene, med lagring og nedlasting.
+     *
+     * Ett opptak kan gi flere filer (språk × oppløsning). Spilleren viser
+     * den første — resten står som en liste med hver sin nedlasting, og
+     * «Lagre i KUL» tar alle sammen.
+     */
+    function visVideo(liste) {
+      var urler = liste.map(function (r) { return URL.createObjectURL(r.blob); });
       var standardNavn = (o.navn || 'flyover').replace(/[\\/:*?"<>|]+/g, '_');
+
+      var filRader = liste.map(function (r, i) {
+        var mb = (r.blob.size / (1024 * 1024)).toFixed(1);
+        return '<li class="fb-video-fil">' +
+          '<span class="fb-video-fil-merke">' + escHtml(sporNavn(r)) + '</span>' +
+          '<span class="fb-video-fil-fakta">' + r.bredde + '×' + r.høyde +
+            ' · ' + mb + ' MB</span>' +
+          '<button type="button" class="fb-knapp fb-video-last" data-i="' + i + '">' +
+            escHtml(t('lastNed')) + '</button></li>';
+      }).join('');
 
       ui.video.innerHTML =
         '<button type="button" class="fb-kort-lukk">✕</button>' +
         '<h3>' + escHtml(t('videoKlar')) + '</h3>' +
         '<video class="fb-video-spiller" controls playsinline></video>' +
-        '<p class="fb-video-fakta">' + escHtml(tidTekst(res.varighet)) + ' · ' +
-          res.bredde + '×' + res.høyde + ' · ' + mb + ' MB · ' +
-          escHtml(res.endelse.toUpperCase()) + '</p>' +
+        '<p class="fb-video-fakta">' + escHtml(tidTekst(liste[0].varighet)) + ' · ' +
+          escHtml(liste[0].endelse.toUpperCase()) + ' · ' +
+          liste.length + ' ' + escHtml(t('filer').toLowerCase()) + '</p>' +
         '<label class="fb-video-navn">' + escHtml(t('videonavn')) +
           '<input type="text" class="fb-video-navn-felt"></label>' +
+        '<ul class="fb-video-filer">' + filRader + '</ul>' +
         '<div class="fb-video-knapper">' +
-          '<button type="button" class="fb-knapp fb-video-last">' +
-            escHtml(t('lastNed')) + '</button>' +
           (lagreVideo
             ? '<button type="button" class="fb-knapp fb-video-lagre fb-primaer">' +
               escHtml(t('lagreIKul')) + '</button>' : '') +
@@ -1948,7 +2639,7 @@ var KULFlyby = (function () {
         '<p class="fb-video-status"></p>';
 
       var spiller = ui.video.querySelector('.fb-video-spiller');
-      spiller.src = url;
+      spiller.src = urler[0];
       var navnFelt = ui.video.querySelector('.fb-video-navn-felt');
       navnFelt.value = standardNavn;
       var status = ui.video.querySelector('.fb-video-status');
@@ -1956,25 +2647,36 @@ var KULFlyby = (function () {
       function lukk() {
         ui.video.classList.add('fb-skjult');
         ui.video.innerHTML = '';
-        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+        setTimeout(function () {
+          urler.forEach(function (u) { URL.revokeObjectURL(u); });
+        }, 2000);
       }
       ui.video.querySelector('.fb-kort-lukk').addEventListener('click', lukk);
 
-      ui.video.querySelector('.fb-video-last').addEventListener('click', function () {
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = (navnFelt.value || standardNavn) + '.' + res.endelse;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      });
+      var lastKnapper = ui.video.querySelectorAll('.fb-video-last');
+      for (var i = 0; i < lastKnapper.length; i++) {
+        (function (knapp) {
+          knapp.addEventListener('click', function () {
+            var idx = Number(knapp.getAttribute('data-i'));
+            var r = liste[idx];
+            var merke = (r.nøkkel && r.nøkkel.lang ? '-' + r.nøkkel.lang : '') +
+              (r.nøkkel && r.nøkkel.merke === 'web' ? '-web' : '');
+            var a = document.createElement('a');
+            a.href = urler[idx];
+            a.download = (navnFelt.value || standardNavn) + merke + '.' + r.endelse;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+          });
+        })(lastKnapper[i]);
+      }
 
       var lagreKnapp = ui.video.querySelector('.fb-video-lagre');
       if (lagreKnapp) {
         lagreKnapp.addEventListener('click', function () {
           lagreKnapp.disabled = true;
           status.textContent = t('lagrer');
-          lagreVideo(res, navnFelt.value || standardNavn)
+          lagreVideo(liste, navnFelt.value || standardNavn)
             .then(function () {
               status.textContent = t('lagret');
               setTimeout(lukk, 1200);
@@ -1990,11 +2692,135 @@ var KULFlyby = (function () {
     }
 
     // ============================================================
+    // Manuspanelet
+    // ============================================================
+
+    /** Kameraet slik det står nå — det «hent stillingen» plukker opp. */
+    function nåKamera() {
+      var dreie = ((kam.dreieMål % 360) + 540) % 360 - 180;
+      return {
+        pitch: kam.pitchMål,
+        zoom: kam.zoomMål,
+        retning: dreie,
+        kurs: map.getBearing(),
+        fart: fart,
+      };
+    }
+
+    function manusCtx() {
+      var lerret = map.getCanvas();
+      var midt = punkter[Math.floor(n / 2)];
+      return {
+        totalKm: totalKm,
+        varighet: varighet,
+        veipunkter: veipunkter,
+        avstander: avstander,
+        midtLat: midt ? midt.lat : 60,
+        kartBredde: ui.kart.clientWidth || 1200,
+        løypenavn: o.navn || '',
+        orbitStandard: ui.stopp.checked,
+        opptakBredde: lerret.width,
+        opptakHøyde: lerret.height,
+      };
+    }
+
+    // ---- Kamerapunktene tegnet på kartet ----
+    // Ei liste i et panel sier lite om HVOR i løypa punktene ligger.
+    // Nummererte merker langs traseen gjør det umiddelbart tydelig, og gjør
+    // dem samtidig direkte redigerbare: klikk velger, dra flytter.
+    var kfMarkører = [];
+    var kfSiste = { liste: [], valgt: -1 };
+
+    /** Km-verdien til det sporpunktet som ligger nærmest et sted på kartet. */
+    function nærmesteKm(lon, lat) {
+      var k = Math.cos(lat * RAD);
+      var beste = 0, besteD = Infinity;
+      for (var i = 0; i < visIdx.length; i++) {
+        var p = punkter[visIdx[i]];
+        var dx = (p.lon - lon) * k, dy = p.lat - lat;
+        var d = dx * dx + dy * dy;
+        if (d < besteD) { besteD = d; beste = visIdx[i]; }
+      }
+      return avstander[beste];
+    }
+
+    function tegnKamerapunkter(liste, valgt) {
+      kfSiste = { liste: liste || [], valgt: valgt };
+      for (var i = 0; i < kfMarkører.length; i++) kfMarkører[i].remove();
+      kfMarkører = [];
+      if (!liste || !liste.length || eks) return;
+
+      // posVed flytter den vandrende pekeren; legg den tilbake etterpå
+      var peker = pekIdx;
+      liste.forEach(function (kp, i) {
+        var p = posVed(kp.km);
+        var el = document.createElement('div');
+        el.className = 'fb-kf-mark' + (i === valgt ? ' fb-kf-valgt' : '');
+        el.textContent = String(i + 1);
+        el.title = t('kamerapunkt') + ' ' + (i + 1) + ' · ' +
+          kp.km.toFixed(2) + ' km\n' + t('dragForFlytt');
+        var mk = new maplibregl.Marker({
+          element: el, anchor: 'center', draggable: true,
+        }).setLngLat([p.lon, p.lat]).addTo(map);
+        el.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (manusPanel) manusPanel.velg(i);
+        });
+        // Merket kan dras fritt, men punktet HØRER TIL løypa — så det
+        // festes til nærmeste sted på traseen når man slipper.
+        mk.on('dragend', function () {
+          var ll = mk.getLngLat();
+          if (manusPanel) manusPanel.settKm(i, nærmesteKm(ll.lng, ll.lat));
+        });
+        kfMarkører.push(mk);
+      });
+      pekIdx = peker;
+    }
+
+    function åpneManus() {
+      if (!manusMulig) return;
+      if (manusPanel) { manusPanel.frisk(manusCtx()); return; }
+      manusPanel = KULManus.åpne({
+        rot: ui.scene,
+        manus: manus,
+        ctx: manusCtx(),
+        nåKm: function () { return orbit ? avstander[orbit.wpt.idx] : s; },
+        nåKamera: nåKamera,
+        spolTil: function (km) {
+          if (eks) return;                    // tidslinja eier posisjonen
+          brukerHarStyrt = true;
+          settSpiller(false);
+          spolTil(km);
+        },
+        påEndret: function (m) { manus = m; },
+        påKamerapunkter: tegnKamerapunkter,
+        påLagre: o.lagreManus ? function (m) { return o.lagreManus(m); } : null,
+        påForhånd: function (m) {
+          manus = m;
+          if (opptak) return;
+          if (eks) { avsluttForhåndsvisning(); return; }
+          startForhåndsvisning();
+        },
+        påStart: function (m) {
+          manus = m;
+          if (opptak) { stoppOpptak(); return; }
+          if (eks) avsluttForhåndsvisning();
+          startOpptak();
+        },
+        påLukk: function () { manusPanel = null; tegnKamerapunkter([], -1); },
+      });
+    }
+
+    // ============================================================
     // Kontroller
     // ============================================================
 
-    /** Spill av ↔ pause. Brukes av knappen, mellomrom og klikk på kartet. */
+    /** Spill av ↔ pause. Brukes av knappen, mellomrom og klikk på kartet.
+     *  Virker også under forhåndsvisning — da fryser hele tidslinja, slik
+     *  at man kan stoppe opp og se på et bilde. Under selve opptaket er
+     *  det eksportløkka som driver tida, og da skal ingen bryte inn. */
     function vekslAvspilling() {
+      if (opptak) return;
       brukerHarStyrt = true;
       settSpiller(!spiller);
     }
@@ -2005,21 +2831,44 @@ var KULFlyby = (function () {
       ui.opptak.textContent = t('taOpp');
       ui.opptak.title = t('taOppTittel');
       ui.opptak.classList.remove('fb-skjult');
+      // «Ta opp» åpner manuset i stedet for å sette i gang med en gang.
+      // Da får man sett over innstillingene — og startknappen står rett
+      // der, så det koster ett ekstra klikk å komme i gang.
       ui.opptak.addEventListener('click', function () {
-        if (opptak) stoppOpptak(); else startOpptak();
+        if (opptak) { stoppOpptak(); return; }
+        if (eks) { avsluttForhåndsvisning(); return; }
+        if (manusMulig) åpneManus(); else startOpptak();
+      });
+    }
+
+    if (manusMulig && opptakMulig()) {
+      ui.manusKnapp.textContent = t('manus');
+      ui.manusKnapp.title = t('manusTittel');
+      ui.manusKnapp.classList.remove('fb-skjult');
+      ui.manusKnapp.addEventListener('click', function () {
+        if (manusPanel) manusPanel.lukk(); else åpneManus();
       });
     }
 
     ui.omstart.addEventListener('click', function () {
       brukerHarStyrt = true;
+      // Under forhåndsvisning betyr «start på nytt» at manuset skal kjøres
+      // om igjen fra første bilde — ikke bare at løperen flyttes til start.
+      if (eks && !opptak) { startTidslinje(); return; }
+      if (opptak) return;
       nullstill();
       ferdigTekst();
       settSpiller(true);
     });
 
     ui.scrubber.addEventListener('input', function () {
+      var km = (Number(ui.scrubber.value) / 1000) * totalKm;
+      // Under opptak eier eksportløkka posisjonen — der ville spoling
+      // gitt et hopp midt i den ferdige fila.
+      if (opptak) { ui.scrubber.value = String(Math.round((s / totalKm) * 1000)); return; }
       brukerHarStyrt = true;
-      spolTil((Number(ui.scrubber.value) / 1000) * totalKm);
+      if (eks) { spolIEks(km); return; }
+      spolTil(km);
     });
 
     for (var f = 0; f < FARTER.length; f++) {
@@ -2067,7 +2916,9 @@ var KULFlyby = (function () {
     function antallPekere() { return Object.keys(pekere).length; }
 
     lerret.addEventListener('pointerdown', function (e) {
-      if (e.target.closest && e.target.closest('.fb-wpt')) return; // punktmerker
+      // Punktmerker og kamerapunkt-merker har sine egne handlinger (klikk
+      // og dra) — de skal ikke også dreie kameraet.
+      if (e.target.closest && e.target.closest('.fb-wpt, .fb-kf-mark')) return;
       pekere[e.pointerId] = { x: e.clientX, y: e.clientY, flyttet: false };
       if (antallPekere() === 2) sistPinch = pinchAvstand();
       lerret.setPointerCapture(e.pointerId);
@@ -2120,25 +2971,54 @@ var KULFlyby = (function () {
       if (!kortWpt) return;
       if (e.target.closest('.fb-kort') || e.target.closest('.fb-wpt')) return;
       if (e.target.closest('.fb-bunn') || e.target.closest('.fb-topp')) return;
+      if (e.target.closest('.fb-manus') || e.target.closest('.fb-kf-mark')) return;
       skjulKort();
     });
 
+    /**
+     * Skriver brukeren i et felt akkurat nå?
+     *
+     * Snarveiene ligger på `document`, så uten denne sjekken spiste
+     * mellomromstasten hvert mellomrom man prøvde å skrive i manuspanelet
+     * (den ble tolket som spill/pause), og piltastene spolte i stedet for
+     * å flytte en skyveknapp.
+     */
+    function iSkjemafelt(e) {
+      var el = e.target;
+      if (!el || !el.tagName) return false;
+      var tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'textarea' || tag === 'select' ||
+        el.isContentEditable === true;
+    }
+
     function påTast(e) {
+      if (iSkjemafelt(e)) {
+        if (e.key === 'Escape' && e.target.blur) e.target.blur();
+        return;
+      }
       if (e.key === 'Escape') {
         if (kortWpt) { skjulKort(); return; }
+        if (eks && !opptak) { avsluttForhåndsvisning(); return; }
+        if (manusPanel) { manusPanel.lukk(); return; }
         lukk();
       } else if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
         vekslAvspilling();
       } else if (e.key === 'ArrowRight') {
-        e.preventDefault(); brukerHarStyrt = true; spolTil(s + totalKm * 0.02);
+        e.preventDefault(); brukerHarStyrt = true; spolSteg(totalKm * 0.02);
       } else if (e.key === 'ArrowLeft') {
-        e.preventDefault(); brukerHarStyrt = true; spolTil(s - totalKm * 0.02);
+        e.preventDefault(); brukerHarStyrt = true; spolSteg(-totalKm * 0.02);
       }
     }
     document.addEventListener('keydown', påTast);
 
-    function påResize() { settPadding(); map.resize(); }
+    function påResize() {
+      settPadding();
+      map.resize();
+      // Oppløsningen på videoen følger kartflaten, så målingen i panelet
+      // må friskes opp når vinduet endrer seg.
+      if (manusPanel) manusPanel.frisk(manusCtx());
+    }
     window.addEventListener('resize', påResize);
 
     // ============================================================
@@ -2149,6 +3029,8 @@ var KULFlyby = (function () {
       if (!instans || instans.ødelagt) return;
       instans.ødelagt = true;
       if (opptak) { try { opptak.stopp(); } catch (e) { /* uansett på vei ut */ } opptak = null; }
+      eks = null;
+      if (manusPanel) { try { manusPanel.lukk(); } catch (e) { /* alt borte */ } }
       if (rafId) cancelAnimationFrame(rafId);
       clearTimeout(toastTimer);
       document.removeEventListener('keydown', påTast);
