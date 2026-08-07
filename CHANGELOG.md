@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 4.2.1 — 7. august 2026
+
+**Ryddet venstre stolpe.** Ren GUI-opprydding, ingen funksjonsendring.
+
+- Fil-innlasting (**Last inn GPX-fil**, **Importer .loype-fil**) flyttet inn
+  under Segmentbibliotek i stedet for å stå i en egen boks øverst.
+- Alle handlingsknapper (**+ Gruppe**, **+ Ny**, **⬆ Last opp**) står nå på en
+  egen rad rett under hvert bibliotek-navn, alltid synlig — også når
+  biblioteket er kollapset.
+- Stolpen har fått en samlende overskrift **«Biblioteker»**, og hvert enkelt
+  bibliotek har mistet «-bibliotek»-endelsen i navnet sitt (Segment, Punkt,
+  Arenakart, Kontakt, Video).
+- Skillelinjer mellom hvert bibliotek, synlige uansett hvor mange som står
+  ekspandert samtidig.
+
 ## 4.2.0 — 7. august 2026
 
 **Videobibliotek: grupper og opplasting av redigerte videoer.**

@@ -7,11 +7,11 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=34">
-  <link rel="stylesheet" href="flyby.css?v=34">
+  <link rel="stylesheet" href="style.css?v=35">
+  <link rel="stylesheet" href="flyby.css?v=35">
   <!-- Opptaksmanuset finnes bare i verktøyet — publiserte løypevisninger
        spiller ikke inn video. -->
-  <link rel="stylesheet" href="manus.css?v=34">
+  <link rel="stylesheet" href="manus.css?v=35">
 </head>
 <body>
 
@@ -39,25 +39,26 @@
 
   <div class="layout">
 
-    <!-- Venstre kolonne: fil-innlasting og segmentbibliotek -->
+    <!-- Venstre kolonne: bibliotekene (segment, punkt, arenakart, kontakt, video) -->
     <aside class="sidebar">
-      <section class="upload-box">
-        <label id="gpx-load-label" for="gpx-file" class="btn btn-primary btn-block">
-          &#128194; Last inn GPX-fil&hellip;
-        </label>
-        <input type="file" id="gpx-file" accept=".gpx" hidden>
-        <label id="loype-load-label" for="loype-file" class="btn btn-small btn-block"
-               title="Åpne en .loype-fil (f.eks. mottatt for publisering) med kart, punkter og alle metadata">
-          &#128229; Importer .loype-fil&hellip;
-        </label>
-        <input type="file" id="loype-file" accept=".loype,.json" hidden>
-      </section>
+      <h2 class="sidebar-tittel">Biblioteker</h2>
 
       <section class="library kollapset" id="library-segment">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-segment" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>Segmentbibliotek</h2>
+            <span class="lib-chevron">▼</span><h2>Segment</h2>
           </button>
+        </div>
+        <div class="library-header-actions">
+          <label id="gpx-load-label" for="gpx-file" class="btn btn-small">
+            &#128194; Last inn GPX-fil&hellip;
+          </label>
+          <input type="file" id="gpx-file" accept=".gpx" hidden>
+          <label id="loype-load-label" for="loype-file" class="btn btn-small"
+                 title="Åpne en .loype-fil (f.eks. mottatt for publisering) med kart, punkter og alle metadata">
+            &#128229; Importer .loype-fil&hellip;
+          </label>
+          <input type="file" id="loype-file" accept=".loype,.json" hidden>
           <button id="btn-new-group" class="btn btn-small" title="Lag en gruppe å organisere segmenter i (f.eks. «MMC»)">+ Gruppe</button>
         </div>
         <div class="library-body">
@@ -73,7 +74,7 @@
       <section class="library kollapset" id="library-punkt">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-punkt" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>🔗 Punktbibliotek</h2>
+            <span class="lib-chevron">▼</span><h2>🔗 Punkt</h2>
           </button>
         </div>
         <div class="library-body">
@@ -89,8 +90,10 @@
       <section class="library kollapset" id="library-arena">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-arena" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>Arenakartbibliotek</h2>
+            <span class="lib-chevron">▼</span><h2>Arenakart</h2>
           </button>
+        </div>
+        <div class="library-header-actions">
           <button id="btn-new-arena-group" class="btn btn-small" title="Lag en gruppe å organisere arenakart i">+ Gruppe</button>
         </div>
         <div class="library-body">
@@ -105,8 +108,10 @@
       <section class="library kollapset" id="library-kontakt">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-kontakt" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>👤 Kontaktbibliotek</h2>
+            <span class="lib-chevron">▼</span><h2>👤 Kontakt</h2>
           </button>
+        </div>
+        <div class="library-header-actions">
           <button id="btn-ny-kontakt" class="btn btn-small"
                   title="Opprett en ny delt kontakt (kobles ikke til noe arenakart ennå)">+ Ny</button>
         </div>
@@ -129,14 +134,14 @@
       <section class="library kollapset" id="library-video">
         <div class="library-header">
           <button class="library-toggle" data-lib="library-video" title="Vis/skjul">
-            <span class="lib-chevron">▼</span><h2>🎬 Videobibliotek</h2>
+            <span class="lib-chevron">▼</span><h2>🎬 Video</h2>
           </button>
-          <span class="library-header-actions">
-            <button id="btn-video-upload" class="btn btn-small"
-                    title="Last opp en ferdig redigert video, f.eks. fra Kdenlive">⬆ Last opp</button>
-            <button id="btn-new-video-group" class="btn btn-small"
-                    title="Lag en gruppe å organisere videoer i">+ Gruppe</button>
-          </span>
+        </div>
+        <div class="library-header-actions">
+          <button id="btn-video-upload" class="btn btn-small"
+                  title="Last opp en ferdig redigert video, f.eks. fra Kdenlive">⬆ Last opp</button>
+          <button id="btn-new-video-group" class="btn btn-small"
+                  title="Lag en gruppe å organisere videoer i">+ Gruppe</button>
         </div>
         <div class="library-body">
           <p class="muted library-hint">Flyover-videoer du har spilt inn, eller ferdig redigerte videoer du
@@ -435,7 +440,7 @@
       <section id="arena-workspace" class="arena-workspace hidden">
         <div class="arena-toolbar">
           <button id="arena-new" class="btn btn-small"
-                  title="Start et nytt, tomt arenakart (åpne lagrede arenakart fra Arenakartbiblioteket til venstre)">&#10133; Nytt</button>
+                  title="Start et nytt, tomt arenakart (åpne lagrede arenakart fra Arenakart-biblioteket til venstre)">&#10133; Nytt</button>
           <span class="toolbar-divider"></span>
           <label id="arena-image-label" for="arena-image-input" class="btn btn-small"
                  title="Legg til et oversiktskart/bilde som bakgrunn">&#128444;&#65039; Legg til bilde&hellip;</label>
@@ -1062,14 +1067,14 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=34"></script>
+  <script src="felles.js?v=35"></script>
   <!-- 3D fly-by. Selve 3D-biblioteket (maplibre) lastes først når
        brukeren åpner en fly-by, så oppstarten er like rask som før. -->
   <script src="vendor/mp4-muxer.js"></script>
-  <script src="opptak.js?v=34"></script>
-  <script src="manus.js?v=34"></script>
-  <script src="flyby.js?v=34" data-maplibre="vendor/"></script>
-  <script src="app.js?v=34"></script>
-  <script src="arena.js?v=34"></script>
+  <script src="opptak.js?v=35"></script>
+  <script src="manus.js?v=35"></script>
+  <script src="flyby.js?v=35" data-maplibre="vendor/"></script>
+  <script src="app.js?v=35"></script>
+  <script src="arena.js?v=35"></script>
 </body>
 </html>

@@ -312,8 +312,8 @@ punktbiblioteket. I andre løyper:
   løypa** («snap») eller vise på de eksakte koordinatene.
 
 Endrer du et delt punkt i én løype, gjelder endringen alle løypene som
-bruker det. Knappen **«🔗 Punktbibliotek…»** viser alle delte punkter og
-hvilke løyper som bruker dem.
+bruker det. **🔗 Punkt**-biblioteket i venstre stolpe viser alle delte
+punkter og hvilke løyper som bruker dem.
 
 ## Metadata (navn, beskrivelse, creator, lenke, copyright, nøkkelord)
 

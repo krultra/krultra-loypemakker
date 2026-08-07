@@ -24,7 +24,7 @@
 // å virke (dvs. alt som rører backend/), og ellers ved merkbare endringer.
 // Da kan man se på skjermen om omstarten faktisk tok — hold det i takt med
 // BACKEND_VERSJON i backend/routes.py.
-const APP_VERSJON = '4.2.0';
+const APP_VERSJON = '4.2.1';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor

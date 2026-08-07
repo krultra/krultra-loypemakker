@@ -115,7 +115,14 @@ body { display: flex; flex-direction: column; }
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
+}
+
+.sidebar-tittel {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tekst);
 }
 
 .content {
@@ -468,7 +475,15 @@ dialog select {
   pointer-events: none;
 }
 
-/* ---------- Bibliotek (segment + arenakart) ---------- */
+/* ---------- Bibliotek (segment, punkt, arenakart, kontakt, video) ---------- */
+
+/* Skillelinje mellom bibliotekene, så inndelingen er tydelig selv når
+   flere står ekspandert samtidig. Den første seksjonen får ingen —
+   «Biblioteker»-tittelen over gjør den jobben der. */
+.library + .library {
+  border-top: 1px solid var(--kant);
+  padding-top: 14px;
+}
 
 .library-header {
   display: flex;
@@ -477,11 +492,15 @@ dialog select {
   margin-bottom: 6px;
 }
 
-/* Flere handlingsknapper i samme header (f.eks. «Last opp» + «+ Gruppe») */
+/* Handlingsknapper som hører til biblioteket (opplasting, «+ Gruppe» …) —
+   egen rad under selve overskriften, alltid synlig (også kollapset), som
+   knappene sto i før. */
 .library-header-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  margin-bottom: 6px;
 }
 
 /* Sammenleggbar seksjonsknapp (chevron + overskrift) */
@@ -653,10 +672,6 @@ dialog select {
 .btn-red:hover:not(:disabled) { background: #fef2f2; border-color: var(--farge-b); }
 
 .btn-icon { padding: 8px 12px; font-size: 12px; }
-
-.btn-block { display: block; width: 100%; text-align: center; }
-/* Importer-knappen står rett under «Last inn GPX-fil» — litt luft imellom */
-#loype-load-label { margin-top: 6px; }
 
 .btn-small { padding: 4px 10px; font-size: 12px; border-radius: 6px; }
 
