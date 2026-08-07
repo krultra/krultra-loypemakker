@@ -493,8 +493,8 @@ dialog select {
 }
 
 /* Handlingsknapper som hører til biblioteket (opplasting, «+ Gruppe» …) —
-   egen rad under selve overskriften, alltid synlig (også kollapset), som
-   knappene sto i før. */
+   egen rad under selve overskriften. Skjules sammen med resten av
+   biblioteket når det er kollapset (se .library.kollapset over). */
 .library-header-actions {
   display: flex;
   align-items: center;
@@ -515,7 +515,8 @@ dialog select {
 }
 .lib-chevron { font-size: 10px; color: var(--tekst-dus); transition: transform 0.15s; }
 .library.kollapset .lib-chevron { transform: rotate(-90deg); }
-.library.kollapset .library-body { display: none; }
+.library.kollapset .library-body,
+.library.kollapset .library-header-actions { display: none; }
 
 .library h2 {
   font-size: 13px;

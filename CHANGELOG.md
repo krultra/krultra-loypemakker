@@ -24,8 +24,8 @@ Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 - Fil-innlasting (**Last inn GPX-fil**, **Importer .loype-fil**) flyttet inn
   under Segmentbibliotek i stedet for å stå i en egen boks øverst.
 - Alle handlingsknapper (**+ Gruppe**, **+ Ny**, **⬆ Last opp**) står nå på en
-  egen rad rett under hvert bibliotek-navn, alltid synlig — også når
-  biblioteket er kollapset.
+  egen rad rett under hvert bibliotek-navn, og skjules sammen med resten av
+  biblioteket når det kollapses.
 - Stolpen har fått en samlende overskrift **«Biblioteker»**, og hvert enkelt
   bibliotek har mistet «-bibliotek»-endelsen i navnet sitt (Segment, Punkt,
   Arenakart, Kontakt, Video).
