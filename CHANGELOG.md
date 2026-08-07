@@ -31,6 +31,8 @@ Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
   Arenakart, Kontakt, Video).
 - Skillelinjer mellom hvert bibliotek, synlige uansett hvor mange som står
   ekspandert samtidig.
+- Alle fem bibliotekene har nå et ikon foran navnet: 🥾 Segment,
+  🔗 Punkt, 🏟️ Arenakart, 👤 Kontakt, 🎬 Video.
 
 ## 4.2.0 — 7. august 2026
 
