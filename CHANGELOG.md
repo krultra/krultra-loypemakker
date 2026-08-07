@@ -17,6 +17,21 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 4.2.0 — 7. august 2026
+
+**Videobibliotek: grupper og opplasting av redigerte videoer.**
+
+- **Gruppering i videobiblioteket**, samme dra-og-slipp-system som segment-
+  og arenakartbiblioteket: lag grupper med **+ Gruppe**, dra videoer inn i
+  dem eller ut igjen, endre rekkefølge fritt. Videoradene har fått samme
+  utseende som segment-/arenakartkortene.
+- **⬆ Last opp** i videobiblioteket tar imot en ferdig redigert video (f.eks.
+  eksportert fra Kdenlive eller DaVinci Resolve) og legger den i biblioteket
+  ved siden av flyover-opptakene — samme publisering, samme organisering.
+  Varighet og oppløsning leses fra fila i nettleseren (ingen ffmpeg
+  påkrevd). Kan valgfritt kombineres med en egen, lettere nettversjon, akkurat
+  som et flyover-opptak med to spor.
+
 ## 4.1.0 — 7. august 2026
 
 **Opptaksmanus** — du regisserer videoen på forhånd i stedet for å styre

@@ -199,6 +199,27 @@ spilles av (**▶**, åpner i egen fane), lastes ned (**⤓**), døpes om,
 slettes og publiseres. Raden viser lengde, oppløsning, størrelse og
 hvilke utgaver som finnes.
 
+### Organisere videobiblioteket i grupper
+
+Videobiblioteket har samme gruppering som segment- og arenakartbiblioteket:
+**+ Gruppe** lager en gruppe (f.eks. et arrangementnavn), og du drar
+videoer inn i den eller ut igjen. Rekkefølgen — både på rotnivået og inni
+en gruppe — settes ved å dra. Slett en gruppe, og videoene i den legges
+tilbake på rotnivå i stedet for å bli slettet.
+
+### Laste opp en ferdig redigert video
+
+Har du klippet, tekstet eller mikset en video utenfor KUL (f.eks. i
+Kdenlive eller DaVinci Resolve) og vil ha den med i videobiblioteket for
+publisering, bruker du **⬆ Last opp** i videobibliotekets overskrift.
+Fyll inn navn, eventuelt løype og språk, velg fila — og eventuelt en
+lettere nettversjon i tillegg, akkurat som et flyover-opptak kan gi to
+filer. Lengde og oppløsning leses fra videofila i nettleseren, uten noen
+tur om serveren.
+
+Den opplastede videoen havner i biblioteket på lik linje med
+flyover-opptak, og publiseres på nøyaktig samme måte.
+
 ### Publisere en video
 
 **«Publiser»** i videobiblioteket legger videoen ut som en egen liten side

@@ -7,11 +7,11 @@
   <link rel="icon" href="favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="favicon.png">
   <link rel="stylesheet" href="vendor/leaflet.css">
-  <link rel="stylesheet" href="style.css?v=33">
-  <link rel="stylesheet" href="flyby.css?v=33">
+  <link rel="stylesheet" href="style.css?v=34">
+  <link rel="stylesheet" href="flyby.css?v=34">
   <!-- Opptaksmanuset finnes bare i verktøyet — publiserte løypevisninger
        spiller ikke inn video. -->
-  <link rel="stylesheet" href="manus.css?v=33">
+  <link rel="stylesheet" href="manus.css?v=34">
 </head>
 <body>
 
@@ -131,11 +131,20 @@
           <button class="library-toggle" data-lib="library-video" title="Vis/skjul">
             <span class="lib-chevron">▼</span><h2>🎬 Videobibliotek</h2>
           </button>
+          <span class="library-header-actions">
+            <button id="btn-video-upload" class="btn btn-small"
+                    title="Last opp en ferdig redigert video, f.eks. fra Kdenlive">⬆ Last opp</button>
+            <button id="btn-new-video-group" class="btn btn-small"
+                    title="Lag en gruppe å organisere videoer i">+ Gruppe</button>
+          </span>
         </div>
         <div class="library-body">
-          <p class="muted library-hint">Flyover-videoer du har spilt inn. Ta opp nye med «Ta opp» inne i Flyover.</p>
-          <p id="video-lib-empty" class="muted hidden"></p>
-          <div id="video-sidebar-list" class="wpt-lib-list"></div>
+          <p class="muted library-hint">Flyover-videoer du har spilt inn, eller ferdig redigerte videoer du
+            har lastet opp. Dra for å gruppere og endre rekkefølge, som for segmentene.</p>
+          <p id="video-library-empty" class="muted hidden">
+            Ingen videoer ennå. Ta opp en flyover, eller last opp en ferdig redigert video.
+          </p>
+          <ul id="video-list"></ul>
         </div>
       </section>
     </aside>
@@ -614,6 +623,44 @@
     </form>
   </dialog>
 
+  <!-- Dialog for å laste opp en ferdig redigert video (f.eks. fra Kdenlive) -->
+  <dialog id="video-upload-dialog">
+    <form method="dialog">
+      <h3>Last opp video</h3>
+      <p class="muted">
+        For videoer du har redigert utenfor KUL (klipping, tekst, lyd) og vil ha
+        med i videobiblioteket for publisering — flyover-opptak gjøres fortsatt
+        med «Ta opp» inne i Flyover.
+      </p>
+      <label class="field-label" for="video-upload-navn">Navn</label>
+      <input type="text" id="video-upload-navn" autocomplete="off">
+      <label class="field-label" for="video-upload-loype">
+        Løype <span class="muted">(valgfri)</span>
+      </label>
+      <input type="text" id="video-upload-loype" autocomplete="off">
+      <label class="field-label" for="video-upload-sprak">Språk</label>
+      <select id="video-upload-sprak">
+        <option value="no">Norsk</option>
+        <option value="en">Engelsk</option>
+      </select>
+      <label class="field-label" for="video-upload-fil">Videofil</label>
+      <input type="file" id="video-upload-fil" accept="video/mp4,video/webm">
+      <label class="wpt-vis-rad" style="margin-top:8px">
+        <input type="checkbox" id="video-upload-nett-av">
+        Legg til en lettere nettversjon <span class="muted">(mindre fil, samme innhold)</span>
+      </label>
+      <div id="video-upload-nett-felt" class="hidden">
+        <label class="field-label" for="video-upload-nett-fil">Nettversjon</label>
+        <input type="file" id="video-upload-nett-fil" accept="video/mp4,video/webm">
+      </div>
+      <p class="muted" id="video-upload-status"></p>
+      <div class="button-row">
+        <button value="ok" id="video-upload-go" class="btn btn-primary">Last opp</button>
+        <button value="cancel" class="btn" formnovalidate>Avbryt</button>
+      </div>
+    </form>
+  </dialog>
+
   <!-- Dialog: slette et delt punkt / en delt kontakt (to måter) -->
   <dialog id="slett-delt-dialog">
     <form method="dialog">
@@ -1015,14 +1062,14 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="vendor/leaflet.js"></script>
-  <script src="felles.js?v=33"></script>
+  <script src="felles.js?v=34"></script>
   <!-- 3D fly-by. Selve 3D-biblioteket (maplibre) lastes først når
        brukeren åpner en fly-by, så oppstarten er like rask som før. -->
   <script src="vendor/mp4-muxer.js"></script>
-  <script src="opptak.js?v=33"></script>
-  <script src="manus.js?v=33"></script>
-  <script src="flyby.js?v=33" data-maplibre="vendor/"></script>
-  <script src="app.js?v=33"></script>
-  <script src="arena.js?v=33"></script>
+  <script src="opptak.js?v=34"></script>
+  <script src="manus.js?v=34"></script>
+  <script src="flyby.js?v=34" data-maplibre="vendor/"></script>
+  <script src="app.js?v=34"></script>
+  <script src="arena.js?v=34"></script>
 </body>
 </html>

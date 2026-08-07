@@ -24,7 +24,7 @@
 // å virke (dvs. alt som rører backend/), og ellers ved merkbare endringer.
 // Da kan man se på skjermen om omstarten faktisk tok — hold det i takt med
 // BACKEND_VERSJON i backend/routes.py.
-const APP_VERSJON = '4.1.0';
+const APP_VERSJON = '4.2.0';
 
 // ---------- Farger (speiler variablene i style.css) ----------
 const FARGE_A = '#2563eb';        // segment A / vanlig spor
@@ -3427,21 +3427,11 @@ async function utførPublisering() {
 }
 
 // ============================================================
-// Videobibliotek: innspilte flyover-videoer
+// Videobibliotek: innspilte flyover-videoer + opplastede redigerte videoer
 // ============================================================
-
-let videoBibliotek = [];
-
-/** Hent lista med lagrede videoer og tegn den i venstre kolonne. */
-async function oppdaterVideobibliotek() {
-  try {
-    const res = await api('/api/videos');
-    videoBibliotek = (await res.json()).videoer || [];
-  } catch (feil) {
-    videoBibliotek = [];   // eldre server uten videostøtte — bare tom liste
-  }
-  tegnVideobibliotek();
-}
+// Samme grupperings-/dra-og-slipp-system som segment- og arenakartbiblioteket
+// (lagBibliotek() lenger opp) — videoBib er bare en tredje konfigurert
+// instans av den generiske kontrolleren.
 
 function videoStørrelse(byte) {
   return (byte / (1024 * 1024)).toFixed(1) + ' MB';
@@ -3460,59 +3450,69 @@ function videoVarianter(v) {
   return '+ ' + ekstra.map((x) => 'nettversjon ' + (x.bredde || '?')).join(', ');
 }
 
-function tegnVideobibliotek() {
-  const liste = document.getElementById('video-sidebar-list');
-  const tom = document.getElementById('video-lib-empty');
-  if (!liste) return;
-  liste.innerHTML = '';
-  if (!videoBibliotek.length) {
-    tom.textContent = 'Ingen videoer ennå. Åpne Flyover og trykk «Ta opp».';
-    tom.classList.remove('hidden');
-    return;
-  }
-  tom.classList.add('hidden');
+function fyllVideoKort(li, v, ktrl) {
+  const navn = document.createElement('div');
+  navn.className = 'seg-name';
+  navn.textContent = v.navn;
 
-  for (const v of videoBibliotek) {
-    const rad = document.createElement('div');
-    rad.className = 'wpt-lib-item';
-    const fakta = [
-      videoVarighet(v.varighet),
-      v.bredde ? v.bredde + '×' + v.hoyde : null,
-      videoStørrelse(v.storrelse),
-      videoVarianter(v),
-      v.sprak && v.sprak !== 'no' ? v.sprak.toUpperCase() : null,
-      v.loype,
-    ].filter(Boolean).join(' · ');
-    rad.innerHTML =
-      '<div class="wpt-lib-tekst">' +
-        '<span class="wpt-lib-navn"></span>' +
-        '<span class="wpt-lib-meta"></span>' +
-      '</div>' +
-      '<div class="wpt-lib-knapper">' +
-        '<a class="btn btn-small" data-h="spill" target="_blank" rel="noopener" ' +
-          'title="Spill av videoen i egen fane">▶</a>' +
-        '<a class="btn btn-small" data-h="last" target="_blank" rel="noopener" ' +
-          'title="Last ned videofila">⤓</a>' +
-        '<button class="btn btn-small" data-h="publiser" title="Publiser videoen på nett">Publiser</button>' +
-        '<button class="btn btn-small" data-h="navn" title="Gi videoen et nytt navn">Endre</button>' +
-        '<button class="btn btn-small btn-danger-subtle" data-h="slett" title="Slett videoen">Slett</button>' +
-      '</div>';
-    rad.querySelector('.wpt-lib-navn').textContent = v.navn;
-    rad.querySelector('.wpt-lib-meta').textContent = fakta;
-    // «Spill av» ber serveren sende fila inline; uten det setter
-    // FileResponse Content-Disposition: attachment, og videoen havner i
-    // nedlastingsmappa i stedet for i en avspiller.
-    rad.querySelector('[data-h="spill"]').href = '/api/videos/' + v.id + '/fil?inline=1';
-    rad.querySelector('[data-h="last"]').href = '/api/videos/' + v.id + '/fil';
-    rad.querySelector('[data-h="publiser"]').addEventListener(
-      'click', () => åpneVideoPublisering(v));
-    rad.querySelector('[data-h="navn"]').addEventListener(
-      'click', () => endreVideonavn(v));
-    rad.querySelector('[data-h="slett"]').addEventListener(
-      'click', () => slettVideo(v));
-    liste.appendChild(rad);
-  }
+  const meta = document.createElement('div');
+  meta.className = 'seg-meta';
+  meta.textContent = [
+    videoVarighet(v.varighet),
+    v.bredde ? v.bredde + '×' + v.hoyde : null,
+    videoStørrelse(v.storrelse),
+    videoVarianter(v),
+    v.sprak && v.sprak !== 'no' ? v.sprak.toUpperCase() : null,
+    v.loype,
+  ].filter(Boolean).join(' · ');
+  li.append(navn, meta);
+
+  const knapper = document.createElement('div');
+  knapper.className = 'seg-buttons';
+  const spill = document.createElement('a');
+  spill.className = 'btn btn-small';
+  spill.target = '_blank';
+  spill.rel = 'noopener';
+  spill.title = 'Spill av videoen i egen fane';
+  spill.textContent = '▶';
+  // Ber serveren sende fila inline; uten det setter FileResponse
+  // Content-Disposition: attachment, og videoen havner i nedlastingsmappa
+  // i stedet for i en avspiller.
+  spill.href = '/api/videos/' + v.id + '/fil?inline=1';
+  const last = document.createElement('a');
+  last.className = 'btn btn-small';
+  last.target = '_blank';
+  last.rel = 'noopener';
+  last.title = 'Last ned videofila';
+  last.textContent = '⤓';
+  last.href = '/api/videos/' + v.id + '/fil';
+  knapper.append(
+    spill, last,
+    lagKnapp('Publiser', 'btn btn-small', () => åpneVideoPublisering(v)),
+    lagKnapp('Endre', 'btn btn-small', () => endreVideonavn(v)),
+    lagKnapp('Slett', 'btn btn-small btn-danger-subtle', () => slettVideo(v)));
+  li.appendChild(knapper);
 }
+
+const videoBib = lagBibliotek({
+  listeId: 'video-list', emptyId: 'video-library-empty',
+  entryType: 'video', dndPrefiks: 'vid', enhet: 'videoer',
+  endepunkt: '/api/video-library', utvidetNøkkel: 'gps-tool.video-utvidede',
+  hent: async () => {
+    const [vidRes, libRes] = await Promise.all([api('/api/videos'), api('/api/video-library')]);
+    const info = {};
+    for (const v of (await vidRes.json()).videoer) info[v.id] = v;
+    return { struktur: await libRes.json(), info };
+  },
+  fyllKort: fyllVideoKort,
+});
+
+// Wrapper med det gamle navnet, så resten av koden kan be om en oppfriskning
+// uten å kjenne kontrolleren.
+async function oppdaterVideobibliotek() { await videoBib.oppdater(); }
+
+document.getElementById('btn-new-video-group').addEventListener(
+  'click', () => nyGruppe(videoBib));
 
 async function endreVideonavn(v) {
   const nytt = prompt('Nytt navn på videoen:', v.navn);
@@ -3648,6 +3648,112 @@ document.getElementById('video-publish-copy').addEventListener('click', async ()
     felt.select();
     toast('Kopier med Ctrl+C (teksten er markert)', 'error');
   }
+});
+
+// ---- Last opp en ferdig redigert video (f.eks. fra Kdenlive) ----
+
+/**
+ * Les varighet og oppløsning fra en videofil FØR opplasting, uten noen
+ * server-tur. Nettleseren kan lese dette selv via et skjult
+ * <video>-element — det sparer oss for en ffmpeg-avhengighet i backend
+ * bare for å vise disse tallene i biblioteket.
+ */
+function lesVideoMetadata(file) {
+  return new Promise((ok) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    const ferdig = (data) => { URL.revokeObjectURL(url); ok(data); };
+    v.onloadedmetadata = () => ferdig({
+      varighet: v.duration || null, bredde: v.videoWidth || null, hoyde: v.videoHeight || null,
+    });
+    v.onerror = () => ferdig({ varighet: null, bredde: null, hoyde: null });
+    v.src = url;
+  });
+}
+
+const videoUpploadDialog = document.getElementById('video-upload-dialog');
+
+document.getElementById('btn-video-upload').addEventListener('click', () => {
+  document.getElementById('video-upload-navn').value = editorState.navn || '';
+  document.getElementById('video-upload-loype').value = editorState.navn || '';
+  document.getElementById('video-upload-sprak').value = 'no';
+  document.getElementById('video-upload-fil').value = '';
+  document.getElementById('video-upload-nett-av').checked = false;
+  document.getElementById('video-upload-nett-felt').classList.add('hidden');
+  document.getElementById('video-upload-nett-fil').value = '';
+  document.getElementById('video-upload-status').textContent = '';
+  videoUpploadDialog.showModal();
+});
+
+document.getElementById('video-upload-nett-av').addEventListener('change', (e) => {
+  document.getElementById('video-upload-nett-felt').classList.toggle('hidden', !e.target.checked);
+});
+
+async function lastOppVideo() {
+  const knapp = document.getElementById('video-upload-go');
+  const status = document.getElementById('video-upload-status');
+  const navn = document.getElementById('video-upload-navn').value.trim();
+  const loype = document.getElementById('video-upload-loype').value.trim();
+  const sprak = document.getElementById('video-upload-sprak').value;
+  const hovedInput = document.getElementById('video-upload-fil');
+  const nettPå = document.getElementById('video-upload-nett-av').checked;
+  const nettInput = document.getElementById('video-upload-nett-fil');
+
+  if (!navn) { status.textContent = 'Videoen må ha et navn.'; return; }
+  if (!hovedInput.files.length) { status.textContent = 'Velg en videofil.'; return; }
+  if (nettPå && !nettInput.files.length) {
+    status.textContent = 'Velg en fil for nettversjonen, eller fjern haken.';
+    return;
+  }
+
+  // Størst (eller eneste) fil regnes som hovedvarianten, uansett hvilken
+  // rekkefølge feltene ble fylt ut i.
+  const filer = [hovedInput.files[0]];
+  if (nettPå) filer.push(nettInput.files[0]);
+
+  knapp.disabled = true;
+  try {
+    status.textContent = 'Leser videoen …';
+    const skjema = new FormData();
+    const varianter = [];
+    let hovedVarighet = null;
+    for (let i = 0; i < filer.length; i++) {
+      const merke = i === 0 ? 'full' : 'web';
+      const meta = await lesVideoMetadata(filer[i]);
+      if (i === 0) hovedVarighet = meta.varighet;
+      const endelse = (filer[i].name.split('.').pop() || 'mp4').toLowerCase();
+      skjema.append('files', filer[i], merke + '.' + endelse);
+      varianter.push({ merke, bredde: meta.bredde, hoyde: meta.hoyde });
+    }
+    skjema.append('varianter', JSON.stringify(varianter));
+    skjema.append('navn', navn);
+    if (loype) skjema.append('loype', loype);
+    skjema.append('sprak', sprak);
+    if (hovedVarighet) skjema.append('varighet', String(Math.round(hovedVarighet * 10) / 10));
+
+    status.textContent = 'Laster opp …';
+    const svar = await fetch('/api/videos', { method: 'POST', body: skjema });
+    if (!svar.ok) {
+      const feil = await svar.json().catch(() => ({}));
+      throw new Error(feil.detail || ('HTTP ' + svar.status));
+    }
+    const video = await svar.json();
+    videoUpploadDialog.close();
+    toast('Videoen «' + video.navn + '» er lastet opp.', 'success');
+    await oppdaterVideobibliotek();
+  } catch (feil) {
+    status.textContent = feil.message;
+  } finally {
+    knapp.disabled = false;
+  }
+}
+
+document.querySelector('#video-upload-dialog form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const handling = (e.submitter && e.submitter.value) || 'ok';
+  if (handling === 'cancel') videoUpploadDialog.close();
+  else lastOppVideo();
 });
 
 document.getElementById('btn-publish').addEventListener('click', åpnePubliseringsdialog);
@@ -4831,11 +4937,11 @@ oppdaterBibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterArenabibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterPunktbibliotek().catch((feil) => toast(feil.message, 'error'));
 oppdaterKontaktbibliotek().catch((feil) => toast(feil.message, 'error'));
-oppdaterVideobibliotek();   // feiler stille på eldre server uten videostøtte
+oppdaterVideobibliotek().catch((feil) => toast(feil.message, 'error'));
 
 // Versjonen frontend forventer av backend. Økes i takt med BACKEND_VERSJON
 // i backend/routes.py når nye endepunkter/felter tas i bruk.
-const FORVENTET_BACKEND = 40;
+const FORVENTET_BACKEND = 41;
 
 /** Sjekk at den kjørende serveren har ny nok kode; ellers varsle tydelig. */
 async function sjekkServerversjon() {

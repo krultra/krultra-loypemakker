@@ -477,6 +477,13 @@ dialog select {
   margin-bottom: 6px;
 }
 
+/* Flere handlingsknapper i samme header (f.eks. «Last opp» + «+ Gruppe») */
+.library-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Sammenleggbar seksjonsknapp (chevron + overskrift) */
 .library-toggle {
   display: flex;
@@ -598,7 +605,9 @@ dialog select {
 .dnd-over-bottom::after { bottom: -5px; }
 .dnd-into { outline: 2px solid var(--farge-primær); outline-offset: -1px; }
 
-#segment-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+#segment-list, #arena-list, #video-list {
+  list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px;
+}
 
 .segment-item {
   border: 1px solid var(--kant);

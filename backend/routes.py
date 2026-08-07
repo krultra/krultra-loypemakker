@@ -65,7 +65,7 @@ router = APIRouter()
 # Økes når backend får ny funksjonalitet frontend er avhengig av. Frontend
 # sjekker dette ved oppstart og varsler tydelig hvis den kjørende serveren
 # er eldre enn koden på disk (dvs. må startes på nytt).
-BACKEND_VERSJON = 40
+BACKEND_VERSJON = 41
 
 
 @router.get("/health")
@@ -201,6 +201,21 @@ def lagre_arena_bibliotek(struktur: LibraryStructure):
         if entry.type not in ("group", "arena"):
             raise HTTPException(status_code=400, detail="Ugyldig oppføringstype")
     return storage.save_arena_library(struktur)
+
+
+@router.get("/video-library", response_model=LibraryStructure)
+def hent_video_bibliotek():
+    """Hent organiseringen av videobiblioteket (grupper og rekkefølge)."""
+    return storage.load_video_library()
+
+
+@router.put("/video-library", response_model=LibraryStructure)
+def lagre_video_bibliotek(struktur: LibraryStructure):
+    """Lagre organiseringen etter at brukeren har flyttet/gruppert videoer."""
+    for entry in struktur.root:
+        if entry.type not in ("group", "video"):
+            raise HTTPException(status_code=400, detail="Ugyldig oppføringstype")
+    return storage.save_video_library(struktur)
 
 
 @router.get("/segments/{segment_id}", response_model=SegmentDetail)

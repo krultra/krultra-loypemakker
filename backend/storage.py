@@ -29,6 +29,8 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "segments"
 LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "library.json"
 # Samme, men for arenakartbiblioteket: data/arena-library.json
 ARENA_LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "arena-library.json"
+# Samme, men for videobiblioteket: data/video-library.json
+VIDEO_LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "video-library.json"
 
 # Gyldige segment-id-er: bare heksadesimale tegn (som uuid4().hex gir oss).
 # Sjekken hindrer at rare verdier i URL-en kan peke utenfor data-mappa.
@@ -244,3 +246,17 @@ def save_arena_library(struktur: LibraryStructure) -> LibraryStructure:
     ARENA_LIBRARY_FILE.parent.mkdir(parents=True, exist_ok=True)
     ARENA_LIBRARY_FILE.write_text(struktur.model_dump_json(indent=2), encoding="utf-8")
     return load_arena_library()
+
+
+def load_video_library() -> LibraryStructure:
+    """Les videobiblioteket og avstem det mot videoene som finnes."""
+    from . import video_lagring  # lokal import: unngå importsyklus på modulnivå
+    kjente = [v["id"] for v in video_lagring.les_index()]  # nyeste først
+    return _avstem_bibliotek(_les_struktur(VIDEO_LIBRARY_FILE), kjente, "video")
+
+
+def save_video_library(struktur: LibraryStructure) -> LibraryStructure:
+    """Lagre videobiblioteket. Returnerer den avstemte varianten."""
+    VIDEO_LIBRARY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    VIDEO_LIBRARY_FILE.write_text(struktur.model_dump_json(indent=2), encoding="utf-8")
+    return load_video_library()
