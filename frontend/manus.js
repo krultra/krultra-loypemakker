@@ -94,7 +94,7 @@ var KULManus = (function () {
   function standard() {
     return {
       versjon: 1,
-      sprak: ['no'],
+      sprak: ['no', 'en'],
       maksBredde: 1920,
       nettversjon: true,
       nettBredde: 1280,
@@ -991,18 +991,41 @@ var KULManus = (function () {
     // Fane: Sjekkpunkter
     // ============================================================
 
+    // Bare ett sjekkpunkt utvidet av gangen — samme mønster som kamerapunktene
+    // (indeks i ctx.veipunkter, eller null når alle står kollapset).
+    var valgtSjekkpunkt = null;
+
     function tegnPunkter() {
       hjelp('For hvert punkt kan du velge om markøren skal vises på vei inn, ' +
         'om kameraet skal ta en runde rundt punktet, og om vi skal stoppe og ' +
         'vise detaljkortet. Punkter du skjuler teller heller ikke som ' +
-        '«neste punkt» — da hoppes de rett og slett over.');
+        '«neste punkt» — da hoppes de rett og slett over. Klikk et punkt for ' +
+        'å åpne innstillingene.');
 
       var wp = ctx.veipunkter || [];
       if (!wp.length) {
         kropp.appendChild(el('p', 'fb-m-tom', 'Løypa har ingen interessepunkter.'));
         return;
       }
-      wp.forEach(function (w) { kropp.appendChild(punktkort(w)); });
+      wp.forEach(function (w, i) {
+        var rad = sjekkpunktRad(w, i);
+        kropp.appendChild(rad);
+        if (i === valgtSjekkpunkt) {
+          // Toggle-bryterne i kortet endrer sammendraget på raden over —
+          // uten denne kroken ville raden stått igjen med utdatert tekst
+          // til man lukker og åpner igjen (bare tegnFane() bygger den på nytt).
+          kropp.appendChild(punktkort(w, function () {
+            var sum = rad.querySelector('.fb-m-kfsum');
+            if (sum) sum.textContent = sjekkpunktSammendrag(innstillingFor(w));
+          }));
+        }
+      });
+    }
+
+    function velgSjekkpunkt(i) {
+      // Klikk på det som alt er åpent lukker det igjen
+      valgtSjekkpunkt = (valgtSjekkpunkt === i) ? null : i;
+      tegnFane();
     }
 
     function innstillingFor(w) {
@@ -1013,26 +1036,41 @@ var KULManus = (function () {
       return m.sjekkpunkter[n];
     }
 
-    function punktkort(w) {
-      var d = innstillingFor(w);
-      var kort = el('div', 'fb-m-kort');
+    /** Kort oppsummering av et sjekkpunkts innstillinger, til den kollapsede raden. */
+    function sjekkpunktSammendrag(d) {
+      var deler = [];
+      if (!d.vis) deler.push('Skjult');
+      if (d.orbit) deler.push('360°');
+      if (d.kort) deler.push('Kort ' + d.kortSek + ' s');
+      return deler.length ? deler.join(' · ') : 'Standard';
+    }
 
-      var hode = el('div', 'fb-m-kort-hode fb-m-cp-hode');
+    /** Sammenklappet rad for ett sjekkpunkt — klikk for å utvide/lukke. */
+    function sjekkpunktRad(w, i) {
+      var d = innstillingFor(w);
+      var rad = el('div', 'fb-m-kfrad' + (i === valgtSjekkpunkt ? ' valgt' : ''));
       var sym = el('span', 'fb-m-cp-sym');
       if (typeof wptTyper === 'function' && typeof symbolGlyphHtml === 'function') {
         sym.innerHTML = wptTyper(w).map(function (tp) {
           return symbolGlyphHtml(tp, 15);
         }).join(' ');
       }
-      hode.appendChild(sym);
-      hode.appendChild(el('b', 'fb-m-cp-navn', w.name || '(uten navn)'));
+      rad.appendChild(sym);
+      rad.appendChild(el('span', 'fb-m-cp-navn', w.name || '(uten navn)'));
       var km = (ctx.avstander && w.idx != null) ? ctx.avstander[w.idx] : null;
-      hode.appendChild(el('span', 'fb-m-cp-km',
+      rad.appendChild(el('span', 'fb-m-cp-km',
         km == null ? '' : km.toFixed(2).replace('.', ',') + ' km'));
-      kort.appendChild(hode);
+      rad.appendChild(el('span', 'fb-m-kfsum', sjekkpunktSammendrag(d)));
+      rad.addEventListener('click', function () { velgSjekkpunkt(i); });
+      return rad;
+    }
+
+    function punktkort(w, oppdaterRad) {
+      var d = innstillingFor(w);
+      var kort = el('div', 'fb-m-kort');
 
       var visRad = bryter('Vis markøren på kartet', d.vis, function (v) {
-        d.vis = v; endret(); byggVisDel();
+        d.vis = v; endret(); byggVisDel(); oppdaterRad();
       });
       kort.appendChild(visRad);
 
@@ -1056,7 +1094,7 @@ var KULManus = (function () {
       byggVisDel();
 
       var orbitRad = bryter('Ta en 360 rundt punktet', d.orbit, function (v) {
-        d.orbit = v; endret(); byggOrbitDel();
+        d.orbit = v; endret(); byggOrbitDel(); oppdaterRad();
       });
       kort.appendChild(orbitRad);
       var orbitDel = el('div', 'fb-m-inn');
@@ -1075,7 +1113,7 @@ var KULManus = (function () {
       byggOrbitDel();
 
       var kortRad = bryter('Stopp og vis detaljkortet', d.kort, function (v) {
-        d.kort = v; endret(); byggKortDel();
+        d.kort = v; endret(); byggKortDel(); oppdaterRad();
       });
       kort.appendChild(kortRad);
       var kortDel = el('div', 'fb-m-inn');
@@ -1085,7 +1123,7 @@ var KULManus = (function () {
         kortDel.style.display = d.kort ? '' : 'none';
         if (!d.kort) return;
         kortDel.appendChild(tallfelt('Vises i', 1, 15, 0.5, d.kortSek, 'sek',
-          function (v) { d.kortSek = v; endret(); }));
+          function (v) { d.kortSek = v; endret(); oppdaterRad(); }));
       }
       byggKortDel();
 

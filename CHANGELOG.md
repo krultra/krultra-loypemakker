@@ -17,6 +17,17 @@ Fra og med **2.0.0** følger prosjektet
 Versjonene før 2.0.0 (under **Utviklingshistorikk** nedenfor) ble kalt
 «v2»–«v19» underveis i utviklingen og fulgte ikke dette skjemaet.
 
+## 4.2.2 — 7. august 2026
+
+**Justeringer i opptaksmanuset.**
+
+- **Norsk og engelsk er nå standardvalget** for et nytt manus (tidligere bare
+  norsk) — du slår av engelsk hvis du bare vil ha én video.
+- **Sjekkpunktene i manuset er nå en harmonika**: hvert punkt vises kollapset
+  til én tittellinje med et sammendrag av innstillingene («Skjult»,
+  «360°», «Kort 3 s» …), og bare ett punkt kan stå utvidet av gangen — å
+  åpne ett lukker automatisk det forrige.
+
 ## 4.2.1 — 7. august 2026
 
 **Ryddet venstre stolpe.** Ren GUI-opprydding, ingen funksjonsendring.

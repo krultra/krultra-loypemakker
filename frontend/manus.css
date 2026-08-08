@@ -380,6 +380,14 @@
   flex: none;
 }
 
+/* Sjekkpunktenes kollapsede rad gjenbruker cp-sym/cp-navn/cp-km, men her
+   skal navnet ha forrangen til den voksende plassen — sammendraget til
+   høyre (fb-m-kfsum) får bare den plassen som er igjen. */
+.kul-flyby .fb-m-cp-navn ~ .fb-m-kfsum {
+  flex: none;
+  max-width: 40%;
+}
+
 /* ---------- Video-fanen ---------- */
 
 .kul-flyby .fb-m-maaling {
