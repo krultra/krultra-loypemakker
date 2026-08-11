@@ -17,12 +17,14 @@ Mål konfigureres i data/publisering.json og kan være:
 """
 import json
 import math
+import os
 import re
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
+from .data_paths import APP_ROOT, DATA_ROOT
 from .models import Point, Waypoint
 
 # Økes når viewer-koden (viewer/ eller frontend/felles.js) endres, slik
@@ -37,9 +39,9 @@ from .models import Point, Waypoint
 # /api/health er det som fanger opp nettopp det.
 ASSET_VERSJON = 26
 
-_ROT = Path(__file__).resolve().parent.parent
+_ROT = APP_ROOT
 VIEWER_DIR = _ROT / "viewer"
-KONFIG_FIL = _ROT / "data" / "publisering.json"
+KONFIG_FIL = DATA_ROOT / "publisering.json"
 
 GYLDIG_SLUG = re.compile(r"^[a-z0-9][a-z0-9-]{1,60}$")
 
@@ -261,7 +263,9 @@ KONFIG_MAL = {
         "Publiseringsmål for løypevisninger. type 'mappe' skriver til en "
         "lokal mappe (test/manuell opplasting); type 'sftp' laster opp "
         "direkte til en server. For sftp: angi enten 'passord' eller "
-        "'nøkkelfil' (sti til privat SSH-nøkkel). 'fjernmappe' er mappa "
+        "'nøkkelfil' (sti til privat SSH-nøkkel); på Linux kan "
+        "'nøkkelfil_linux' brukes når konfigurasjonen deles med Windows. "
+        "'fjernmappe' er mappa "
         "webserveren serverer, 'baseUrl' er den offentlige adressen dit. "
         "type 'gruppe' publiserer til flere mål i én operasjon: "
         "'medlemmer' er lista med navnene på målene (f.eks. prod + failover)."
@@ -270,10 +274,11 @@ KONFIG_MAL = {
         # lokal-test serveres av verktøyet selv (se /publisert i main.py) —
         # lenken virker altså så lenge verktøyet kjører
         {"navn": "lokal-test", "type": "mappe",
-         "mappe": "data/publisert", "baseUrl": "http://127.0.0.1:8000/publisert"},
+         "mappe": "publisert", "baseUrl": "http://127.0.0.1:8000/publisert"},
         {"navn": "krultra-pi", "type": "sftp",
          "host": "FYLL-INN", "port": 22, "bruker": "FYLL-INN",
          "passord": "FYLL-INN-ELLER-SLETT", "nøkkelfil": "",
+         "nøkkelfil_linux": "",
          "fjernmappe": "/var/www/loyper",
          "baseUrl": "https://loyper.krultra.no"},
     ],
@@ -331,7 +336,13 @@ class _MappeMål:
 
     def __init__(self, mål: dict):
         mappe = Path(mål["mappe"])
-        self.rot = mappe if mappe.is_absolute() else _ROT / mappe
+        if mappe.is_absolute():
+            self.rot = mappe
+        elif mappe.parts and mappe.parts[0] == "data":
+            # Bakoverkompatibilitet med eldre publisering.json-filer.
+            self.rot = DATA_ROOT.joinpath(*mappe.parts[1:])
+        else:
+            self.rot = DATA_ROOT / mappe
 
     def har_assets(self, versjon: int, filnavn) -> bool:
         mappe = self.rot / "assets" / "v{}".format(versjon)
@@ -355,13 +366,16 @@ class _SftpMål:
         self.rotsti = mål["fjernmappe"].rstrip("/")
         klient = paramiko.SSHClient()
         klient.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        nøkkelfil = (
+            mål.get("nøkkelfil_linux") if os.name != "nt" else mål.get("nøkkelfil")
+        ) or mål.get("nøkkelfil") or None
         try:
             klient.connect(
                 hostname=mål["host"],
                 port=int(mål.get("port", 22)),
                 username=mål["bruker"],
                 password=mål.get("passord") or None,
-                key_filename=mål.get("nøkkelfil") or None,
+                key_filename=nøkkelfil,
                 timeout=15,
             )
         except paramiko.AuthenticationException:

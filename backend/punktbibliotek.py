@@ -24,8 +24,9 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from .models import DeltPunkt, Waypoint
+from .data_paths import DATA_ROOT
 
-BIBLIOTEK_FIL = Path(__file__).resolve().parent.parent / "data" / "waypoints.json"
+BIBLIOTEK_FIL = DATA_ROOT / "waypoints.json"
 
 # Feltene som deles på tvers av løyper. Etikettplassering (lab_lat/lab_lon)
 # og ikonvisning (vis_ikon) er bevisst IKKE med — de er per løype, siden

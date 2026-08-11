@@ -22,7 +22,9 @@ import re
 from pathlib import Path
 from typing import Optional
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "manus"
+from .data_paths import DATA_ROOT
+
+DATA_DIR = DATA_ROOT / "manus"
 
 # Samme id-format som segmentene (uuid4().hex[:8]). Sjekken hindrer at
 # rare verdier i URL-en kan peke utenfor data-mappa.

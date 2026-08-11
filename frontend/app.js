@@ -4895,10 +4895,17 @@ document.getElementById('tab-editor').addEventListener('click', () => byttFane('
 document.getElementById('tab-merge').addEventListener('click', () => byttFane('merge'));
 document.getElementById('tab-arena').addEventListener('click', () => byttFane('arena'));
 
-// Oppstart: gjenopprett lagrede valg, hent biblioteket, vis tom-tilstand
-// settKartfliser speiler selv riktig verdi i Kartvisning-dropdownen («Skjul
-// kart» når kartet er av, ellers det aktive laget).
-settKartfliser(localStorage.getItem('gps-tool.kart') === '1');
+// Oppstart: gjenopprett lagrede valg, hent biblioteket, vis tom-tilstand.
+// Før kartlaget fikk riktig default ble «0» lagret automatisk ved første
+// oppstart. Migrer dette gamle standardvalget én gang; senere skal bare et
+// eksplisitt valg av «Skjul kart» slå kartet av.
+if (localStorage.getItem('gps-tool.kart-default-v2') !== '1') {
+  if (localStorage.getItem('gps-tool.kart') === '0') {
+    localStorage.setItem('gps-tool.kart', '1');
+  }
+  localStorage.setItem('gps-tool.kart-default-v2', '1');
+}
+settKartfliser(localStorage.getItem('gps-tool.kart') !== '0');
 document.getElementById('map-track-color').value = kartEksport.farge;
 document.getElementById('map-track-width').value = kartEksport.tykkelse;
 document.getElementById('map-track-width-val').textContent = kartEksport.tykkelse;

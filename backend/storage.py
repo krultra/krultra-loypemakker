@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import punktbibliotek
+from .data_paths import DATA_ROOT
 from .models import (
     LibraryEntry,
     LibraryStructure,
@@ -23,14 +24,14 @@ from .models import (
 )
 
 # Mappa segmentene lagres i: <prosjektrot>/data/segments
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "segments"
+DATA_DIR = DATA_ROOT / "segments"
 
 # Organiseringen av biblioteket (grupper og rekkefølge): data/library.json
-LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "library.json"
+LIBRARY_FILE = DATA_ROOT / "library.json"
 # Samme, men for arenakartbiblioteket: data/arena-library.json
-ARENA_LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "arena-library.json"
+ARENA_LIBRARY_FILE = DATA_ROOT / "arena-library.json"
 # Samme, men for videobiblioteket: data/video-library.json
-VIDEO_LIBRARY_FILE = Path(__file__).resolve().parent.parent / "data" / "video-library.json"
+VIDEO_LIBRARY_FILE = DATA_ROOT / "video-library.json"
 
 # Gyldige segment-id-er: bare heksadesimale tegn (som uuid4().hex gir oss).
 # Sjekken hindrer at rare verdier i URL-en kan peke utenfor data-mappa.

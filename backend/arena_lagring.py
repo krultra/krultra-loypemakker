@@ -16,10 +16,11 @@ from pathlib import Path
 from typing import List
 
 from . import kontaktbibliotek
+from .data_paths import DATA_ROOT
 from .models import ArenaDetail, ArenaImage, ArenaSaveRequest, ArenaSummary
 
 # Rotmappa arenaene lagres i: <prosjektrot>/data/arenaer
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "arenaer"
+DATA_DIR = DATA_ROOT / "arenaer"
 
 # Gyldige arena-id-er: bare heksadesimale tegn (som uuid4().hex gir oss).
 # Hindrer at rare verdier i en URL kan peke utenfor data-mappa.

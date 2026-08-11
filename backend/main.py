@@ -19,6 +19,7 @@ from fastapi import FastAPI
 from starlette.staticfiles import StaticFiles
 
 from . import routes
+from .data_paths import APP_ROOT, DATA_ROOT
 
 app = FastAPI(title="KrUltra Løypemakker")
 
@@ -40,14 +41,12 @@ class NoCacheStaticFiles(StaticFiles):
         return response
 
 
-_rot = Path(__file__).resolve().parent.parent
-
 # Lokalt publiserte løypevisninger (lokal-test-målet) serveres av verktøyet
 # selv på /publisert/<slug>/ — nettlesere blokkerer fetch() fra file://-
 # sider, så visningen MÅ nås over HTTP for at course.json skal kunne lastes.
-_publisert_dir = _rot / "data" / "publisert"
+_publisert_dir = DATA_ROOT / "publisert"
 _publisert_dir.mkdir(parents=True, exist_ok=True)
 app.mount("/publisert", NoCacheStaticFiles(directory=str(_publisert_dir), html=True), name="publisert")
 
-_frontend_dir = _rot / "frontend"
+_frontend_dir = APP_ROOT / "frontend"
 app.mount("/", NoCacheStaticFiles(directory=str(_frontend_dir), html=True), name="frontend")

@@ -24,8 +24,9 @@ from pathlib import Path
 from typing import Dict, List
 
 from .models import ArenaContact, DeltKontakt
+from .data_paths import DATA_ROOT
 
-BIBLIOTEK_FIL = Path(__file__).resolve().parent.parent / "data" / "contacts.json"
+BIBLIOTEK_FIL = DATA_ROOT / "contacts.json"
 
 # Feltene som deles på tvers av arenakart. Alt innhold deles — det er nettopp
 # gjenbruk av selve kontaktopplysningene som er poenget.

@@ -28,7 +28,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "videoer"
+from .data_paths import DATA_ROOT
+
+DATA_DIR = DATA_ROOT / "videoer"
 INDEX_FIL = DATA_DIR / "index.json"
 
 # Formatene vi tar imot fra nettleseren. MP4 er førstevalget (spilles av

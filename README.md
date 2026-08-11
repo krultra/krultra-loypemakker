@@ -93,6 +93,13 @@ får du en fil du sender til `post@krultra.no`.
 - **Video:** bygges bilde for bilde i nettleseren med WebCodecs (H.264) og
   pakkes i MP4 — ingen serverkoding, ingen eksterne tjenester.
 - **Tester:** `python -m pytest` (fra prosjektmappa med `.venv` aktivert).
+- **Data:** brukerdata ligger normalt i `data/`, men kan flyttes med
+  miljøvariabelen `KUL_DATA_DIR`. Linux-startskriptet `KUL.sh` bruker
+  `~/OneDrive/Documents/KrUltra/KUL - KrUltra Løypemakker/data` som standard.
+
+På Ubuntu starter du derfor med `./KUL.sh`. Skriptet lar kode og brukerdata
+ligge separat, slik at data kan synkroniseres og sikkerhetskopieres uten å
+blandes inn i Git-repoet. `KUL_DATA_DIR` kan overstyres ved behov.
 
 Koden er organisert i `backend/` (server + GPX-logikk), `frontend/` (alt du
 ser i nettleseren — løype-, sammenslåings- og arenakart-editoren), `viewer/`
