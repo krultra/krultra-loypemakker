@@ -76,7 +76,7 @@ Hver gang senere: bare dobbeltklikk `KUL.bat`. Lukk det svarte terminalvinduet f
 
 ## Vil du ha løypa publisert, men mangler egen server?
 
-KrUltra tilbyr å publisere løyper på `loyper.krultra.no` for arrangører som
+KrUltra tilbyr å publisere løyper gratis på `loyper.krultra.no` for arrangører som
 ikke har egen nettpublisering. Bruk **«Send til KrUltra»** i verktøyet, så
 får du en fil du sender til `post@krultra.no`.
 
