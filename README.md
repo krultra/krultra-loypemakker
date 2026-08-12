@@ -66,7 +66,7 @@ segment · slå sammen segmenter · rediger arenakart) og viser hva som er
    komponenter lastes ned automatisk). Nettleseren åpner verktøyet på
    `http://127.0.0.1:8000/`.
 
-Hver gang senere: bare dobbeltklikk `KUL.bat`. Lukk det svarte vinduet for
+Hver gang senere: bare dobbeltklikk `KUL.bat`. Lukk det svarte terminalvinduet for
 å avslutte.
 
 📖 Detaljert, billedlagt installasjon: [docs/INSTALLASJON.md](docs/INSTALLASJON.md)
