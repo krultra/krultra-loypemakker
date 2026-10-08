@@ -146,6 +146,8 @@ class TestPubliser:
         # Filstrukturen: delte assets + per-løype-filer
         v = publisering.ASSET_VERSJON
         assert (mappemål / "assets" / f"v{v}" / "viewer.js").exists()
+        assert (mappemål / "assets" / f"v{v}" / "theme.js").exists()
+        assert (mappemål / "assets" / f"v{v}" / "theme.css").exists()
         assert (mappemål / "assets" / f"v{v}" / "felles.js").exists()
         assert (mappemål / "assets" / f"v{v}" / "leaflet.js").exists()
         index = (mappemål / "test-loype" / "index.html").read_text(encoding="utf-8")

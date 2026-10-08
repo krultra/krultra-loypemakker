@@ -37,7 +37,7 @@ from .models import Point, Waypoint
 # blir malen ny mens versjonsnummeret er gammelt — og publiseringen peker
 # på en assets-mappe som mangler de nye filene. Versjonssjekken mot
 # /api/health er det som fanger opp nettopp det.
-ASSET_VERSJON = 26
+ASSET_VERSJON = 27
 
 _ROT = APP_ROOT
 VIEWER_DIR = _ROT / "viewer"
@@ -268,14 +268,14 @@ KONFIG_MAL = {
         "'fjernmappe' er mappa "
         "webserveren serverer, 'baseUrl' er den offentlige adressen dit. "
         "type 'gruppe' publiserer til flere mål i én operasjon: "
-        "'medlemmer' er lista med navnene på målene (f.eks. prod + failover)."
+        "'medlemmer' er lista med navnene på målene. Eldre mål som peker på pi-amk blir ignorert."
     ),
     "mål": [
         # lokal-test serveres av verktøyet selv (se /publisert i main.py) —
         # lenken virker altså så lenge verktøyet kjører
         {"navn": "lokal-test", "type": "mappe",
          "mappe": "publisert", "baseUrl": "http://127.0.0.1:8000/publisert"},
-        {"navn": "krultra-pi", "type": "sftp",
+        {"navn": "pi-tok", "type": "sftp",
          "host": "FYLL-INN", "port": 22, "bruker": "FYLL-INN",
          "passord": "FYLL-INN-ELLER-SLETT", "nøkkelfil": "",
          "nøkkelfil_linux": "",
@@ -294,10 +294,47 @@ def les_konfig() -> dict:
     return json.loads(KONFIG_FIL.read_text(encoding="utf-8"))
 
 
+def _inneholder_pi_amk(verdi) -> bool:
+    """Finn gamle pi-amk-referanser i en målkonfigurasjon."""
+    if isinstance(verdi, str):
+        return "pi-amk" in verdi.lower()
+    if isinstance(verdi, dict):
+        return any(_inneholder_pi_amk(v) for v in verdi.values())
+    if isinstance(verdi, list):
+        return any(_inneholder_pi_amk(v) for v in verdi)
+    return False
+
+
+def _er_forbudt_mål(mål: dict, alle: dict, besøkte=None) -> bool:
+    """Returner true for mål, eller grupper, som bruker pi-amk."""
+    if _inneholder_pi_amk(mål):
+        return True
+    if mål.get("type") != "gruppe":
+        return False
+    besøkte = besøkte or set()
+    navn = mål.get("navn")
+    if navn in besøkte:
+        return False
+    besøkte.add(navn)
+    return any(
+        medlem in alle and _er_forbudt_mål(alle[medlem], alle, besøkte)
+        for medlem in (mål.get("medlemmer") or [])
+    )
+
+
+def tillatte_mål() -> list:
+    """Les mål uten eldre pi-amk-mål eller grupper som inkluderer dem."""
+    mål = les_konfig().get("mål", [])
+    indeks = {m.get("navn"): m for m in mål}
+    return [m for m in mål if not _er_forbudt_mål(m, indeks)]
+
+
 def finn_mål(navn: str) -> dict:
-    for mål in les_konfig().get("mål", []):
+    for mål in tillatte_mål():
         if mål.get("navn") == navn:
             return mål
+    if any(m.get("navn") == navn for m in les_konfig().get("mål", [])):
+        raise ValueError("Publiseringsmålet «{}» er deaktivert fordi det peker på pi-amk".format(navn))
     raise ValueError("Ukjent publiseringsmål: {}".format(navn))
 
 
@@ -311,6 +348,8 @@ def _viewer_filer() -> "list[tuple[str, bytes]]":
     filer = [
         ("viewer.js", (VIEWER_DIR / "viewer.js").read_bytes()),
         ("viewer.css", (VIEWER_DIR / "viewer.css").read_bytes()),
+        ("theme.js", (VIEWER_DIR / "theme.js").read_bytes()),
+        ("theme.css", (VIEWER_DIR / "theme.css").read_bytes()),
         ("felles.js", (frontend / "felles.js").read_bytes()),
         ("flyby.js", (frontend / "flyby.js").read_bytes()),
         ("flyby.css", (frontend / "flyby.css").read_bytes()),

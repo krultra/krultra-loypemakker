@@ -74,20 +74,8 @@ starter serveren og kaller publisering). Fyll inn:
 ```
 
 - Bruk helst `nøkkelfil` (SSH-nøkkel) i stedet for `passord`.
-- **Flere servere i én operasjon (failover):** lag et mål med
-  `"type": "gruppe"` og lista `"medlemmer"` med navnene på målene som
-  skal få samme innhold, f.eks. prod- og failover-Pi:
-
-  ```json
-  { "navn": "krultra (prod + failover)", "type": "gruppe",
-    "medlemmer": ["krultra-prod (pi-amk)", "krultra-failover (pi-tok)"],
-    "baseUrl": "https://loyper.krultra.no" }
-  ```
-
-  Velg gruppa i publiseringsdialogen, så publiseres det til alle
-  medlemmene. Feiler ett av målene (f.eks. failover-Pi-en er avslått),
-  fullføres de andre, og dialogen viser en advarsel om hvilket mål som
-  feilet — publiser på nytt når serveren er oppe igjen.
+- KUL publiserer selvhostet innhold kun til `pi-tok`. Eldre mål eller grupper
+  som peker på `pi-amk` blir ikke vist og kan ikke brukes.
 - `lokal-test`-målet skriver til en mappe på PC-en, og verktøyet serverer
   den selv på `http://127.0.0.1:8000/publisert/<slug>/` — klikk lenken i
   publiseringsdialogen for å se resultatet (verktøyet må kjøre).

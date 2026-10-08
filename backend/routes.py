@@ -370,7 +370,7 @@ def publiseringsmål():
     mål = [
         PublishTarget(navn=m.get("navn", "?"), type=m.get("type", "?"),
                       baseUrl=m.get("baseUrl", ""))
-        for m in publisering.les_konfig().get("mål", [])
+        for m in publisering.tillatte_mål()
     ]
     return PublishTargetsResponse(targets=mål)
 

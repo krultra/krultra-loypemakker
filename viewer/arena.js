@@ -212,7 +212,7 @@ function gaaTilArena(felt) {
   if (!href) return;
   const url = new URL(href, location.href);
   url.searchParams.set('lang', lang);
-  location.href = url.href;
+  location.href = KulTheme.medTema(url.href);
 }
 
 function byggKart() {
@@ -756,7 +756,7 @@ function byggSpraakvelger() {
       if (kode === lang) return;
       const url = new URL(location.href);
       url.searchParams.set('lang', kode);
-      location.href = url.href; // last på nytt med nytt språk
+      location.href = KulTheme.medTema(url.href); // last på nytt med nytt språk
     });
     velger.appendChild(b);
   }

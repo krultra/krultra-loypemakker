@@ -1,0 +1,42 @@
+/* Felles kontroller og Leaflet-flater. Rasterkart og arenaillustrasjoner
+   beholder originalfargene for at kartinformasjonen skal være tydelig. */
+:root { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+.tema-velger {
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  cursor: pointer;
+}
+#topp-knapper, #arena-topp-knapper { flex-wrap: wrap; }
+#topp-knapper { max-width: 100%; }
+#arena-topp { flex-wrap: wrap; }
+:root[data-theme="dark"] .tema-velger {
+  background: #1e293b; color: #e2e8f0; border-color: #475569;
+}
+:root[data-theme="dark"], :root[data-theme="dark"] body { background: #0f172a; color: #e2e8f0; }
+:root[data-theme="dark"] :is(#topp p, .info-navn, .wpt-popup td:first-child,
+  .arena-liste-beskr, .arena-liste-tom) { color: #94a3b8; }
+:root[data-theme="dark"] :is(#map, #laster) { background: #0f172a; color: #cbd5e1; }
+:root[data-theme="dark"] #kontroll { border-color: #334155; }
+:root[data-theme="dark"] :is(#lag-knapp, #fullskjerm-knapp, #last-ned-gpx,
+  #flyby-knapp, #video-lenke, .sprakvelger-knapp) {
+  background: #1e293b; color: #e2e8f0; border-color: #475569;
+}
+:root[data-theme="dark"] :is(#topp-knapper button:hover, #video-lenke:hover) { background: #273449; }
+:root[data-theme="dark"] .sprakvelger { border-color: #475569; }
+:root[data-theme="dark"] .sprakvelger-knapp + .sprakvelger-knapp { border-color: #475569; }
+:root[data-theme="dark"] .sprakvelger-knapp.aktiv { background: #312e81; color: #f1f5f9; }
+:root[data-theme="dark"] :is(.leaflet-popup-content-wrapper, .leaflet-popup-tip,
+  .leaflet-control-attribution, .leaflet-bar a) { background: #1e293b; color: #e2e8f0; }
+:root[data-theme="dark"] .leaflet-bar a:hover { background: #334155; }
+:root[data-theme="dark"] .leaflet-bar a.leaflet-disabled { color: #94a3b8; }
+:root[data-theme="dark"] :is(.leaflet-control-attribution a, .leaflet-popup-content a,
+  #arena-bunn a) { color: #93c5fd; }
+:root[data-theme="dark"] :is(.wpt-popup-typer, .wpt-popup p) { color: #cbd5e1; }
+:root[data-theme="dark"] .wpt-popup-arena a { background: #312e81; color: #bfdbfe; }
+:root[data-theme="dark"] .wpt-popup-arena a:hover { background: #3730a3; }

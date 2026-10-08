@@ -8,7 +8,7 @@
       "baseUrl": "http://127.0.0.1:8000/publisert"
     },
     {
-      "navn": "min-server",
+      "navn": "pi-tok",
       "type": "sftp",
       "host": "FYLL-INN-vertsnavn-eller-ip",
       "port": 22,

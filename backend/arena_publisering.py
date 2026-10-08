@@ -25,7 +25,7 @@ from .models import ArenaDetail
 
 # Økes når arena-viewer-koden (viewer/arena.*) endres, så nye publiseringer
 # laster opp friske assets uten å røre allerede publiserte arenaer.
-ARENA_ASSET_VERSJON = 13
+ARENA_ASSET_VERSJON = 14
 
 _ROT = Path(__file__).resolve().parent.parent
 VIEWER_DIR = _ROT / "viewer"
@@ -84,6 +84,8 @@ def _arena_viewer_filer() -> "list[tuple[str, bytes]]":
     return [
         ("arena.js", (VIEWER_DIR / "arena.js").read_bytes()),
         ("arena.css", (VIEWER_DIR / "arena.css").read_bytes()),
+        ("theme.js", (VIEWER_DIR / "theme.js").read_bytes()),
+        ("theme.css", (VIEWER_DIR / "theme.css").read_bytes()),
         ("leaflet.js", (frontend / "vendor" / "leaflet.js").read_bytes()),
         ("leaflet.css", (frontend / "vendor" / "leaflet.css").read_bytes()),
         ("favicon.png", (VIEWER_DIR / "favicon.png").read_bytes()),

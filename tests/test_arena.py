@@ -159,6 +159,8 @@ class TestArenaPublisering:
 
         v = arena_publisering.ARENA_ASSET_VERSJON
         assert (mål / "arena-assets" / f"v{v}" / "arena.js").exists()
+        assert (mål / "arena-assets" / f"v{v}" / "theme.js").exists()
+        assert (mål / "arena-assets" / f"v{v}" / "theme.css").exists()
         assert (mål / "arena-assets" / f"v{v}" / "leaflet.js").exists()
         index = (mål / "mmc-70k" / "teveltunet" / "index.html").read_text(encoding="utf-8")
         assert f"../../arena-assets/v{v}/" in index

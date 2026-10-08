@@ -489,7 +489,7 @@ function arenaHref(felt) {
 function medSprak(href) {
   if (!href) return href;
   const eksplisitt = new URLSearchParams(location.search).get('lang');
-  return eksplisitt ? href + '?lang=' + encodeURIComponent(lang) : href;
+  return KulTheme.medTema(eksplisitt ? href + '?lang=' + encodeURIComponent(lang) : href);
 }
 
 /** Bygg en GPX-fil (1.1) fra den publiserte løypa: sporet + interessepunktene.
@@ -623,7 +623,13 @@ let profilGeom = null; // {margVenstre, plotB, ...} — for klikk→indeks
 
 function tegnProfilV() {
   if (!løype) return;
-  const pStil = (løype.stil && løype.stil.profil) || {};
+  const publisertStil = (løype.stil && løype.stil.profil) || {};
+  // Mørk palett gir lesbare akser også når publisert stil har lyse bakgrunnsfarger.
+  const pStil = document.documentElement.dataset.theme === 'dark'
+    ? { ...publisertStil, bakgrunn: '#0f172a', rutenettFarge: '#334155',
+        tallFarge: '#cbd5e1', akseFarge: '#94a3b8', linje: '#f1f5f9',
+        punktFarge: '#cbd5e1', markørFarge: '#60a5fa' }
+    : publisertStil;
   const tekstPx = 11;
   const canvas = profilCanvas;
   // Tilgjengelig bredde = beholderens innhold UTEN padding — clientWidth
@@ -810,3 +816,5 @@ function byggProfilInteraksjon() {
     if (Math.abs(b - sistBredde) > 2) { sistBredde = b; tegnProfilV(); map.invalidateSize(); }
   }).observe(profilCanvas.parentElement);
 }
+
+window.addEventListener('kul-theme-change', tegnProfilV);
